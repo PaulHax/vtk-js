@@ -58,6 +58,8 @@ actor.getProperty().setDiffuse(0.7);
 actor.getProperty().setSpecular(0.3);
 actor.getProperty().setSpecularPower(8.0);
 
+actor.setScale([1, 1, 10]);
+
 mapper.setInputConnection(reader.getOutputPort());
 
 reader.setUrl(`${__BASE_PATH__}/data/volume/LIDC2.vti`).then(() => {
@@ -66,8 +68,10 @@ reader.setUrl(`${__BASE_PATH__}/data/volume/LIDC2.vti`).then(() => {
     const interactor = renderWindow.getInteractor();
     interactor.setDesiredUpdateRate(15.0);
     renderer.resetCamera();
-    renderer.getActiveCamera().zoom(1.5);
-    renderer.getActiveCamera().elevation(70);
+    // renderer.getActiveCamera().zoom(1.5);
+    // renderer.getActiveCamera().elevation(70);
+    renderer.getActiveCamera().dolly(8);
+    renderer.resetCameraClippingRange();
     renderWindow.render();
   });
 });
