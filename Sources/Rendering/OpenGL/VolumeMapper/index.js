@@ -496,50 +496,50 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
     program.setUniformf('camNear', crange[0]);
     program.setUniformf('camFar', crange[1]);
 
-    const bounds = model.currentInput.getBounds();
+    // const bounds = model.currentInput.getBounds();
     const dims = model.currentInput.getDimensions();
 
     // compute the viewport bounds of the volume
     // we will only render those fragments.
     const pos = vec3.create();
-    const dir = vec3.create();
-    let dcxmin = 1.0;
-    let dcxmax = -1.0;
-    let dcymin = 1.0;
-    let dcymax = -1.0;
+    // const dir = vec3.create();
+    // let dcxmin = -1.0;
+    // let dcxmax = 1.0;
+    // let dcymin = -1.0;
+    // let dcymax = 1.0;
 
-    for (let i = 0; i < 8; ++i) {
-      vec3.set(
-        pos,
-        bounds[i % 2],
-        bounds[2 + (Math.floor(i / 2) % 2)],
-        bounds[4 + Math.floor(i / 4)]
-      );
-      vec3.transformMat4(pos, pos, model.modelToView);
-      if (!cam.getParallelProjection()) {
-        vec3.normalize(dir, pos);
+    // for (let i = 0; i < 8; ++i) {
+    //   vec3.set(
+    //     pos,
+    //     bounds[i % 2],
+    //     bounds[2 + (Math.floor(i / 2) % 2)],
+    //     bounds[4 + Math.floor(i / 4)]
+    //   );
+    //   vec3.transformMat4(pos, pos, model.modelToView);
+    //   if (!cam.getParallelProjection()) {
+    //     vec3.normalize(dir, pos);
 
-        // now find the projection of this point onto a
-        // nearZ distance plane. Since the camera is at 0,0,0
-        // in VC the ray is just t*pos and
-        // t is -nearZ/dir.z
-        // intersection becomes pos.x/pos.z
-        const t = -crange[0] / pos[2];
-        vec3.scale(pos, dir, t);
-      }
-      // now convert to DC
-      vec3.transformMat4(pos, pos, keyMats.vcpc);
+    //     // now find the projection of this point onto a
+    //     // nearZ distance plane. Since the camera is at 0,0,0
+    //     // in VC the ray is just t*pos and
+    //     // t is -nearZ/dir.z
+    //     // intersection becomes pos.x/pos.z
+    //     const t = -crange[0] / pos[2];
+    //     vec3.scale(pos, dir, t);
+    //   }
+    //   // now convert to DC
+    //   vec3.transformMat4(pos, pos, keyMats.vcpc);
 
-      dcxmin = Math.min(pos[0], dcxmin);
-      dcxmax = Math.max(pos[0], dcxmax);
-      dcymin = Math.min(pos[1], dcymin);
-      dcymax = Math.max(pos[1], dcymax);
-    }
+    //   dcxmin = Math.min(pos[0], dcxmin);
+    //   dcxmax = Math.max(pos[0], dcxmax);
+    //   dcymin = Math.min(pos[1], dcymin);
+    //   dcymax = Math.max(pos[1], dcymax);
+    // }
 
-    program.setUniformf('dcxmin', dcxmin);
-    program.setUniformf('dcxmax', dcxmax);
-    program.setUniformf('dcymin', dcymin);
-    program.setUniformf('dcymax', dcymax);
+    program.setUniformf('dcxmin', -1);
+    program.setUniformf('dcxmax', 1);
+    program.setUniformf('dcymin', -1);
+    program.setUniformf('dcymax', 1);
 
     if (program.isUniformUsed('cameraParallel')) {
       program.setUniformi('cameraParallel', cam.getParallelProjection());
