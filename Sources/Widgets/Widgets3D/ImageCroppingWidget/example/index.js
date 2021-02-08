@@ -8,7 +8,7 @@ import vtkColorTransferFunction from 'vtk.js/Sources/Rendering/Core/ColorTransfe
 import vtkPiecewiseFunction from 'vtk.js/Sources/Common/DataModel/PiecewiseFunction';
 import vtkVolume from 'vtk.js/Sources/Rendering/Core/Volume';
 import vtkVolumeMapper from 'vtk.js/Sources/Rendering/Core/VolumeMapper';
-import vtkImageCropFilter from 'vtk.js/Sources/Filters/General/ImageCropFilter';
+import vtkPlane from 'vtk.js/Sources/Common/DataModel/Plane';
 
 import controlPanel from './controlPanel.html';
 
@@ -117,9 +117,21 @@ actor.getProperty().setDiffuse(0.7);
 actor.getProperty().setSpecular(0.3);
 actor.getProperty().setSpecularPower(8.0);
 
-const cropFilter = vtkImageCropFilter.newInstance();
-cropFilter.setInputConnection(reader.getOutputPort());
-mapper.setInputConnection(cropFilter.getOutputPort());
+mapper.setInputConnection(reader.getOutputPort());
+
+const clipPlanes = [
+  { normal: [1, 0, 0], handleLabel: '-==' },
+  { normal: [-1, 0, 0], handleLabel: '+==' },
+  { normal: [0, 1, 0], handleLabel: '=-=' },
+  { normal: [0, -1, 0], handleLabel: '=+=' },
+  { normal: [0, 0, 1], handleLabel: '==-' },
+  { normal: [0, 0, -1], handleLabel: '==+' },
+].map(({ normal, handleLabel }) => ({
+  plane: vtkPlane.newInstance({ normal }), // set origin later
+  handleLabel,
+}));
+
+mapper.setClippingPlanes(clipPlanes.map(({ plane }) => plane));
 
 // -----------------------------------------------------------
 // Get data
@@ -128,15 +140,20 @@ mapper.setInputConnection(cropFilter.getOutputPort());
 reader.setUrl(`${__BASE_PATH__}/data/volume/LIDC2.vti`).then(() => {
   reader.loadData().then(() => {
     const image = reader.getOutputData();
-    cropFilter.setCroppingPlanes(...image.getExtent());
 
     // update crop widget
     widget.copyImageDataDescription(image);
     window.asdf = widget;
     const cropState = widget.getWidgetState().getCroppingPlanes();
     cropState.onModified(() => {
-      cropFilter.setCroppingPlanes(cropState.getPlanes());
+      clipPlanes.forEach(({ plane, handleLabel }) =>
+        plane.setOrigin(
+          widget.getWidgetState().getStatesWithLabel(handleLabel)[0].getOrigin()
+        )
+      );
     });
+    // trigger plane.setOrigin after copyImageDataDescription
+    cropState.modified();
 
     // add volume to renderer
     renderer.addVolume(actor);
