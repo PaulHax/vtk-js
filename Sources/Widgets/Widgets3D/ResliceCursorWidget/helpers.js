@@ -1,16 +1,15 @@
 import vtkBoundingBox, {
   STATIC,
 } from 'vtk.js/Sources/Common/DataModel/BoundingBox';
-import vtkBox from 'vtk.js/Sources/Common/DataModel/Box';
 import vtkCubeSource from 'vtk.js/Sources/Filters/Sources/CubeSource';
 import vtkCutter from 'vtk.js/Sources/Filters/Core/Cutter';
 import vtkPlane from 'vtk.js/Sources/Common/DataModel/Plane';
 import * as vtkMath from 'vtk.js/Sources/Common/Core/Math';
+import vtkMatrixBuilder from 'vtk.js/Sources/Common/Core/MatrixBuilder';
 
 import { ViewTypes } from 'vtk.js/Sources/Widgets/Core/WidgetManager/Constants';
-import { defaultViewUpFromViewType } from 'vtk.js/Sources/Widgets/Widgets3D/ResliceCursorWidget/Constants';
 
-import vtkMatrixBuilder from 'vtk.js/Sources/Common/Core/MatrixBuilder';
+const EPSILON = 0.00001;
 
 /**
  * Fit the plane defined by origin, p1, p2 onto the bounds.
@@ -23,18 +22,19 @@ import vtkMatrixBuilder from 'vtk.js/Sources/Common/Core/MatrixBuilder';
 export function boundPlane(bounds, origin, p1, p2) {
   const v1 = [];
   vtkMath.subtract(p1, origin, v1);
+  vtkMath.normalize(v1);
 
   const v2 = [];
   vtkMath.subtract(p2, origin, v2);
+  vtkMath.normalize(v2);
 
   const n = [0, 0, 1];
   vtkMath.cross(v1, v2, n);
-  const plane = vtkPlane.newInstance();
-  plane.setOrigin(origin);
-  plane.setNormal(n);
-  vtkMath.normalize(v1);
-  vtkMath.normalize(v2);
   vtkMath.normalize(n);
+
+  const plane = vtkPlane.newInstance();
+  plane.setOrigin(...origin);
+  plane.setNormal(...n);
 
   const cubeSource = vtkCubeSource.newInstance();
   cubeSource.setBounds(bounds);
@@ -67,7 +67,6 @@ export function boundPlane(bounds, origin, p1, p2) {
 export function boundPoint(inPoint, v1, v2, bounds) {
   const absT1 = v1.map((val) => Math.abs(val));
   const absT2 = v2.map((val) => Math.abs(val));
-  const epsilon = 0.00001;
 
   let o1 = 0.0;
   let o2 = 0.0;
@@ -80,10 +79,10 @@ export function boundPoint(inPoint, v1, v2, bounds) {
     const absT = useT1 ? absT1 : absT2;
 
     if (inPoint[i] < bounds[i * 2]) {
-      axisOffset = absT[i] > epsilon ? (bounds[2 * i] - inPoint[i]) / t[i] : 0;
+      axisOffset = absT[i] > EPSILON ? (bounds[2 * i] - inPoint[i]) / t[i] : 0;
     } else if (inPoint[i] > bounds[2 * i + 1]) {
       axisOffset =
-        absT[i] > epsilon ? (bounds[2 * i + 1] - inPoint[i]) / t[i] : 0;
+        absT[i] > EPSILON ? (bounds[2 * i + 1] - inPoint[i]) / t[i] : 0;
     }
 
     if (useT1) {
@@ -114,44 +113,18 @@ export function boundPointOnPlane(p1, p2, bounds) {
 
   const out = [0, 0, 0];
   const tolerance = [0, 0, 0];
-  vtkBox.intersectBox(bounds, p1, dir12, out, tolerance);
+  vtkBoundingBox.intersectBox(bounds, p1, dir12, out, tolerance);
 
   return out;
 }
 
-// Get name of the line in the same plane as the input
-export function getAssociatedLinesName(lineName) {
-  switch (lineName) {
-    case 'AxisXinY':
-      return 'AxisZinY';
-    case 'AxisXinZ':
-      return 'AxisYinZ';
-    case 'AxisYinX':
-      return 'AxisZinX';
-    case 'AxisYinZ':
-      return 'AxisXinZ';
-    case 'AxisZinX':
-      return 'AxisYinX';
-    case 'AxisZinY':
-      return 'AxisXinY';
-    default:
-      return '';
-  }
-}
-
-export function getViewPlaneNameFromViewType(viewType) {
-  switch (viewType) {
-    case ViewTypes.YZ_PLANE:
-      return 'X';
-    case ViewTypes.XZ_PLANE:
-      return 'Y';
-    case ViewTypes.XY_PLANE:
-      return 'Z';
-    default:
-      return '';
-  }
-}
-
+/**
+ * Rotates a vector around another.
+ * @param {vec3} vectorToBeRotated Vector to rate
+ * @param {vec3} axis Axis to rotate around
+ * @param {Number} angle Angle in radian
+ * @returns The rotated vector
+ */
 export function rotateVector(vectorToBeRotated, axis, angle) {
   const rotatedVector = [...vectorToBeRotated];
   vtkMatrixBuilder.buildFromRadian().rotate(angle, axis).apply(rotatedVector);
@@ -189,16 +162,14 @@ function updateLine(lineState, center, axis, lineLength, rotationLength) {
 
 // Update the reslice cursor state according to the three planes normals and the origin
 export function updateState(widgetState) {
-  // Compute axis
-  const xNormal = widgetState.getXPlaneNormal();
-  const yNormal = widgetState.getYPlaneNormal();
-  const zNormal = widgetState.getZPlaneNormal();
-  const newXAxis = [];
-  const newYAxis = [];
-  const newZAxis = [];
-  vtkMath.cross(xNormal, yNormal, newZAxis);
-  vtkMath.cross(yNormal, zNormal, newXAxis);
-  vtkMath.cross(zNormal, xNormal, newYAxis);
+  // Compute line axis
+  const xNormal = widgetState.getPlanes()[ViewTypes.YZ_PLANE].normal;
+  const yNormal = widgetState.getPlanes()[ViewTypes.XZ_PLANE].normal;
+  const zNormal = widgetState.getPlanes()[ViewTypes.XY_PLANE].normal;
+
+  const yzIntersectionLineAxis = vtkMath.cross(yNormal, zNormal, []);
+  const xzIntersectionLineAxis = vtkMath.cross(zNormal, xNormal, []);
+  const xyIntersectionLineAxis = vtkMath.cross(xNormal, yNormal, []);
 
   const bounds = widgetState.getImage().getBounds();
   const center = widgetState.getCenter();
@@ -215,14 +186,14 @@ export function updateState(widgetState) {
   updateLine(
     widgetState.getAxisXinY(),
     center,
-    newZAxis,
+    xyIntersectionLineAxis,
     pdLength,
     zRotationLength
   );
   updateLine(
     widgetState.getAxisYinX(),
     center,
-    newZAxis,
+    xyIntersectionLineAxis,
     pdLength,
     zRotationLength
   );
@@ -230,14 +201,14 @@ export function updateState(widgetState) {
   updateLine(
     widgetState.getAxisYinZ(),
     center,
-    newXAxis,
+    yzIntersectionLineAxis,
     pdLength,
     xRotationLength
   );
   updateLine(
     widgetState.getAxisZinY(),
     center,
-    newXAxis,
+    yzIntersectionLineAxis,
     pdLength,
     xRotationLength
   );
@@ -245,14 +216,14 @@ export function updateState(widgetState) {
   updateLine(
     widgetState.getAxisXinZ(),
     center,
-    newYAxis,
+    xzIntersectionLineAxis,
     pdLength,
     yRotationLength
   );
   updateLine(
     widgetState.getAxisZinX(),
     center,
-    newYAxis,
+    xzIntersectionLineAxis,
     pdLength,
     yRotationLength
   );
@@ -260,52 +231,95 @@ export function updateState(widgetState) {
 
 /**
  * First rotate planeToTransform to match targetPlane normal.
- * Then rotate around targetPlane normal to preserve world plane "up" vector (i.e. Origin->p2 ).
+ * Then rotate around targetNormal to enforce targetViewUp "up" vector (i.e. Origin->p2 ).
  * There is an infinite number of options to rotate a plane normal to another. Here we attempt to
- * do it by preserving Origin, P1 and P2 to be constrained within the volume bounds.
+ * preserve Origin, P1 and P2 when rotating around targetPlane.
  * @param {vtkPlaneSource} planeToTransform
- * @param {vtkPlane} targetPlane
- * @param {ViewTypes} viewType
+ * @param {vec3} targetOrigin Center of the plane
+ * @param {vec3} targetNormal Normal to state to the plane
+ * @param {vec3} viewType Vector that enforces view up
  */
-export function transformPlane(planeToTransform, targetPlane, viewType) {
-  const defaultViewUp = defaultViewUpFromViewType[viewType];
-  const rotatedNormal = targetPlane.getNormal();
-  const rotatedOrigin = targetPlane.getOrigin();
-  // Apply rotation onto plane (i.e. origin, p1, p2)
-  planeToTransform.setNormal(...rotatedNormal);
-  // TBD: isn't it a no-op ?
-  planeToTransform.setCenter(...rotatedOrigin);
-
-  const rotatedOrig = planeToTransform.getOrigin();
-  const rotatedPoint1 = planeToTransform.getPoint1();
-  const rotatedPoint2 = planeToTransform.getPoint2();
-
-  // Compute local view up of transformed plane
-  const rotatedViewUp = vtkMath.subtract(rotatedPoint2, rotatedOrig, [0, 0, 0]);
-  const rotatedPlane = vtkPlane.newInstance({
-    normal: rotatedNormal,
-    origin: rotatedOrigin,
-  });
-  // Project the default viewup we want to fit on
-  const projectedDefaultViewUp = [0, 0, 1];
-  rotatedPlane.projectVector(defaultViewUp, projectedDefaultViewUp);
-
-  vtkMath.normalize(projectedDefaultViewUp);
-  vtkMath.normalize(rotatedViewUp);
-
-  const rotationAngle = vtkMath.angleBetweenVectors(
-    projectedDefaultViewUp,
-    rotatedViewUp
+export function transformPlane(
+  planeToTransform,
+  targetCenter,
+  targetNormal,
+  targetViewUp
+) {
+  planeToTransform.setNormal(targetNormal);
+  const viewUp = vtkMath.subtract(
+    planeToTransform.getPoint2(),
+    planeToTransform.getOrigin(),
+    []
   );
+  const angle = vtkMath.signedAngleBetweenVectors(
+    viewUp,
+    targetViewUp,
+    targetNormal
+  );
+  planeToTransform.rotate(angle, targetNormal);
+  planeToTransform.setCenter(targetCenter);
+}
 
-  // Compute the new plane points
-  const transform = vtkMatrixBuilder
-    .buildFromRadian()
-    .rotate(rotationAngle, rotatedNormal);
-  transform.apply(rotatedOrig);
-  transform.apply(rotatedPoint1);
-  transform.apply(rotatedPoint2);
-  planeToTransform.setOrigin(rotatedOrig);
-  planeToTransform.setPoint1(rotatedPoint1);
-  planeToTransform.setPoint2(rotatedPoint2);
+// Get name of the line in the same plane as the input
+export function getAssociatedLinesName(lineName) {
+  switch (lineName) {
+    case 'AxisXinY':
+      return 'AxisZinY';
+    case 'AxisXinZ':
+      return 'AxisYinZ';
+    case 'AxisYinX':
+      return 'AxisZinX';
+    case 'AxisYinZ':
+      return 'AxisXinZ';
+    case 'AxisZinX':
+      return 'AxisYinX';
+    case 'AxisZinY':
+      return 'AxisXinY';
+    default:
+      return '';
+  }
+}
+
+/**
+ * Get the line name, constructs from the plane name and where the plane is displayed
+ * Example: planeName='X' rotatedPlaneName='Y', then the return values will be 'AxisXinY'
+ * @param {String} planeName Value between 'X', 'Y' and 'Z'
+ * @param {String} rotatedPlaneName Value between 'X', 'Y' and 'Z'
+ * @returns {String}
+ */
+export function getLineNameFromPlaneAndRotatedPlaneName(
+  planeName,
+  rotatedPlaneName
+) {
+  return `Axis${planeName}in${rotatedPlaneName}`;
+}
+
+/**
+ * Extract the plane name from the line name
+ * Example: 'AxisXinY' will return 'X'
+ * @param {String} lineName Should be following this template : 'Axis_in_' with _ a character
+ * @returns {String} Value between 'X', 'Y' and 'Z' or null if an error occured
+ */
+export function getPlaneNameFromLineName(lineName) {
+  const match = lineName.match('([XYZ])in[XYZ]');
+  if (match) {
+    return match[1];
+  }
+  return null;
+}
+
+/**
+ * Get the orthogonal plane name of 'planeName' in a specific 'rotatedPlaneName'
+ * Example: planeName='X' on rotatedPlaneName='Z', then the associated plane name
+ * of 'X' plane is 'Y'
+ * @param {String} planeName
+ * @param {String} rotatedPlaneName
+ */
+export function getAssociatedPlaneName(planeName, rotatedPlaneName) {
+  const lineName = getLineNameFromPlaneAndRotatedPlaneName(
+    planeName,
+    rotatedPlaneName
+  );
+  const associatedLine = getAssociatedLinesName(lineName);
+  return getPlaneNameFromLineName(associatedLine);
 }

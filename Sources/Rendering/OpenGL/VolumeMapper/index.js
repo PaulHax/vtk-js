@@ -166,7 +166,7 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
     // a system will execute every step regardless
     const ext = model.currentInput.getExtent();
     const spc = model.currentInput.getSpacing();
-    const vsize = vec3.create();
+    const vsize = new Float64Array(3);
     vec3.set(
       vsize,
       (ext[1] - ext[0]) * spc[0],
@@ -406,7 +406,7 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
 
     const ext = model.currentInput.getExtent();
     const spc = model.currentInput.getSpacing();
-    const vsize = vec3.create();
+    const vsize = new Float64Array(3);
     vec3.set(
       vsize,
       (ext[1] - ext[0]) * spc[0],
@@ -575,50 +575,50 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
     program.setUniformf('camNear', crange[0]);
     program.setUniformf('camFar', crange[1]);
 
-    // const bounds = model.currentInput.getBounds();
+    const bounds = model.currentInput.getBounds();
     const dims = model.currentInput.getDimensions();
 
     // compute the viewport bounds of the volume
     // we will only render those fragments.
-    const pos = vec3.create();
-    // const dir = vec3.create();
-    // let dcxmin = -1.0;
-    // let dcxmax = 1.0;
-    // let dcymin = -1.0;
-    // let dcymax = 1.0;
+    const pos = new Float64Array(3);
+    const dir = new Float64Array(3);
+    let dcxmin = 1.0;
+    let dcxmax = -1.0;
+    let dcymin = 1.0;
+    let dcymax = -1.0;
 
-    // for (let i = 0; i < 8; ++i) {
-    //   vec3.set(
-    //     pos,
-    //     bounds[i % 2],
-    //     bounds[2 + (Math.floor(i / 2) % 2)],
-    //     bounds[4 + Math.floor(i / 4)]
-    //   );
-    //   vec3.transformMat4(pos, pos, model.modelToView);
-    //   if (!cam.getParallelProjection()) {
-    //     vec3.normalize(dir, pos);
+    for (let i = 0; i < 8; ++i) {
+      vec3.set(
+        pos,
+        bounds[i % 2],
+        bounds[2 + (Math.floor(i / 2) % 2)],
+        bounds[4 + Math.floor(i / 4)]
+      );
+      vec3.transformMat4(pos, pos, model.modelToView);
+      if (!cam.getParallelProjection()) {
+        vec3.normalize(dir, pos);
 
-    //     // now find the projection of this point onto a
-    //     // nearZ distance plane. Since the camera is at 0,0,0
-    //     // in VC the ray is just t*pos and
-    //     // t is -nearZ/dir.z
-    //     // intersection becomes pos.x/pos.z
-    //     const t = -crange[0] / pos[2];
-    //     vec3.scale(pos, dir, t);
-    //   }
-    //   // now convert to DC
-    //   vec3.transformMat4(pos, pos, keyMats.vcpc);
+        // now find the projection of this point onto a
+        // nearZ distance plane. Since the camera is at 0,0,0
+        // in VC the ray is just t*pos and
+        // t is -nearZ/dir.z
+        // intersection becomes pos.x/pos.z
+        const t = -crange[0] / pos[2];
+        vec3.scale(pos, dir, t);
+      }
+      // now convert to DC
+      vec3.transformMat4(pos, pos, keyMats.vcpc);
 
-    //   dcxmin = Math.min(pos[0], dcxmin);
-    //   dcxmax = Math.max(pos[0], dcxmax);
-    //   dcymin = Math.min(pos[1], dcymin);
-    //   dcymax = Math.max(pos[1], dcymax);
-    // }
+      dcxmin = Math.min(pos[0], dcxmin);
+      dcxmax = Math.max(pos[0], dcxmax);
+      dcymin = Math.min(pos[1], dcymin);
+      dcymax = Math.max(pos[1], dcymax);
+    }
 
-    program.setUniformf('dcxmin', -1);
-    program.setUniformf('dcxmax', 1);
-    program.setUniformf('dcymin', -1);
-    program.setUniformf('dcymax', 1);
+    program.setUniformf('dcxmin', dcxmin);
+    program.setUniformf('dcxmax', dcxmax);
+    program.setUniformf('dcymin', dcymin);
+    program.setUniformf('dcymax', dcymax);
 
     if (program.isUniformUsed('cameraParallel')) {
       program.setUniformi('cameraParallel', cam.getParallelProjection());
@@ -626,7 +626,7 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
 
     const ext = model.currentInput.getExtent();
     const spc = model.currentInput.getSpacing();
-    const vsize = vec3.create();
+    const vsize = new Float64Array(3);
     vec3.set(
       vsize,
       (ext[1] - ext[0] + 1) * spc[0],
@@ -667,7 +667,7 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
         volumeMapper sampleDistance or its maximum number of samples.`);
     }
 
-    const vctoijk = vec3.create();
+    const vctoijk = new Float64Array(3);
 
     vec3.set(vctoijk, 1.0, 1.0, 1.0);
     vec3.divide(vctoijk, vctoijk, vsize);
@@ -685,8 +685,8 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
 
     // map normals through normal matrix
     // then use a point on the plane to compute the distance
-    const normal = vec3.create();
-    const pos2 = vec3.create();
+    const normal = new Float64Array(3);
+    const pos2 = new Float64Array(3);
     for (let i = 0; i < 6; ++i) {
       switch (i) {
         default:
@@ -1237,8 +1237,12 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
 
   publicAPI.buildBufferObjects = (ren, actor) => {
     const image = model.currentInput;
+    if (!image) {
+      return;
+    }
 
-    if (image === null) {
+    const scalars = image.getPointData() && image.getPointData().getScalars();
+    if (!scalars) {
       return;
     }
 
@@ -1260,7 +1264,7 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
       );
     }
 
-    const numComp = image.getPointData().getScalars().getNumberOfComponents();
+    const numComp = scalars.getNumberOfComponents();
     const iComps = vprop.getIndependentComponents();
     const numIComps = iComps ? numComp : 1;
 
@@ -1368,8 +1372,8 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
         dims[1],
         dims[2],
         numComp,
-        image.getPointData().getScalars().getDataType(),
-        image.getPointData().getScalars().getData()
+        scalars.getDataType(),
+        scalars.getData()
       );
       // console.log(model.scalarTexture.get());
       model.scalarTextureString = toString;
@@ -1491,11 +1495,11 @@ export function extend(publicAPI, model, initialValues = {}) {
   model.jitterTexture.setWrapT(Wrap.REPEAT);
   model.framebuffer = vtkOpenGLFramebuffer.newInstance();
 
-  model.idxToView = mat4.create();
-  model.idxNormalMatrix = mat3.create();
-  model.modelToView = mat4.create();
-  model.projectionToView = mat4.create();
-  model.projectionToWorld = mat4.create();
+  model.idxToView = mat4.identity(new Float64Array(16));
+  model.idxNormalMatrix = mat3.identity(new Float64Array(9));
+  model.modelToView = mat4.identity(new Float64Array(16));
+  model.projectionToView = mat4.identity(new Float64Array(16));
+  model.projectionToWorld = mat4.identity(new Float64Array(16));
 
   // Build VTK API
   macro.setGet(publicAPI, model, ['context']);

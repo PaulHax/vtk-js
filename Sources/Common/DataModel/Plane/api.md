@@ -7,6 +7,7 @@ returning plane normal.
 ### normal (set/get)
 
 Plane normal. Plane is defined by point and normal. Default is [0.0, 0.0, 1.0].
+Must be normalized (magnitude = 1)
 
 ### origin (set/get)
 
@@ -44,10 +45,12 @@ have magnitude 1.
 
 ### _(static)_ projectVector(v, normal, vproj)
 
+Project a vector v onto a plane defined by a normal. The
+projected vector is returned in vproj.
+
 ### projectVector(v, vproj)
 
-Project a vector v onto plane defined by origin and normal. The
-projected vector is returned in vproj.
+Project a vector v onto plane. The projected vector is returned in vproj.
 
 ### _(static)_ generalizedProjectPoint(x, origin, normal, xproj)
 

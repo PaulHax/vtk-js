@@ -173,22 +173,22 @@ export default function widgetBehavior(publicAPI, model) {
   };
 
   publicAPI.setVisibility = (visibility) => {
+    let modified = false;
     if (model.useHandles) {
-      superClass.setVisibility(visibility);
+      modified = superClass.setVisibility(visibility) || modified;
     } else {
-      model.shapeHandle.setVisible(visibility);
+      modified = model.shapeHandle.setVisible(visibility) || modified;
     }
 
     if (model.label) {
       if (visibility) {
-        model.label.setContainer(model.interactor.getContainer());
+        modified =
+          model.label.setContainer(model.interactor.getContainer()) || modified;
       } else {
-        model.label.setContainer(null);
+        modified = model.label.setContainer(null) || modified;
       }
     }
-
-    publicAPI.updateRepresentationForRender();
-    model.interactor.render();
+    return modified;
   };
 
   publicAPI.getLabel = () => model.label;
@@ -371,7 +371,6 @@ export default function widgetBehavior(publicAPI, model) {
     ) {
       return macro.VOID;
     }
-
     if (!model.point2) {
       // Update orientation to match the camera's plane
       // if the corners are not yet placed
@@ -384,8 +383,6 @@ export default function widgetBehavior(publicAPI, model) {
       model.shapeHandle.setDirection(normal);
       model.manipulator.setNormal(normal);
     }
-    model.manipulator.setOrigin(model.activeState.getOrigin());
-
     const worldCoords = model.manipulator.handleEvent(
       callData,
       model.openGLRenderWindow

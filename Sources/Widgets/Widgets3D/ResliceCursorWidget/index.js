@@ -8,20 +8,18 @@ import * as vtkMath from 'vtk.js/Sources/Common/Core/Math';
 
 import widgetBehavior from 'vtk.js/Sources/Widgets/Widgets3D/ResliceCursorWidget/behavior';
 import stateGenerator from 'vtk.js/Sources/Widgets/Widgets3D/ResliceCursorWidget/state';
-
 import {
   boundPlane,
   updateState,
-  getViewPlaneNameFromViewType,
   transformPlane,
 } from 'vtk.js/Sources/Widgets/Widgets3D/ResliceCursorWidget/helpers';
 import { ViewTypes } from 'vtk.js/Sources/Widgets/Core/WidgetManager/Constants';
 
 import { vec4, mat4 } from 'gl-matrix';
+import vtkMatrixBuilder from 'vtk.js/Sources/Common/Core/MatrixBuilder';
 
 const VTK_INT_MAX = 2147483647;
 const { vtkErrorMacro } = macro;
-const viewUpFromViewType = {};
 
 // ----------------------------------------------------------------------------
 // Factory
@@ -199,7 +197,6 @@ function vtkResliceCursorWidget(publicAPI, model) {
 
       const worldFocal = renderer.normalizedDisplayToWorld(
         ...displayFocal,
-        1,
         aspect
       );
 
@@ -262,7 +259,7 @@ function vtkResliceCursorWidget(publicAPI, model) {
             initialValues: {
               axis1Name: 'AxisXinZ',
               axis2Name: 'AxisYinZ',
-              viewName: 'Z',
+              viewType: ViewTypes.XY_PLANE,
               rotationEnabled: model.widgetState.getEnableRotation(),
             },
           },
@@ -275,7 +272,7 @@ function vtkResliceCursorWidget(publicAPI, model) {
             initialValues: {
               axis1Name: 'AxisXinY',
               axis2Name: 'AxisZinY',
-              viewName: 'Y',
+              viewType: ViewTypes.XZ_PLANE,
               rotationEnabled: model.widgetState.getEnableRotation(),
             },
           },
@@ -288,7 +285,7 @@ function vtkResliceCursorWidget(publicAPI, model) {
             initialValues: {
               axis1Name: 'AxisYinX',
               axis2Name: 'AxisZinX',
-              viewName: 'X',
+              viewType: ViewTypes.YZ_PLANE,
               rotationEnabled: model.widgetState.getEnableRotation(),
             },
           },
@@ -353,8 +350,6 @@ function vtkResliceCursorWidget(publicAPI, model) {
     resetFocalPoint,
     keepCenterFocalDistance
   ) => {
-    const viewName = getViewPlaneNameFromViewType(viewType);
-
     const center = model.widgetState.getImage().getCenter();
     const focalPoint = renderer.getActiveCamera().getFocalPoint();
     const position = renderer.getActiveCamera().getPosition();
@@ -364,7 +359,7 @@ function vtkResliceCursorWidget(publicAPI, model) {
       vtkMath.distance2BetweenPoints(position, focalPoint)
     );
 
-    const normal = model.widgetState[`get${viewName}PlaneNormal`]();
+    const normal = publicAPI.getPlaneNormalFromViewType(viewType);
 
     // ResetFocalPoint will reset focal point to the center of the image
     const estimatedFocalPoint = resetFocalPoint ? center : focalPoint;
@@ -375,10 +370,11 @@ function vtkResliceCursorWidget(publicAPI, model) {
       distance,
       [0, 0, 0]
     );
-
     renderer.getActiveCamera().setFocalPoint(...estimatedFocalPoint);
     renderer.getActiveCamera().setPosition(...estimatedCameraPosition);
-    renderer.getActiveCamera().setViewUp(viewUpFromViewType[viewType]);
+    renderer
+      .getActiveCamera()
+      .setViewUp(model.widgetState.getPlanes()[viewType].viewUp);
 
     // Project focalPoint onto image plane and preserve distance
     updateCamera(
@@ -391,8 +387,6 @@ function vtkResliceCursorWidget(publicAPI, model) {
   };
 
   publicAPI.updateReslicePlane = (imageReslice, viewType) => {
-    const plane = publicAPI.getPlaneSourceFromViewType(viewType);
-
     // Calculate appropriate pixel spacing for the reslicing
     const spacing = model.widgetState.getImage().getSpacing();
 
@@ -400,23 +394,16 @@ function vtkResliceCursorWidget(publicAPI, model) {
     // centered on cursor center.
     const planeSource = computeReslicePlaneOrigin(viewType);
 
+    const { normal, viewUp } = model.widgetState.getPlanes()[viewType];
     // Adapt plane orientation in order to fit the correct viewUp
     // so that the rotations will be more understandable than now.
-    transformPlane(planeSource, plane, viewType);
-
-    // TODO: orient plane on volume.
-
-    // Compute view up to configure camera later on
-    const bottomLeftPoint = planeSource.getOrigin();
-    const topLeftPoint = planeSource.getPoint2();
-    const viewUp = vtkMath.subtract(topLeftPoint, bottomLeftPoint, [0, 0, 0]);
-    vtkMath.normalize(viewUp);
-    viewUpFromViewType[viewType] = viewUp;
+    transformPlane(planeSource, model.widgetState.getCenter(), normal, viewUp);
 
     // Clip to bounds
     const boundedOrigin = [...planeSource.getOrigin()];
     const boundedP1 = [...planeSource.getPoint1()];
     const boundedP2 = [...planeSource.getPoint2()];
+
     boundPlane(
       model.widgetState.getImage().getBounds(),
       boundedOrigin,
@@ -424,9 +411,9 @@ function vtkResliceCursorWidget(publicAPI, model) {
       boundedP2
     );
 
-    planeSource.setOrigin(boundedOrigin);
-    planeSource.setPoint1(boundedP1[0], boundedP1[1], boundedP1[2]);
-    planeSource.setPoint2(boundedP2[0], boundedP2[1], boundedP2[2]);
+    planeSource.setOrigin(...boundedOrigin);
+    planeSource.setPoint1(...boundedP1);
+    planeSource.setPoint2(...boundedP2);
 
     const o = planeSource.getOrigin();
 
@@ -441,10 +428,8 @@ function vtkResliceCursorWidget(publicAPI, model) {
     // The x,y dimensions of the plane
     const planeSizeX = vtkMath.normalize(planeAxis1);
     const planeSizeY = vtkMath.normalize(planeAxis2);
-    const normal = planeSource.getNormal();
 
-    const newResliceAxes = mat4.create();
-    mat4.identity(newResliceAxes);
+    const newResliceAxes = mat4.identity(new Float64Array(16));
 
     for (let i = 0; i < 3; i++) {
       newResliceAxes[4 * i + 0] = planeAxis1[i];
@@ -540,7 +525,7 @@ function vtkResliceCursorWidget(publicAPI, model) {
       imageReslice.setOutputExtent([0, extentX - 1, 0, extentY - 1, 0, 0]) ||
       modified;
 
-    return modified;
+    return { modified, origin: o, point1: p1, point2: p2 };
   };
 
   /**
@@ -550,31 +535,55 @@ function vtkResliceCursorWidget(publicAPI, model) {
    */
   publicAPI.getPlaneSourceFromViewType = (type) => {
     const planeSource = vtkPlaneSource.newInstance();
-    const widgetState = publicAPI.getWidgetState();
-    const origin = widgetState.getCenter();
-    planeSource.setOrigin(origin);
-    let normal = [];
-    switch (type) {
-      case ViewTypes.XY_PLANE: {
-        normal = widgetState.getZPlaneNormal();
-        break;
-      }
-      case ViewTypes.XZ_PLANE: {
-        normal = widgetState.getYPlaneNormal();
-        break;
-      }
-      case ViewTypes.YZ_PLANE: {
-        normal = widgetState.getXPlaneNormal();
-        break;
-      }
-      default:
-        break;
-    }
+    const origin = publicAPI.getWidgetState().getCenter();
+    const planeNormal = publicAPI.getPlaneNormalFromViewType(type);
 
-    planeSource.setNormal(normal);
+    planeSource.setNormal(planeNormal);
     planeSource.setOrigin(origin);
 
     return planeSource;
+  };
+
+  publicAPI.getPlaneNormalFromViewType = (viewType) =>
+    publicAPI.getWidgetState().getPlanes()[viewType].normal;
+
+  /**
+   * Returns the normals of the planes that are not viewType.
+   * @param {ViewType} viewType ViewType to extract other normals
+   */
+  publicAPI.getOtherPlaneNormals = (viewType) =>
+    [ViewTypes.YZ_PLANE, ViewTypes.XZ_PLANE, ViewTypes.XY_PLANE]
+      .filter((vt) => vt !== viewType)
+      .map((vt) => publicAPI.getPlaneNormalFromViewType(vt));
+
+  /**
+   * Return the reslice cursor matrix built as such: [YZ, XZ, XY, center]
+   */
+  publicAPI.getResliceMatrix = () => {
+    const resliceMatrix = mat4.identity(new Float64Array(16));
+
+    for (let i = 0; i < 3; i++) {
+      resliceMatrix[4 * i + 0] = publicAPI.getPlaneNormalFromViewType(
+        ViewTypes.YZ_PLANE
+      )[i];
+      resliceMatrix[4 * i + 1] = publicAPI.getPlaneNormalFromViewType(
+        ViewTypes.XZ_PLANE
+      )[i];
+      resliceMatrix[4 * i + 2] = publicAPI.getPlaneNormalFromViewType(
+        ViewTypes.XY_PLANE
+      )[i];
+    }
+
+    const origin = publicAPI.getWidgetState().getCenter();
+
+    const m = vtkMatrixBuilder
+      .buildFromRadian()
+      .translate(...origin)
+      .multiply(resliceMatrix)
+      .translate(...vtkMath.multiplyScalar([...origin], -1))
+      .getMatrix();
+
+    return m;
   };
 }
 

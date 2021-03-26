@@ -5,17 +5,17 @@ import vtkBufferObject from 'vtk.js/Sources/Rendering/OpenGL/BufferObject';
 import { ObjectType } from 'vtk.js/Sources/Rendering/OpenGL/BufferObject/Constants';
 import { Representation } from 'vtk.js/Sources/Rendering/Core/Property/Constants';
 
-const { vtkDebugMacro, vtkErrorMacro } = macro;
+const { vtkErrorMacro } = macro;
 
 // ----------------------------------------------------------------------------
 // Static functions
 // ----------------------------------------------------------------------------
 
 function computeInverseShiftAndScaleMatrix(coordShift, coordScale) {
-  const inverseScale = vec3.create();
+  const inverseScale = new Float64Array(3);
   vec3.inverse(inverseScale, coordScale);
 
-  const matrix = mat4.create();
+  const matrix = new Float64Array(16);
   mat4.fromRotationTranslationScale(
     matrix,
     quat.create(),
@@ -141,32 +141,31 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
       },
       polysToWireframe(numPoints, cellPts, offset) {
         // for polys we add a bunch of segments and close it
-        for (let i = 0; i < numPoints; ++i) {
-          addAPoint(cellPts[offset + i]);
-          addAPoint(cellPts[offset + ((i + 1) % numPoints)]);
+        if (numPoints > 2) {
+          for (let i = 0; i < numPoints; ++i) {
+            addAPoint(cellPts[offset + i]);
+            addAPoint(cellPts[offset + ((i + 1) % numPoints)]);
+          }
         }
       },
       stripsToWireframe(numPoints, cellPts, offset) {
-        // for strips we add a bunch of segments and close it
-        for (let i = 0; i < numPoints - 1; ++i) {
-          addAPoint(cellPts[offset + i]);
-          addAPoint(cellPts[offset + i + 1]);
-        }
-        for (let i = 0; i < numPoints - 2; i++) {
-          addAPoint(cellPts[offset + i]);
-          addAPoint(cellPts[offset + i + 2]);
+        if (numPoints > 2) {
+          // for strips we add a bunch of segments and close it
+          for (let i = 0; i < numPoints - 1; ++i) {
+            addAPoint(cellPts[offset + i]);
+            addAPoint(cellPts[offset + i + 1]);
+          }
+          for (let i = 0; i < numPoints - 2; i++) {
+            addAPoint(cellPts[offset + i]);
+            addAPoint(cellPts[offset + i + 2]);
+          }
         }
       },
       polysToSurface(npts, cellPts, offset) {
-        if (npts < 3) {
-          // ignore degenerate triangles
-          vtkDebugMacro('skipping degenerate triangle');
-        } else {
-          for (let i = 0; i < npts - 2; i++) {
-            addAPoint(cellPts[offset + 0]);
-            addAPoint(cellPts[offset + i + 1]);
-            addAPoint(cellPts[offset + i + 2]);
-          }
+        for (let i = 0; i < npts - 2; i++) {
+          addAPoint(cellPts[offset + 0]);
+          addAPoint(cellPts[offset + i + 1]);
+          addAPoint(cellPts[offset + i + 2]);
         }
       },
       stripsToSurface(npts, cellPts, offset) {
@@ -184,22 +183,34 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
         return numPoints;
       },
       linesToWireframe(numPoints, cellPts) {
-        return (numPoints - 1) * 2;
+        if (numPoints > 1) {
+          return (numPoints - 1) * 2;
+        }
+        return 0;
       },
       polysToWireframe(numPoints, cellPts) {
-        return numPoints * 2;
+        if (numPoints > 2) {
+          return numPoints * 2;
+        }
+        return 0;
       },
       stripsToWireframe(numPoints, cellPts) {
-        return numPoints * 4 - 6;
+        if (numPoints > 2) {
+          return numPoints * 4 - 6;
+        }
+        return 0;
       },
       polysToSurface(npts, cellPts) {
-        if (npts < 3) {
-          return 0;
+        if (npts > 2) {
+          return (npts - 2) * 3;
         }
-        return (npts - 2) * 3;
+        return 0;
       },
       stripsToSurface(npts, cellPts, offset) {
-        return (npts - 2) * 3;
+        if (npts > 2) {
+          return (npts - 2) * 3;
+        }
+        return 0;
       },
     };
 
@@ -254,8 +265,8 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
 
     if (useShiftAndScale) {
       // Compute shift and scale vectors
-      const coordShift = vec3.create();
-      const coordScale = vec3.create();
+      const coordShift = new Float64Array(3);
+      const coordScale = new Float64Array(3);
       for (let i = 0; i < 3; ++i) {
         const range = options.points.getRange(i);
         const delta = range[1] - range[0];
@@ -343,7 +354,7 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
   publicAPI.setCoordShiftAndScale = (coordShift, coordScale) => {
     if (
       coordShift !== null &&
-      (coordShift.constructor !== Float32Array || coordShift.length !== 3)
+      (coordShift.constructor !== Float64Array || coordShift.length !== 3)
     ) {
       vtkErrorMacro('Wrong type for coordShift, expected vec3 or null');
       return;
@@ -351,7 +362,7 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
 
     if (
       coordScale !== null &&
-      (coordScale.constructor !== Float32Array || coordScale.length !== 3)
+      (coordScale.constructor !== Float64Array || coordScale.length !== 3)
     ) {
       vtkErrorMacro('Wrong type for coordScale, expected vec3 or null');
       return;

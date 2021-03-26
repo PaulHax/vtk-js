@@ -28,6 +28,8 @@ const handledEvents = [
   'StartAnimation',
   'Animation',
   'EndAnimation',
+  'MouseEnter',
+  'MouseLeave',
   'StartMouseMove',
   'MouseMove',
   'EndMouseMove',
@@ -186,8 +188,8 @@ function vtkRenderWindowInteractor(publicAPI, model) {
     const keys = {
       key: event.key,
       keyCode: event.charCode,
+      ...modifierKeys,
     };
-    Object.assign(keys, modifierKeys);
     return keys;
   }
 
@@ -209,7 +211,6 @@ function vtkRenderWindowInteractor(publicAPI, model) {
       }
 
       rootElm[method]('mouseup', publicAPI.handleMouseUp);
-      // rootElm[method]('mouseleave', publicAPI.handleMouseUp);
       rootElm[method]('mousemove', publicAPI.handleMouseMove);
       rootElm[method]('touchend', publicAPI.handleTouchEnd, false);
       rootElm[method]('touchcancel', publicAPI.handleTouchEnd, false);
@@ -227,6 +228,8 @@ function vtkRenderWindowInteractor(publicAPI, model) {
     // container.addEventListener('click', preventDefault); // Avoid stopping event propagation
     container.addEventListener('wheel', publicAPI.handleWheel);
     container.addEventListener('DOMMouseScroll', publicAPI.handleWheel);
+    container.addEventListener('mouseenter', publicAPI.handleMouseEnter);
+    container.addEventListener('mouseleave', publicAPI.handleMouseLeave);
     container.addEventListener('mousemove', publicAPI.handleMouseMove);
     container.addEventListener('mousedown', publicAPI.handleMouseDown);
     document
@@ -256,6 +259,14 @@ function vtkRenderWindowInteractor(publicAPI, model) {
     model.container.removeEventListener(
       'DOMMouseScroll',
       publicAPI.handleWheel
+    );
+    model.container.removeEventListener(
+      'mouseenter',
+      publicAPI.handleMouseEnter
+    );
+    model.container.removeEventListener(
+      'mouseleave',
+      publicAPI.handleMouseLeave
     );
     model.container.removeEventListener('mousemove', publicAPI.handleMouseMove);
     model.container.removeEventListener('mousedown', publicAPI.handleMouseDown);
@@ -305,10 +316,9 @@ function vtkRenderWindowInteractor(publicAPI, model) {
     event.preventDefault();
 
     const callData = {
+      ...getModifierKeysFor(event),
       position: getScreenEventPositionFor(event),
     };
-    const keys = getModifierKeysFor(event);
-    Object.assign(callData, keys);
     switch (event.button) {
       case 0:
         publicAPI.leftButtonPressEvent(callData);
@@ -474,10 +484,9 @@ function vtkRenderWindowInteractor(publicAPI, model) {
     // event.preventDefault();
 
     const callData = {
+      ...getModifierKeysFor(event),
       position: getScreenEventPositionFor(event),
     };
-    const keys = getModifierKeysFor(event);
-    Object.assign(callData, keys);
 
     if (model.moveTimeoutID === 0) {
       publicAPI.startMouseMoveEvent(callData);
@@ -527,9 +536,11 @@ function vtkRenderWindowInteractor(publicAPI, model) {
      *   pixelY  -- " - y plane
      *
      */
-    const callData = normalizeWheel(event);
-    const keys = getModifierKeysFor(event);
-    Object.assign(callData, keys);
+    const callData = {
+      ...normalizeWheel(event),
+      ...getModifierKeysFor(event),
+      position: getScreenEventPositionFor(event),
+    };
 
     if (model.wheelTimeoutID === 0) {
       publicAPI.startMouseWheelEvent(callData);
@@ -545,16 +556,32 @@ function vtkRenderWindowInteractor(publicAPI, model) {
     }, 200);
   };
 
+  publicAPI.handleMouseEnter = (event) => {
+    const callData = {
+      ...getModifierKeysFor(event),
+      position: getScreenEventPositionFor(event),
+    };
+    publicAPI.mouseEnterEvent(callData);
+  };
+
+  publicAPI.handleMouseLeave = (event) => {
+    const callData = {
+      ...getModifierKeysFor(event),
+      position: getScreenEventPositionFor(event),
+    };
+
+    publicAPI.mouseLeaveEvent(callData);
+  };
+
   publicAPI.handleMouseUp = (event) => {
     interactionRegistration(false);
     event.stopPropagation();
     event.preventDefault();
 
     const callData = {
+      ...getModifierKeysFor(event),
       position: getScreenEventPositionFor(event),
     };
-    const keys = getModifierKeysFor(event);
-    Object.assign(callData, keys);
     switch (event.button) {
       case 0:
         publicAPI.leftButtonReleaseEvent(callData);
@@ -769,10 +796,9 @@ function vtkRenderWindowInteractor(publicAPI, model) {
       const callData = {
         type: eventName,
         pokedRenderer: model.currentRenderer,
+        // Add the arguments to the call data
+        ...arg,
       };
-
-      // Add the arguments to the call data
-      Object.assign(callData, arg);
 
       // Call invoke
       publicAPI[`invoke${eventName}`](callData);
@@ -1031,8 +1057,6 @@ export function extend(publicAPI, model, initialValues = {}) {
   macro.get(publicAPI, model, [
     'initialized',
     'container',
-    'enabled',
-    'enableRender',
     'interactorStyle',
     'lastFrameTime',
     'view',
@@ -1042,6 +1066,7 @@ export function extend(publicAPI, model, initialValues = {}) {
   macro.setGet(publicAPI, model, [
     'lightFollowCamera',
     'enabled',
+    'enableRender',
     'recognizeGestures',
     'desiredUpdateRate',
     'stillUpdateRate',

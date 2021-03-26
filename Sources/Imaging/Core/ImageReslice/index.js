@@ -3,6 +3,7 @@ import { vec4, mat4 } from 'gl-matrix';
 import macro from 'vtk.js/Sources/macro';
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
 import { VtkDataTypes } from 'vtk.js/Sources/Common/Core/DataArray/Constants';
+import vtkBoundingBox from 'vtk.js/Sources/Common/DataModel/BoundingBox';
 import vtkImageData from 'vtk.js/Sources/Common/DataModel/ImageData';
 import vtkImageInterpolator from 'vtk.js/Sources/Imaging/Core/ImageInterpolator';
 import vtkImagePointDataIterator from 'vtk.js/Sources/Imaging/Core/ImagePointDataIterator';
@@ -15,9 +16,9 @@ import {
   vtkInterpolationMathRound,
   vtkInterpolationMathClamp,
 } from 'vtk.js/Sources/Imaging/Core/AbstractImageInterpolator/InterpolationInfo';
-import SlabMode from './Constants';
+import { SlabMode } from './Constants';
 
-const { TYPED_ARRAYS, capitalize, vtkErrorMacro, vtkDebugMacro } = macro;
+const { TYPED_ARRAYS, capitalize, vtkErrorMacro } = macro;
 
 // ----------------------------------------------------------------------------
 // vtkImageReslice methods
@@ -30,9 +31,75 @@ function vtkImageReslice(publicAPI, model) {
   let indexMatrix = null;
   let optimizedTransform = null;
 
+  function getImageResliceSlabTrap(tmpPtr, inComponents, sampleCount, f) {
+    const n = sampleCount - 1;
+    for (let i = 0; i < inComponents; i += 1) {
+      let result = tmpPtr[i] * 0.5;
+      for (let j = 1; j < n; j += 1) {
+        result += tmpPtr[i + j * inComponents];
+      }
+      result += tmpPtr[i + n * inComponents] * 0.5;
+      tmpPtr[i] = result * f;
+    }
+  }
+
+  function getImageResliceSlabSum(tmpPtr, inComponents, sampleCount, f) {
+    for (let i = 0; i < inComponents; i += 1) {
+      let result = tmpPtr[i];
+      for (let j = 1; j < sampleCount; j += 1) {
+        result += tmpPtr[i + j * inComponents];
+      }
+      tmpPtr[i] = result * f;
+    }
+  }
+
+  function getImageResliceCompositeMinValue(tmpPtr, inComponents, sampleCount) {
+    for (let i = 0; i < inComponents; i += 1) {
+      let result = tmpPtr[i];
+      for (let j = 1; j < sampleCount; j += 1) {
+        result = Math.min(result, tmpPtr[i + j * inComponents]);
+      }
+      tmpPtr[i] = result;
+    }
+  }
+
+  function getImageResliceCompositeMaxValue(tmpPtr, inComponents, sampleCount) {
+    for (let i = 0; i < inComponents; i += 1) {
+      let result = tmpPtr[i];
+      for (let j = 1; j < sampleCount; j += 1) {
+        result = Math.max(result, tmpPtr[i + j * inComponents]);
+      }
+      tmpPtr[i] = result;
+    }
+  }
+
+  function getImageResliceCompositeMeanValue(
+    tmpPtr,
+    inComponents,
+    sampleCount
+  ) {
+    const f = 1.0 / sampleCount;
+    getImageResliceSlabSum(tmpPtr, inComponents, sampleCount, f);
+  }
+
+  function getImageResliceCompositeMeanTrap(tmpPtr, inComponents, sampleCount) {
+    const f = 1.0 / (sampleCount - 1);
+    getImageResliceSlabTrap(tmpPtr, inComponents, sampleCount, f);
+  }
+
+  function getImageResliceCompositeSumValue(tmpPtr, inComponents, sampleCount) {
+    const f = 1.0;
+    getImageResliceSlabSum(tmpPtr, inComponents, sampleCount, f);
+  }
+
+  function getImageResliceCompositeSumTrap(tmpPtr, inComponents, sampleCount) {
+    const f = 1.0;
+    getImageResliceSlabTrap(tmpPtr, inComponents, sampleCount, f);
+  }
+
   publicAPI.setResliceAxes = (resliceAxes) => {
     if (!model.resliceAxes) {
-      model.resliceAxes = mat4.create();
+      model.resliceAxes = mat4.identity(new Float64Array(16));
     }
 
     if (!mat4.exactEquals(model.resliceAxes, resliceAxes)) {
@@ -67,11 +134,13 @@ function vtkImageReslice(publicAPI, model) {
     const outWholeExt = [0, 0, 0, 0, 0, 0];
     const outDims = [0, 0, 0];
 
-    let matrix = mat4.create();
+    let matrix = null;
     if (model.resliceAxes) {
       matrix = model.resliceAxes;
+    } else {
+      matrix = mat4.identity(new Float64Array(16));
     }
-    const imatrix = mat4.create();
+    const imatrix = new Float64Array(16);
     mat4.invert(imatrix, matrix);
 
     const inCenter = [
@@ -219,7 +288,6 @@ function vtkImageReslice(publicAPI, model) {
 
     outData[0] = output;
 
-    vtkDebugMacro('Produced output');
     // console.timeEnd('reslice');
   };
 
@@ -233,7 +301,7 @@ function vtkImageReslice(publicAPI, model) {
     const outputStencil = null;
 
     // multiple samples for thick slabs
-    const nsamples = Math.min(model.slabNumberOfSlices, 1);
+    const nsamples = Math.max(model.slabNumberOfSlices, 1);
 
     // spacing between slab samples (as a fraction of slice spacing).
     const slabSampleSpacing = model.slabSliceSpacingFraction;
@@ -314,9 +382,7 @@ function vtkImageReslice(publicAPI, model) {
     // allocate an output row of type double
     let floatPtr = null;
     if (!optimizeNearest) {
-      floatPtr = new Float64Array(
-        inComponents * (outExt[1] - outExt[0] + nsamples)
-      );
+      floatPtr = new Float64Array(inComponents * (outExt[1] - outExt[0]));
     }
 
     const background = new TYPED_ARRAYS[inputScalarType](model.backgroundColor);
@@ -358,13 +424,24 @@ function vtkImageReslice(publicAPI, model) {
     const iter = vtkImagePointDataIterator.newInstance();
     iter.initialize(output, outExt, model.stencil, null);
     const outPtr0 = iter.getScalars(output, 0);
+    let outPtrIndex = 0;
+    const outTmp = new TYPED_ARRAYS[scalarType](
+      vtkBoundingBox.getDiagonalLength(outExt) * outComponents * 2
+    );
+
+    const interpolatedPtr = new Float64Array(inComponents * nsamples);
+    const interpolatedPoint = new Float64Array(inComponents);
+
     for (; !iter.isAtEnd(); iter.nextSpan()) {
       const span = iter.spanEndId() - iter.getId();
-      outPtr = outPtr0.subarray(iter.getId() * scalarSize * outComponents);
+      outPtrIndex = iter.getId() * scalarSize * outComponents;
 
       if (!iter.isInStencil()) {
         // clear any regions that are outside the stencil
-        outPtr = setpixels(outPtr, background, outComponents, span);
+        const n = setpixels(outTmp, background, outComponents, span);
+        for (let i = 0; i < n; ++i) {
+          outPtr0[outPtrIndex++] = outTmp[i];
+        }
       } else {
         // get output index, and compute position in input image
         const outIndex = iter.getIndex();
@@ -397,7 +474,8 @@ function vtkImageReslice(publicAPI, model) {
           let isInBounds = 1;
           let startIdX = idXmin;
           let idX = idXmin;
-          let tmpPtr = floatPtr;
+          const tmpPtr = floatPtr;
+          let pixelIndex = 0;
 
           while (startIdX <= idXmax) {
             for (; idX <= idXmax && isInBounds === wasInBounds; idX++) {
@@ -412,8 +490,7 @@ function vtkImageReslice(publicAPI, model) {
               let inPoint = inPoint2;
               isInBounds = false;
 
-              let sampleCount = 0;
-              let interpolatedPtr = tmpPtr;
+              let interpolatedPtrIndex = 0;
               for (let sample = 0; sample < nsamples; ++sample) {
                 if (nsamples > 1) {
                   let s = sample - 0.5 * (nsamples - 1);
@@ -445,17 +522,25 @@ function vtkImageReslice(publicAPI, model) {
 
                 if (model.interpolator.checkBoundsIJK(inPoint)) {
                   // do the interpolation
-                  sampleCount++;
                   isInBounds = 1;
-                  model.interpolator.interpolateIJK(inPoint, interpolatedPtr);
-                  interpolatedPtr = interpolatedPtr.subarray(inComponents);
+                  model.interpolator.interpolateIJK(inPoint, interpolatedPoint);
+                  for (let i = 0; i < inComponents; ++i) {
+                    interpolatedPtr[interpolatedPtrIndex++] =
+                      interpolatedPoint[i];
+                  }
                 }
               }
 
-              if (sampleCount > 1) {
-                composite(tmpPtr, inComponents, sampleCount);
+              if (interpolatedPtrIndex > inComponents) {
+                composite(
+                  interpolatedPtr,
+                  inComponents,
+                  interpolatedPtrIndex / inComponents
+                );
               }
-              tmpPtr = tmpPtr.subarray(inComponents);
+              for (let i = 0; i < inComponents; ++i) {
+                tmpPtr[pixelIndex++] = interpolatedPtr[i];
+              }
 
               // set "was in" to "is in" if first pixel
               wasInBounds = idX > idXmin ? wasInBounds : isInBounds;
@@ -465,6 +550,7 @@ function vtkImageReslice(publicAPI, model) {
             const endIdX = idX - 1 - (isInBounds !== wasInBounds);
             const numpixels = endIdX - startIdX + 1;
 
+            let n = 0;
             if (wasInBounds) {
               if (outputStencil) {
                 outputStencil.insertNextExtent(startIdX, endIdX, idY, idZ);
@@ -483,7 +569,7 @@ function vtkImageReslice(publicAPI, model) {
               if (convertScalars) {
                 convertScalars(
                   floatPtr.subarray(startIdX * inComponents),
-                  outPtr,
+                  outTmp,
                   inputScalarType,
                   inComponents,
                   numpixels,
@@ -491,19 +577,20 @@ function vtkImageReslice(publicAPI, model) {
                   idY,
                   idZ
                 );
-                outPtr = outPtr.subarray(
-                  numpixels * outComponents * scalarSize
-                );
+                n = numpixels * outComponents * scalarSize;
               } else {
-                outPtr = convertpixels(
-                  outPtr,
+                n = convertpixels(
+                  outTmp,
                   floatPtr.subarray(startIdX * inComponents),
                   outComponents,
                   numpixels
                 );
               }
             } else {
-              outPtr = setpixels(outPtr, background, outComponents, numpixels);
+              n = setpixels(outTmp, background, outComponents, numpixels);
+            }
+            for (let i = 0; i < n; ++i) {
+              outPtr0[outPtrIndex++] = outTmp[i];
             }
 
             startIdX += numpixels;
@@ -512,7 +599,7 @@ function vtkImageReslice(publicAPI, model) {
         } else {
           // optimize for nearest-neighbor interpolation
           const inPtrTmp0 = inPtr;
-          let outPtrTmp = outPtr;
+          const outPtrTmp = outPtr;
 
           const inIncX = inInc[0] * inputScalarSize;
           const inIncY = inInc[1] * inputScalarSize;
@@ -550,13 +637,15 @@ function vtkImageReslice(publicAPI, model) {
                 // clear leading out-of-bounds pixels
                 startIdX = iidX;
                 isInBounds = true;
-                outPtr = setpixels(
-                  outPtr,
+                const n = setpixels(
+                  outTmp,
                   background,
                   outComponents,
                   startIdX - idXmin
                 );
-                outPtrTmp = outPtr;
+                for (let i = 0; i < n; ++i) {
+                  outPtr0[outPtrIndex++] = outTmp[i];
+                }
               }
               // set the final index that was within input bounds
               endIdX = iidX;
@@ -569,7 +658,7 @@ function vtkImageReslice(publicAPI, model) {
               // of instructions necessary to perform the copy
               switch (bytesPerPixel) {
                 case 1:
-                  outPtrTmp[0] = inPtrTmp0[offset];
+                  outPtr0[outPtrIndex++] = inPtrTmp0[offset];
                   break;
                 case 2:
                 case 3:
@@ -577,20 +666,19 @@ function vtkImageReslice(publicAPI, model) {
                 case 8:
                 case 12:
                 case 16:
-                  outPtrTmp.set(
-                    inPtrTmp0.subarray(offset, offset + bytesPerPixel)
-                  );
+                  for (let i = 0; i < bytesPerPixel; ++i) {
+                    outPtr0[outPtrIndex++] = inPtrTmp0[offset + i];
+                  }
                   break;
                 default: {
                   // TODO: check bytes
                   let oc = 0;
                   do {
-                    outPtrTmp[oc] = inPtrTmp0[offset++];
+                    outPtr0[outPtrIndex++] = inPtrTmp0[offset++];
                   } while (++oc !== bytesPerPixel);
                   break;
                 }
               }
-              outPtrTmp = outPtrTmp.subarray(bytesPerPixel);
             } else if (isInBounds) {
               // leaving input bounds
               break;
@@ -599,12 +687,15 @@ function vtkImageReslice(publicAPI, model) {
 
           // clear trailing out-of-bounds pixels
           outPtr = outPtrTmp;
-          outPtr = setpixels(
-            outPtr,
+          const n = setpixels(
+            outTmp,
             background,
             outComponents,
             idXmax - endIdX
           );
+          for (let i = 0; i < n; ++i) {
+            outPtr0[outPtrIndex++] = outTmp[i];
+          }
 
           if (outputStencil && endIdX >= startIdX) {
             outputStencil.insertNextExtent(startIdX, endIdX, idY, idZ);
@@ -617,7 +708,7 @@ function vtkImageReslice(publicAPI, model) {
   publicAPI.getIndexMatrix = (input, output) => {
     // first verify that we have to update the matrix
     if (indexMatrix === null) {
-      indexMatrix = mat4.create();
+      indexMatrix = mat4.identity(new Float64Array(16));
     }
 
     const inOrigin = input.getOrigin();
@@ -625,9 +716,9 @@ function vtkImageReslice(publicAPI, model) {
     const outOrigin = output.getOrigin();
     const outSpacing = output.getSpacing();
 
-    const transform = mat4.create();
-    const inMatrix = mat4.create();
-    const outMatrix = mat4.create();
+    const transform = mat4.identity(new Float64Array(16));
+    const inMatrix = mat4.identity(new Float64Array(16));
+    const outMatrix = mat4.identity(new Float64Array(16));
 
     if (optimizedTransform) {
       optimizedTransform = null;
@@ -685,9 +776,11 @@ function vtkImageReslice(publicAPI, model) {
     const dims = input.getDimensions();
     const inWholeExt = [0, dims[0] - 1, 0, dims[1] - 1, 0, dims[2] - 1];
 
-    const matrix = mat4.create();
+    const matrix = new Float64Array(16);
     if (model.resliceAxes) {
       mat4.invert(matrix, model.resliceAxes);
+    } else {
+      mat4.identity(matrix);
     }
 
     const bounds = [
@@ -759,7 +852,7 @@ function vtkImageReslice(publicAPI, model) {
     for (let i = 0; i < count; ++i) {
       outPtr[i] = vtkInterpolationMathClamp(inPtr[i], min, max);
     }
-    return outPtr.subarray(n * numscalars);
+    return count;
   };
 
   publicAPI.convert = (outPtr, inPtr, numscalars, n) => {
@@ -767,7 +860,7 @@ function vtkImageReslice(publicAPI, model) {
     for (let i = 0; i < count; ++i) {
       outPtr[i] = Math.round(inPtr[i]);
     }
-    return outPtr.subarray(n * numscalars);
+    return count;
   };
 
   publicAPI.getConversionFunc = (
@@ -811,22 +904,49 @@ function vtkImageReslice(publicAPI, model) {
   };
 
   publicAPI.set = (outPtr, inPtr, numscalars, n) => {
-    const source = inPtr.subarray(0, numscalars);
+    const count = numscalars * n;
     for (let i = 0; i < n; ++i) {
-      outPtr.set(source, i * numscalars);
+      outPtr[i] = inPtr[i];
     }
-    return outPtr.subarray(numscalars * n);
+    return count;
   };
 
   publicAPI.set1 = (outPtr, inPtr, numscalars, n) => {
     outPtr.fill(inPtr[0], 0, n);
-    return outPtr.subarray(n);
+    return n;
   };
 
   publicAPI.getSetPixelsFunc = (dataType, dataSize, numscalars, dataPtr) =>
     numscalars === 1 ? publicAPI.set1 : publicAPI.set;
 
-  publicAPI.getCompositeFunc = (slabMode, slabTrapezoidIntegration) => null;
+  publicAPI.getCompositeFunc = (slabMode, slabTrapezoidIntegration) => {
+    let composite = null;
+    // eslint-disable-next-line default-case
+    switch (slabMode) {
+      case SlabMode.MIN:
+        composite = getImageResliceCompositeMinValue;
+        break;
+      case SlabMode.MAX:
+        composite = getImageResliceCompositeMaxValue;
+        break;
+      case SlabMode.MEAN:
+        if (slabTrapezoidIntegration) {
+          composite = getImageResliceCompositeMeanTrap;
+        } else {
+          composite = getImageResliceCompositeMeanValue;
+        }
+        break;
+      case SlabMode.SUM:
+        if (slabTrapezoidIntegration) {
+          composite = getImageResliceCompositeSumTrap;
+        } else {
+          composite = getImageResliceCompositeSumValue;
+        }
+        break;
+    }
+
+    return composite;
+  };
 
   publicAPI.applyTransform = (newTrans, inPoint, inOrigin, inInvSpacing) => {
     inPoint[3] = 1;
@@ -875,6 +995,7 @@ function vtkImageReslice(publicAPI, model) {
     return 1;
   };
 
+  // TODO: to move in vtkMath and add tolerance
   publicAPI.isIdentityMatrix = (matrix) => {
     for (let i = 0; i < 4; ++i) {
       for (let j = 0; j < 4; ++j) {
@@ -990,6 +1111,10 @@ export function extend(publicAPI, model, initialValues = {}) {
     'mirror',
     'border',
     'backgroundColor',
+    'slabMode',
+    'slabTrapezoidIntegration',
+    'slabNumberOfSlices',
+    'slabSliceSpacingFraction',
   ]);
 
   macro.setGetArray(publicAPI, model, ['outputOrigin', 'outputSpacing'], 3);
