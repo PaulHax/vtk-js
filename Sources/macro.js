@@ -32,6 +32,9 @@ consoleMethods.forEach((methodName) => {
   fakeConsole[methodName] = noOp;
 });
 
+/* eslint-disable no-undef */
+const global = globalThis;
+
 global.console = console.hasOwnProperty('log') ? console : fakeConsole;
 
 const loggerFunctions = {

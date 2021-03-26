@@ -306,6 +306,8 @@ export function extend(publicAPI, model, initialValues = {}) {
     );
   }
 
+  /* eslint-disable no-undef */
+  const window = globalThis;
   if (!model.values) {
     model.values = new window[model.dataType](model.size);
   } else if (Array.isArray(model.values)) {
