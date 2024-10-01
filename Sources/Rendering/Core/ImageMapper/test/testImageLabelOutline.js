@@ -4,6 +4,7 @@ import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
 
 import vtkImageMapper from 'vtk.js/Sources/Rendering/Core/ImageMapper';
 import vtkImageSlice from 'vtk.js/Sources/Rendering/Core/ImageSlice';
+import { SlicingMode } from 'vtk.js/Sources/Rendering/Core/ImageMapper/Constants';
 import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
 import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
 import vtkImageData from 'vtk.js/Sources/Common/DataModel/ImageData';
@@ -13,7 +14,7 @@ import vtkPiecewiseFunction from 'vtk.js/Sources/Common/DataModel/PiecewiseFunct
 
 import baseline from './testImageLabelOutline.png';
 
-test('Test ImageMapper', (t) => {
+test.only('Test ImageMapper', (t) => {
   const gc = testUtils.createGarbageCollector(t);
   t.ok('rendering', 'vtkImageMapper testImage');
 
@@ -37,6 +38,9 @@ test('Test ImageMapper', (t) => {
   const BACKGROUND = 0;
   const LOW_VALUE = 80;
   const HIGH_VALUE = 160;
+  const SLICE = 4;
+  const SLICING_MODE = SlicingMode.I;
+  const CAMERA_POS = [10, 0, 0];
 
   function createLabelPipeline(backgroundImageData) {
     const labelMapData = gc.registerResource(
@@ -78,6 +82,9 @@ test('Test ImageMapper', (t) => {
       cfun: gc.registerResource(vtkColorTransferFunction.newInstance()),
       ofun: gc.registerResource(vtkPiecewiseFunction.newInstance()),
     };
+
+    labelMap.mapper.setSlicingMode(SLICING_MODE);
+    labelMap.mapper.setSlice(SLICE);
 
     // Labelmap pipeline
     labelMap.mapper.setInputData(labelMapData);
@@ -129,7 +136,7 @@ test('Test ImageMapper', (t) => {
   // Create a one slice vtkImageData that has four quadrants of different values
 
   const imageData = gc.registerResource(vtkImageData.newInstance());
-  const dims = [10, 10, 1];
+  const dims = [10, 10, 10];
   imageData.setSpacing(1, 1, 1);
   imageData.setOrigin(0.1, 0.1, 0.1);
   imageData.setDirection(1, 0, 0, 0, 1, 0, 0, 0, 1);
@@ -140,14 +147,16 @@ test('Test ImageMapper', (t) => {
   const values = new Uint8Array(dims[0] * dims[1] * dims[2]);
 
   let i = 0;
-  for (let y = 0; y < dims[1]; y++) {
-    for (let x = 0; x < dims[0]; x++, i++) {
-      if ((x < 3 && y < 3) || (x > 7 && y > 7)) {
-        values[i] = BACKGROUND;
-      } else if (x > 4 && x < 6 && y > 4 && y < 7) {
-        values[i] = LOW_VALUE;
-      } else {
-        values[i] = HIGH_VALUE;
+  for (let z = 0; z < dims[1]; z++) {
+    for (let y = 0; y < dims[1]; y++) {
+      for (let x = 0; x < dims[0]; x++, i++) {
+        if (x > 2 && x < 7 && y > 2 && y < 7) {
+          values[i] = HIGH_VALUE;
+          // } else if (x > 4 && x < 6 && y > 4 && y < 7) {
+          //   values[i] = LOW_VALUE;
+        } else {
+          values[i] = BACKGROUND;
+        }
       }
     }
   }
@@ -170,11 +179,15 @@ test('Test ImageMapper', (t) => {
   const actor = gc.registerResource(vtkImageSlice.newInstance());
   const mapper = gc.registerResource(vtkImageMapper.newInstance());
   mapper.setInputData(data);
+  mapper.setSlicingMode(SLICING_MODE);
+  mapper.setSlice(SLICE);
   actor.setMapper(mapper);
   actor.getProperty().setInterpolationTypeToNearest();
 
   renderer.addActor(actor);
   renderer.addActor(labelMap.actor);
+
+  renderer.getActiveCamera().setPosition(...CAMERA_POS);
   renderer.resetCamera();
   renderer.resetCameraClippingRange();
   renderWindow.render();
