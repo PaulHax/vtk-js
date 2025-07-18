@@ -229,8 +229,153 @@ function notSkippedInstance(call) {
 }
 
 // ----------------------------------------------------------------------------
+// Helper functions
+// ----------------------------------------------------------------------------
+
+/**
+ * Get a unique string suitable for use as state.arrays key.
+ * @param {object} arrayMeta
+ * @returns {string} array key
+ */
+function getArrayKey(arrayMeta) {
+  // Two arrays can have exactly the same hash so try to distinquish with name.
+  const namePart = arrayMeta.name ? `_${arrayMeta.name}` : '';
+  return `${arrayMeta.hash}_${arrayMeta.dataType}${namePart}`;
+}
+
+// ----------------------------------------------------------------------------
 // Updater functions
 // ----------------------------------------------------------------------------
+
+function textureUpdater(instance, state, context) {
+  console.log('🔧 Custom texture updater called for', state.id);
+
+  context.start(); // -> start(texture-updater)
+
+  // CRITICAL FIX: Extract arrays from state.properties.fields (like dataset updater does)
+  if (!state.arrays) {
+    state.arrays = {};
+  }
+
+  // Extract dataset fields into state.arrays
+  const fieldsArrays = state.properties.fields || [];
+  console.log('🔍 Extracting', fieldsArrays.length, 'field arrays for texture');
+  for (let i = 0; i < fieldsArrays.length; i++) {
+    const arrayMeta = fieldsArrays[i];
+    const arrayKey = getArrayKey(arrayMeta);
+    state.arrays[arrayKey] = arrayMeta;
+    console.log(
+      '🔍 Added array to state.arrays:',
+      arrayKey,
+      'hash:',
+      arrayMeta.hash
+    );
+  }
+
+  console.log(
+    '🔍 Texture state arrays after extraction:',
+    state.arrays ? Object.keys(state.arrays).length : 'none'
+  );
+  console.log(
+    '🔍 Texture state dependencies:',
+    state.dependencies ? state.dependencies.length : 'none'
+  );
+
+  // Create local properties without fields (like dataset updater does)
+  const localProperties = { ...state.properties };
+  delete localProperties.fields;
+
+  // First update our own properties
+  instance.set(localProperties);
+
+  // Now handle dependencies (image data, etc.)
+  if (state.dependencies) {
+    state.dependencies.forEach((childState) => {
+      const { id, type } = childState;
+      console.log(
+        '🔍 Processing texture dependency:',
+        type,
+        'with arrays:',
+        childState.arrays ? Object.keys(childState.arrays).length : 'none'
+      );
+
+      if (EXCLUDE_INSTANCE_MAP[type]) {
+        const { key, value } = EXCLUDE_INSTANCE_MAP[type];
+        if (!key || childState.properties[key] === value) {
+          SKIPPED_INSTANCE_IDS.push(WRAP_ID(id));
+          return;
+        }
+      }
+
+      let childInstance = context.getInstance(id);
+      if (!childInstance) {
+        childInstance = build(type, { managedInstanceId: id });
+        context.registerInstance(id, childInstance);
+      }
+      update(type, childInstance, childState, context);
+    });
+  }
+
+  if (state.calls) {
+    state.calls.filter(notSkippedInstance).forEach((call) => {
+      // DEBUG console.log('==>', call[0], extractCallArgs(context, call[1]));
+      instance[call[0]].apply(null, extractCallArgs(context, call[1]));
+    });
+  }
+
+  // Handle arrays (texture image data)
+  const dependencies = [];
+  if (state.arrays) {
+    const arraysToBind = [];
+    const promises = Object.values(state.arrays).map((arrayMetadata) => {
+      context.start(); // -> start(arrays)
+      return context
+        .getArray(arrayMetadata.hash, arrayMetadata.dataType, context)
+        .then(createNewArrayHandler(instance, arrayMetadata, arraysToBind))
+        .catch((error) => {
+          console.log(
+            'Error fetching array',
+            JSON.stringify(arrayMetadata),
+            error
+          );
+        })
+        .finally(context.end); // -> end(arrays)
+    });
+    context.start(); // -> start(arraysToBind)
+    dependencies.push(
+      Promise.all(promises)
+        .then(() => {
+          // Since some arrays are getting updated, we should modify our dataset
+          if (arraysToBind.length) {
+            instance.modified();
+          }
+          bindArrays(arraysToBind);
+
+          // CRITICAL: Force texture to update its internal state
+          // This is the key fix for texture updates
+          if (instance.getInputData && instance.getInputData()) {
+            instance.getInputData().modified();
+            instance.modified();
+            console.log('✅ Texture data forcibly updated');
+          }
+
+          return true;
+        })
+        .catch((error) => {
+          console.error(
+            'Error in array handling for state',
+            JSON.stringify(state),
+            error
+          );
+        })
+        .finally(context.end) // -> end(arraysToBind)
+    );
+  }
+
+  console.log('✅ Custom texture updater completed for', state.id);
+  context.end(); // -> end(texture-updater)
+  return Promise.all(dependencies);
+}
 
 function genericUpdater(instance, state, context) {
   context.start(); // -> start(generic-updater)
@@ -481,17 +626,6 @@ function removeUnavailableArrays(fields, availableNames) {
     fields.removeArray(namesToDelete[i]);
   }
 }
-/**
- * Get a unique string suitable for use as state.arrays key.
- * @param {object} arrayMeta
- * @returns {string} array key
- */
-function getArrayKey(arrayMeta) {
-  // Two arrays can have exactly the same hash so try to distinquish with name.
-  const namePart = arrayMeta.name ? `_${arrayMeta.name}` : '';
-  return `${arrayMeta.hash}_${arrayMeta.dataType}${namePart}`;
-}
-
 function createDataSetUpdate(piecesToFetch = []) {
   return (instance, state, context) => {
     context.start(); // -> start(dataset-update)
@@ -645,7 +779,7 @@ const DEFAULT_MAPPING = {
   },
   vtkTexture: {
     build: vtkTexture.newInstance,
-    update: genericUpdater,
+    update: textureUpdater,
   },
   vtkVolume: {
     build: vtkVolume.newInstance,
