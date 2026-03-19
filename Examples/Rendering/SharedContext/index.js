@@ -154,7 +154,7 @@ async function init() {
     const sphereActor = vtkActor.newInstance();
     sphereActor.setMapper(sphereMapper);
     sphereActor.setPosition(mercator.x, mercator.y, scale * 1.45);
-    sphereActor.setScale(scale * 0.75, -scale * 0.75, scale * 0.75);
+    sphereActor.setScale(scale * 0.75, scale * 0.75, scale * 0.75);
     sphereActor.getProperty().setColor(...city.color);
     sphereActor.getProperty().setAmbient(0.0);
     sphereActor.getProperty().setDiffuse(1.0);
