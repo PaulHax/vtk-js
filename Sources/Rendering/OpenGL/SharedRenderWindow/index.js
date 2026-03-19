@@ -63,12 +63,175 @@ function resetGLState(gl, shaderCache) {
   }
 }
 
+function saveGLState(gl) {
+  const state = {
+    blend: gl.isEnabled(gl.BLEND),
+    cullFace: gl.isEnabled(gl.CULL_FACE),
+    depthTest: gl.isEnabled(gl.DEPTH_TEST),
+    polygonOffsetFill: gl.isEnabled(gl.POLYGON_OFFSET_FILL),
+    scissorTest: gl.isEnabled(gl.SCISSOR_TEST),
+    stencilTest: gl.isEnabled(gl.STENCIL_TEST),
+
+    blendEquationRgb: gl.getParameter(gl.BLEND_EQUATION_RGB),
+    blendEquationAlpha: gl.getParameter(gl.BLEND_EQUATION_ALPHA),
+    blendSrcRgb: gl.getParameter(gl.BLEND_SRC_RGB),
+    blendDstRgb: gl.getParameter(gl.BLEND_DST_RGB),
+    blendSrcAlpha: gl.getParameter(gl.BLEND_SRC_ALPHA),
+    blendDstAlpha: gl.getParameter(gl.BLEND_DST_ALPHA),
+    blendColor: gl.getParameter(gl.BLEND_COLOR),
+
+    colorMask: gl.getParameter(gl.COLOR_WRITEMASK),
+    clearColor: gl.getParameter(gl.COLOR_CLEAR_VALUE),
+
+    depthMask: gl.getParameter(gl.DEPTH_WRITEMASK),
+    depthFunc: gl.getParameter(gl.DEPTH_FUNC),
+    clearDepth: gl.getParameter(gl.DEPTH_CLEAR_VALUE),
+
+    stencilFunc: gl.getParameter(gl.STENCIL_FUNC),
+    stencilRef: gl.getParameter(gl.STENCIL_REF),
+    stencilValueMask: gl.getParameter(gl.STENCIL_VALUE_MASK),
+    stencilFail: gl.getParameter(gl.STENCIL_FAIL),
+    stencilPassDepthFail: gl.getParameter(gl.STENCIL_PASS_DEPTH_FAIL),
+    stencilPassDepthPass: gl.getParameter(gl.STENCIL_PASS_DEPTH_PASS),
+    stencilMask: gl.getParameter(gl.STENCIL_WRITEMASK),
+    clearStencil: gl.getParameter(gl.STENCIL_CLEAR_VALUE),
+
+    stencilBackFunc: gl.getParameter(gl.STENCIL_BACK_FUNC),
+    stencilBackRef: gl.getParameter(gl.STENCIL_BACK_REF),
+    stencilBackValueMask: gl.getParameter(gl.STENCIL_BACK_VALUE_MASK),
+    stencilBackFail: gl.getParameter(gl.STENCIL_BACK_FAIL),
+    stencilBackPassDepthFail: gl.getParameter(gl.STENCIL_BACK_PASS_DEPTH_FAIL),
+    stencilBackPassDepthPass: gl.getParameter(gl.STENCIL_BACK_PASS_DEPTH_PASS),
+    stencilBackMask: gl.getParameter(gl.STENCIL_BACK_WRITEMASK),
+
+    cullFaceMode: gl.getParameter(gl.CULL_FACE_MODE),
+    frontFace: gl.getParameter(gl.FRONT_FACE),
+
+    polygonOffsetFactor: gl.getParameter(gl.POLYGON_OFFSET_FACTOR),
+    polygonOffsetUnits: gl.getParameter(gl.POLYGON_OFFSET_UNITS),
+
+    activeTexture: gl.getParameter(gl.ACTIVE_TEXTURE),
+
+    framebufferBinding: gl.getParameter(gl.FRAMEBUFFER_BINDING),
+
+    currentProgram: gl.getParameter(gl.CURRENT_PROGRAM),
+    lineWidth: gl.getParameter(gl.LINE_WIDTH),
+
+    scissorBox: gl.getParameter(gl.SCISSOR_BOX),
+    viewport: gl.getParameter(gl.VIEWPORT),
+  };
+
+  if (gl.SAMPLE_ALPHA_TO_COVERAGE) {
+    state.sampleAlphaToCoverage = gl.isEnabled(gl.SAMPLE_ALPHA_TO_COVERAGE);
+  }
+  if (gl.DRAW_FRAMEBUFFER) {
+    state.drawFramebufferBinding = gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING);
+    state.readFramebufferBinding = gl.getParameter(gl.READ_FRAMEBUFFER_BINDING);
+  }
+  if (gl.bindVertexArray) {
+    state.vertexArrayBinding = gl.getParameter(gl.VERTEX_ARRAY_BINDING);
+  }
+
+  return state;
+}
+
+function restoreGLState(gl, state) {
+  const setFlag = (flag, enabled) => {
+    if (enabled) gl.enable(flag);
+    else gl.disable(flag);
+  };
+
+  setFlag(gl.BLEND, state.blend);
+  setFlag(gl.CULL_FACE, state.cullFace);
+  setFlag(gl.DEPTH_TEST, state.depthTest);
+  setFlag(gl.POLYGON_OFFSET_FILL, state.polygonOffsetFill);
+  setFlag(gl.SCISSOR_TEST, state.scissorTest);
+  setFlag(gl.STENCIL_TEST, state.stencilTest);
+  if (gl.SAMPLE_ALPHA_TO_COVERAGE && state.sampleAlphaToCoverage != null) {
+    setFlag(gl.SAMPLE_ALPHA_TO_COVERAGE, state.sampleAlphaToCoverage);
+  }
+
+  gl.blendEquationSeparate(state.blendEquationRgb, state.blendEquationAlpha);
+  gl.blendFuncSeparate(
+    state.blendSrcRgb,
+    state.blendDstRgb,
+    state.blendSrcAlpha,
+    state.blendDstAlpha
+  );
+  const bc = state.blendColor;
+  gl.blendColor(bc[0], bc[1], bc[2], bc[3]);
+
+  const cm = state.colorMask;
+  gl.colorMask(cm[0], cm[1], cm[2], cm[3]);
+  const cc = state.clearColor;
+  gl.clearColor(cc[0], cc[1], cc[2], cc[3]);
+
+  gl.depthMask(state.depthMask);
+  gl.depthFunc(state.depthFunc);
+  gl.clearDepth(state.clearDepth);
+
+  gl.stencilFuncSeparate(
+    gl.FRONT,
+    state.stencilFunc,
+    state.stencilRef,
+    state.stencilValueMask
+  );
+  gl.stencilFuncSeparate(
+    gl.BACK,
+    state.stencilBackFunc,
+    state.stencilBackRef,
+    state.stencilBackValueMask
+  );
+  gl.stencilOpSeparate(
+    gl.FRONT,
+    state.stencilFail,
+    state.stencilPassDepthFail,
+    state.stencilPassDepthPass
+  );
+  gl.stencilOpSeparate(
+    gl.BACK,
+    state.stencilBackFail,
+    state.stencilBackPassDepthFail,
+    state.stencilBackPassDepthPass
+  );
+  gl.stencilMaskSeparate(gl.FRONT, state.stencilMask);
+  gl.stencilMaskSeparate(gl.BACK, state.stencilBackMask);
+  gl.clearStencil(state.clearStencil);
+
+  gl.cullFace(state.cullFaceMode);
+  gl.frontFace(state.frontFace);
+
+  gl.polygonOffset(state.polygonOffsetFactor, state.polygonOffsetUnits);
+
+  gl.activeTexture(state.activeTexture);
+
+  if (gl.DRAW_FRAMEBUFFER && state.drawFramebufferBinding !== undefined) {
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, state.drawFramebufferBinding);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, state.readFramebufferBinding);
+  } else {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebufferBinding);
+  }
+
+  gl.useProgram(state.currentProgram);
+  gl.lineWidth(state.lineWidth);
+
+  const sb = state.scissorBox;
+  gl.scissor(sb[0], sb[1], sb[2], sb[3]);
+  const vp = state.viewport;
+  gl.viewport(vp[0], vp[1], vp[2], vp[3]);
+
+  if (gl.bindVertexArray && state.vertexArrayBinding !== undefined) {
+    gl.bindVertexArray(state.vertexArrayBinding);
+  }
+}
+
 function vtkSharedRenderWindow(publicAPI, model) {
   model.classHierarchy.push('vtkSharedRenderWindow');
   let renderEventSubscription = null;
   let renderCallback = null;
   let suppressRenderEvent = false;
   let savedEnableRender = null;
+  let savedHostState = null;
   const superGet3DContext = publicAPI.get3DContext;
   let cachingContextHandler;
 
@@ -179,14 +342,21 @@ function vtkSharedRenderWindow(publicAPI, model) {
     const gl = model.context;
     if (!gl) return;
 
+    savedHostState = saveGLState(gl);
     resetGLState(gl, publicAPI.getShaderCache());
   };
 
   publicAPI.restoreSharedState = () => {
     const gl = model.context;
-    if (!gl) return;
+    if (!gl || !savedHostState) return;
 
-    resetGLState(gl, publicAPI.getShaderCache());
+    restoreGLState(gl, savedHostState);
+    savedHostState = null;
+
+    const shaderCache = publicAPI.getShaderCache();
+    if (shaderCache) {
+      shaderCache.setLastShaderProgramBound(null);
+    }
   };
 
   publicAPI.setRenderCallback = (callback) => {
