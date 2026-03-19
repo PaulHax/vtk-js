@@ -5,9 +5,11 @@ import '@kitware/vtk.js/Rendering/Profiles/Geometry';
 
 import vtkActor from '@kitware/vtk.js/Rendering/Core/Actor';
 import vtkConeSource from '@kitware/vtk.js/Filters/Sources/ConeSource';
+import vtkSphereSource from '@kitware/vtk.js/Filters/Sources/SphereSource';
 import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
 import vtkRenderer from '@kitware/vtk.js/Rendering/Core/Renderer';
 import vtkRenderWindow from '@kitware/vtk.js/Rendering/Core/RenderWindow';
+import vtkLight from '@kitware/vtk.js/Rendering/Core/Light';
 import vtkSharedRenderWindow from '@kitware/vtk.js/Rendering/OpenGL/SharedRenderWindow';
 
 // ----------------------------------------------------------------------------
@@ -57,6 +59,10 @@ mapContainer.style.width = '100vw';
 mapContainer.style.height = '100vh';
 document.body.appendChild(mapContainer);
 
+const IDENTITY_VIEW_MATRIX = new Float64Array([
+  1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
+]);
+
 // ----------------------------------------------------------------------------
 // Main initialization
 // ----------------------------------------------------------------------------
@@ -90,6 +96,7 @@ async function init() {
     antialias: true,
   });
 
+  window._map = map;
   await new Promise((resolve) => {
     map.on('load', resolve);
   });
@@ -100,7 +107,16 @@ async function init() {
   renderer.setBackground(0, 0, 0, 0);
   renderer.setPreserveColorBuffer(true);
   renderer.setPreserveDepthBuffer(true);
+  // Shared-context rendering uses a MapLibre-provided matrix, so bypass
+  // vtk.js automatic headlights and drive a camera-following scene light.
+  renderer.setAutomaticLightCreation(false);
   renderWindow.addRenderer(renderer);
+
+  const viewLight = vtkLight.newInstance();
+  viewLight.setLightTypeToSceneLight();
+  viewLight.setPositional(true);
+  viewLight.setConeAngle(180);
+  renderer.addLight(viewLight);
 
   // Create cone actors at city locations in Mercator coordinates
   cities.forEach((city) => {
@@ -112,8 +128,10 @@ async function init() {
 
     const coneSource = vtkConeSource.newInstance({
       height: 1.0,
-      radius: 0.5,
-      direction: [0, 0, 1],
+      radius: 0.3,
+      resolution: 12,
+      direction: [0, 0, -1],
+      capping: true,
     });
     const mapper = vtkMapper.newInstance();
     mapper.setInputConnection(coneSource.getOutputPort());
@@ -122,7 +140,25 @@ async function init() {
     actor.setPosition(mercator.x, mercator.y, scale * 0.5);
     actor.setScale(scale, scale, scale);
     actor.getProperty().setColor(...city.color);
+    actor.getProperty().setAmbient(0.4);
+    actor.getProperty().setDiffuse(0.6);
     renderer.addActor(actor);
+
+    const sphereSource = vtkSphereSource.newInstance({
+      radius: 0.3,
+      thetaResolution: 32,
+      phiResolution: 32,
+    });
+    const sphereMapper = vtkMapper.newInstance();
+    sphereMapper.setInputConnection(sphereSource.getOutputPort());
+    const sphereActor = vtkActor.newInstance();
+    sphereActor.setMapper(sphereMapper);
+    sphereActor.setPosition(mercator.x, mercator.y, scale * 1.45);
+    sphereActor.setScale(scale * 0.75, -scale * 0.75, scale * 0.75);
+    sphereActor.getProperty().setColor(...city.color);
+    sphereActor.getProperty().setAmbient(0.0);
+    sphereActor.getProperty().setDiffuse(1.0);
+    renderer.addActor(sphereActor);
   });
 
   // Fit map to show all cities
@@ -147,21 +183,44 @@ async function init() {
 
     render(renderGl, args) {
       if (!openglRenderWindow) return;
-
       const camera = renderer.getActiveCamera();
+      const cameraLngLat = map.transform.getCameraLngLat();
+      const cameraAltitude = map.transform.getCameraAltitude();
+      const cameraMercator = maplibregl.MercatorCoordinate.fromLngLat(
+        cameraLngLat,
+        cameraAltitude
+      );
+      const targetMercator = maplibregl.MercatorCoordinate.fromLngLat(
+        map.getCenter(),
+        typeof map.getCameraTargetElevation === 'function'
+          ? map.getCameraTargetElevation()
+          : 0
+      );
 
-      // Identity view matrix
-      const identity = new Float64Array([
-        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
-      ]);
-      camera.setViewMatrix(identity);
+      viewLight.setPosition(
+        cameraMercator.x,
+        cameraMercator.y,
+        cameraMercator.z
+      );
+      viewLight.setFocalPoint(
+        targetMercator.x,
+        targetMercator.y,
+        targetMercator.z
+      );
 
-      // MapLibre 5.x: use defaultProjectionData.mainMatrix which is scaled
-      // for custom layers using mercator coordinates [0..1]
+      camera.setViewMatrix(IDENTITY_VIEW_MATRIX);
       camera.setProjectionMatrix(args.defaultProjectionData.mainMatrix);
       camera.modified();
 
-      openglRenderWindow.renderShared();
+      // MapLibre's projection includes a handedness flip, so compensate while
+      // rendering vtk.js geometry in the shared context.
+      const previousFrontFace = renderGl.getParameter(renderGl.FRONT_FACE);
+      renderGl.frontFace(renderGl.CW);
+      try {
+        openglRenderWindow.renderShared();
+      } finally {
+        renderGl.frontFace(previousFrontFace);
+      }
     },
   };
 
