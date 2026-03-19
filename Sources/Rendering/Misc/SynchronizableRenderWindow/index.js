@@ -87,9 +87,29 @@ function createArrayHandler() {
       });
   }
 
+  function cacheArray(sha, array, context) {
+    const mtimes = context
+      ? { [context.getActiveViewId()]: context.getMTime() }
+      : {};
+    dataArrayCache[sha] = { mtimes, array };
+  }
+
+  function getCachedArray(sha, context) {
+    const entry = dataArrayCache[sha];
+    if (entry) {
+      if (context) {
+        entry.mtimes[context.getActiveViewId()] = context.getMTime();
+      }
+      return entry.array;
+    }
+    return null;
+  }
+
   return {
     setFetchArrayFunction,
     getArray,
+    cacheArray,
+    getCachedArray,
     emptyCachedArrays,
     freeOldArrays,
   };
