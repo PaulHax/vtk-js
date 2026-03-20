@@ -11,6 +11,7 @@ import vtkRenderer from '@kitware/vtk.js/Rendering/Core/Renderer';
 import vtkRenderWindow from '@kitware/vtk.js/Rendering/Core/RenderWindow';
 import vtkLight from '@kitware/vtk.js/Rendering/Core/Light';
 import vtkSharedRenderWindow from '@kitware/vtk.js/Rendering/OpenGL/SharedRenderWindow';
+import { mat4, vec3 } from 'gl-matrix';
 
 // ----------------------------------------------------------------------------
 // City data for geo-positioned cones
@@ -59,9 +60,80 @@ mapContainer.style.width = '100vw';
 mapContainer.style.height = '100vh';
 document.body.appendChild(mapContainer);
 
-const IDENTITY_VIEW_MATRIX = new Float64Array([
-  1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
-]);
+const MAPLIBRE_NORTH_UP = [0, -1, 0];
+
+function computeCameraTargetMercator(maplibregl, transform) {
+  return maplibregl.MercatorCoordinate.fromLngLat(
+    transform.center,
+    transform.elevation
+  );
+}
+
+function computeCameraMercator(targetMercator, transform) {
+  const cameraToCenterDistanceMeters =
+    transform.cameraToCenterDistance / transform.pixelsPerMeter;
+  const metersToMercator = targetMercator.meterInMercatorCoordinateUnits();
+  const cameraToCenterDistanceMercator =
+    cameraToCenterDistanceMeters * metersToMercator;
+  const dzMercator =
+    cameraToCenterDistanceMercator * Math.cos(transform.pitchInRadians);
+  const dhMercator = Math.sqrt(
+    Math.max(
+      0,
+      cameraToCenterDistanceMercator * cameraToCenterDistanceMercator -
+        dzMercator * dzMercator
+    )
+  );
+
+  return {
+    x: targetMercator.x + dhMercator * Math.sin(-transform.bearingInRadians),
+    y: targetMercator.y + dhMercator * Math.cos(-transform.bearingInRadians),
+    z: targetMercator.z + dzMercator,
+  };
+}
+
+function computeViewUp(transform) {
+  const cameraToWorldRotation = new Float64Array(16);
+  const viewUp = vec3.fromValues(...MAPLIBRE_NORTH_UP);
+
+  mat4.identity(cameraToWorldRotation);
+  mat4.rotateZ(
+    cameraToWorldRotation,
+    cameraToWorldRotation,
+    transform.bearingInRadians
+  );
+  mat4.rotateX(
+    cameraToWorldRotation,
+    cameraToWorldRotation,
+    -transform.pitchInRadians
+  );
+  mat4.rotateZ(
+    cameraToWorldRotation,
+    cameraToWorldRotation,
+    transform.rollInRadians
+  );
+  vec3.transformMat4(viewUp, viewUp, cameraToWorldRotation);
+  vec3.normalize(viewUp, viewUp);
+
+  return viewUp;
+}
+
+function computeViewMatrix(cameraMercator, targetMercator, viewUp) {
+  const eye = vec3.fromValues(
+    cameraMercator.x,
+    cameraMercator.y,
+    cameraMercator.z
+  );
+  const target = vec3.fromValues(
+    targetMercator.x,
+    targetMercator.y,
+    targetMercator.z
+  );
+  const viewMatrix = new Float64Array(16);
+
+  mat4.lookAt(viewMatrix, eye, target, viewUp);
+  return viewMatrix;
+}
 
 // ----------------------------------------------------------------------------
 // Main initialization
@@ -114,8 +186,7 @@ async function init() {
 
   const viewLight = vtkLight.newInstance();
   viewLight.setLightTypeToSceneLight();
-  viewLight.setPositional(true);
-  viewLight.setConeAngle(180);
+  viewLight.setPositional(false);
   renderer.addLight(viewLight);
 
   // Create cone actors at city locations in Mercator coordinates
@@ -184,18 +255,16 @@ async function init() {
     render(renderGl, args) {
       if (!openglRenderWindow) return;
       const camera = renderer.getActiveCamera();
-      const cameraLngLat = map.transform.getCameraLngLat();
-      const cameraAltitude = map.transform.getCameraAltitude();
-      const cameraMercator = maplibregl.MercatorCoordinate.fromLngLat(
-        cameraLngLat,
-        cameraAltitude
+      const transform = map.transform;
+      const targetMercator = computeCameraTargetMercator(maplibregl, transform);
+      const cameraMercator = computeCameraMercator(targetMercator, transform);
+      const viewMatrix = computeViewMatrix(
+        cameraMercator,
+        targetMercator,
+        computeViewUp(transform)
       );
-      const targetMercator = maplibregl.MercatorCoordinate.fromLngLat(
-        map.getCenter(),
-        typeof map.getCameraTargetElevation === 'function'
-          ? map.getCameraTargetElevation()
-          : 0
-      );
+      const inverseViewMatrix = new Float64Array(16);
+      const projectionMatrix = new Float64Array(16);
 
       viewLight.setPosition(
         cameraMercator.x,
@@ -208,8 +277,15 @@ async function init() {
         targetMercator.z
       );
 
-      camera.setViewMatrix(IDENTITY_VIEW_MATRIX);
-      camera.setProjectionMatrix(args.defaultProjectionData.mainMatrix);
+      mat4.invert(inverseViewMatrix, viewMatrix);
+      mat4.multiply(
+        projectionMatrix,
+        args.defaultProjectionData.mainMatrix,
+        inverseViewMatrix
+      );
+
+      camera.setViewMatrix(viewMatrix);
+      camera.setProjectionMatrix(projectionMatrix);
       camera.modified();
 
       // MapLibre's projection includes a handedness flip, so compensate while
