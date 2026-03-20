@@ -11,9 +11,29 @@ import vtkSharedRenderWindow from 'vtk.js/Sources/Rendering/OpenGL/SharedRenderW
 import { GET_UNDERLYING_CONTEXT } from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow/ContextProxy';
 
 /**
- * Set non-default GL state simulating a host library (e.g., MapLibre).
+ * Set non-default GL state simulating a host library (e.g. MapLibre).
  */
-function setHostGLState(gl) {
+function createHostGLResources(gl) {
+  const resources = {
+    arrayBuffer: gl.createBuffer(),
+    elementArrayBuffer: gl.createBuffer(),
+    renderbuffer: gl.createRenderbuffer(),
+    texture2DUnit1: gl.createTexture(),
+    textureCubeUnit1: gl.createTexture(),
+    texture2DUnit3: gl.createTexture(),
+  };
+
+  if (gl.TEXTURE_3D !== undefined) {
+    resources.texture3DUnit2 = gl.createTexture();
+  }
+  if (gl.TEXTURE_2D_ARRAY !== undefined) {
+    resources.texture2DArrayUnit2 = gl.createTexture();
+  }
+
+  return resources;
+}
+
+function setHostGLState(gl, resources) {
   gl.enable(gl.BLEND);
   gl.blendFuncSeparate(
     gl.SRC_ALPHA,
@@ -50,13 +70,49 @@ function setHostGLState(gl) {
   gl.enable(gl.POLYGON_OFFSET_FILL);
   gl.polygonOffset(1.0, 2.0);
 
+  gl.bindBuffer(gl.ARRAY_BUFFER, resources.arrayBuffer);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, resources.elementArrayBuffer);
+  gl.bindRenderbuffer(gl.RENDERBUFFER, resources.renderbuffer);
+
+  gl.pixelStorei(gl.PACK_ALIGNMENT, 8);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 2);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+  gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+
+  if (gl.PACK_ROW_LENGTH !== undefined) {
+    gl.pixelStorei(gl.PACK_ROW_LENGTH, 4);
+    gl.pixelStorei(gl.PACK_SKIP_ROWS, 3);
+    gl.pixelStorei(gl.PACK_SKIP_PIXELS, 2);
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 9);
+    gl.pixelStorei(gl.UNPACK_IMAGE_HEIGHT, 7);
+    gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 6);
+    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 5);
+    gl.pixelStorei(gl.UNPACK_SKIP_IMAGES, 4);
+  }
+
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, resources.texture2DUnit1);
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, resources.textureCubeUnit1);
+
+  if (resources.texture3DUnit2 || resources.texture2DArrayUnit2) {
+    gl.activeTexture(gl.TEXTURE2);
+    if (resources.texture3DUnit2) {
+      gl.bindTexture(gl.TEXTURE_3D, resources.texture3DUnit2);
+    }
+    if (resources.texture2DArrayUnit2) {
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, resources.texture2DArrayUnit2);
+    }
+  }
+
   gl.activeTexture(gl.TEXTURE3);
+  gl.bindTexture(gl.TEXTURE_2D, resources.texture2DUnit3);
 }
 
 /**
  * Verify that GL state matches what setHostGLState() set.
  */
-function verifyHostGLState(gl, t) {
+function verifyHostGLState(gl, t, resources) {
   // Enable flags
   t.ok(gl.isEnabled(gl.BLEND), 'BLEND should be enabled');
   t.ok(gl.isEnabled(gl.DEPTH_TEST), 'DEPTH_TEST should be enabled');
@@ -205,6 +261,123 @@ function verifyHostGLState(gl, t) {
     gl.TEXTURE3,
     'ACTIVE_TEXTURE should be TEXTURE3'
   );
+
+  // Buffer and renderbuffer bindings
+  t.equal(
+    gl.getParameter(gl.ARRAY_BUFFER_BINDING),
+    resources.arrayBuffer,
+    'ARRAY_BUFFER_BINDING should be preserved'
+  );
+  t.equal(
+    gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING),
+    resources.elementArrayBuffer,
+    'ELEMENT_ARRAY_BUFFER_BINDING should be preserved'
+  );
+  t.equal(
+    gl.getParameter(gl.RENDERBUFFER_BINDING),
+    resources.renderbuffer,
+    'RENDERBUFFER_BINDING should be preserved'
+  );
+
+  // Pixel store
+  t.equal(gl.getParameter(gl.PACK_ALIGNMENT), 8, 'PACK_ALIGNMENT should be 8');
+  t.equal(
+    gl.getParameter(gl.UNPACK_ALIGNMENT),
+    2,
+    'UNPACK_ALIGNMENT should be 2'
+  );
+  t.equal(
+    gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL),
+    true,
+    'UNPACK_FLIP_Y_WEBGL should be true'
+  );
+  t.equal(
+    gl.getParameter(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL),
+    true,
+    'UNPACK_PREMULTIPLY_ALPHA_WEBGL should be true'
+  );
+  t.equal(
+    gl.getParameter(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL),
+    gl.NONE,
+    'UNPACK_COLORSPACE_CONVERSION_WEBGL should be NONE'
+  );
+
+  if (gl.PACK_ROW_LENGTH !== undefined) {
+    t.equal(gl.getParameter(gl.PACK_ROW_LENGTH), 4, 'PACK_ROW_LENGTH is 4');
+    t.equal(gl.getParameter(gl.PACK_SKIP_ROWS), 3, 'PACK_SKIP_ROWS is 3');
+    t.equal(gl.getParameter(gl.PACK_SKIP_PIXELS), 2, 'PACK_SKIP_PIXELS is 2');
+    t.equal(gl.getParameter(gl.UNPACK_ROW_LENGTH), 9, 'UNPACK_ROW_LENGTH is 9');
+    t.equal(
+      gl.getParameter(gl.UNPACK_IMAGE_HEIGHT),
+      7,
+      'UNPACK_IMAGE_HEIGHT is 7'
+    );
+    t.equal(gl.getParameter(gl.UNPACK_SKIP_ROWS), 6, 'UNPACK_SKIP_ROWS is 6');
+    t.equal(
+      gl.getParameter(gl.UNPACK_SKIP_PIXELS),
+      5,
+      'UNPACK_SKIP_PIXELS is 5'
+    );
+    t.equal(
+      gl.getParameter(gl.UNPACK_SKIP_IMAGES),
+      4,
+      'UNPACK_SKIP_IMAGES is 4'
+    );
+  }
+
+  const activeTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
+  gl.activeTexture(gl.TEXTURE1);
+  t.equal(
+    gl.getParameter(gl.TEXTURE_BINDING_2D),
+    resources.texture2DUnit1,
+    'TEXTURE1 TEXTURE_2D binding should be preserved'
+  );
+  t.equal(
+    gl.getParameter(gl.TEXTURE_BINDING_CUBE_MAP),
+    resources.textureCubeUnit1,
+    'TEXTURE1 TEXTURE_CUBE_MAP binding should be preserved'
+  );
+
+  if (resources.texture3DUnit2 || resources.texture2DArrayUnit2) {
+    gl.activeTexture(gl.TEXTURE2);
+    if (resources.texture3DUnit2) {
+      t.equal(
+        gl.getParameter(gl.TEXTURE_BINDING_3D),
+        resources.texture3DUnit2,
+        'TEXTURE2 TEXTURE_3D binding should be preserved'
+      );
+    }
+    if (resources.texture2DArrayUnit2) {
+      t.equal(
+        gl.getParameter(gl.TEXTURE_BINDING_2D_ARRAY),
+        resources.texture2DArrayUnit2,
+        'TEXTURE2 TEXTURE_2D_ARRAY binding should be preserved'
+      );
+    }
+  }
+
+  gl.activeTexture(gl.TEXTURE3);
+  t.equal(
+    gl.getParameter(gl.TEXTURE_BINDING_2D),
+    resources.texture2DUnit3,
+    'TEXTURE3 TEXTURE_2D binding should be preserved'
+  );
+  gl.activeTexture(activeTexture);
+}
+
+function deleteHostGLResources(gl, resources) {
+  gl.deleteBuffer(resources.arrayBuffer);
+  gl.deleteBuffer(resources.elementArrayBuffer);
+  gl.deleteRenderbuffer(resources.renderbuffer);
+  gl.deleteTexture(resources.texture2DUnit1);
+  gl.deleteTexture(resources.textureCubeUnit1);
+  gl.deleteTexture(resources.texture2DUnit3);
+  if (resources.texture3DUnit2) {
+    gl.deleteTexture(resources.texture3DUnit2);
+  }
+  if (resources.texture2DArrayUnit2) {
+    gl.deleteTexture(resources.texture2DArrayUnit2);
+  }
 }
 
 test.onlyIfWebGL('Test renderShared preserves host GL state', (t) => {
@@ -249,15 +422,18 @@ test.onlyIfWebGL('Test renderShared preserves host GL state', (t) => {
   renderWindow.addView(sharedWindow);
   renderer.resetCamera();
 
+  const hostResources = createHostGLResources(gl);
+
   // Set non-default GL state (simulating host library)
-  setHostGLState(gl);
+  setHostGLState(gl, hostResources);
 
   // Render VTK content
   sharedWindow.renderShared();
 
   // Verify host GL state was preserved
-  verifyHostGLState(gl, t);
+  verifyHostGLState(gl, t, hostResources);
 
+  deleteHostGLResources(gl, hostResources);
   gc.releaseResources();
   t.end();
 });

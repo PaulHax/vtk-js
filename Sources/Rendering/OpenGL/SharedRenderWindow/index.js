@@ -4,7 +4,49 @@ import { createContextProxyHandler } from 'vtk.js/Sources/Rendering/OpenGL/Rende
 import { registerOverride } from 'vtk.js/Sources/Rendering/OpenGL/ViewNodeFactory';
 import vtkSharedRenderer from 'vtk.js/Sources/Rendering/OpenGL/SharedRenderer';
 
+const TEXTURE_BINDING_STATE = [
+  ['texture2D', 'TEXTURE_BINDING_2D', 'TEXTURE_2D'],
+  ['textureCubeMap', 'TEXTURE_BINDING_CUBE_MAP', 'TEXTURE_CUBE_MAP'],
+  ['texture3D', 'TEXTURE_BINDING_3D', 'TEXTURE_3D'],
+  ['texture2DArray', 'TEXTURE_BINDING_2D_ARRAY', 'TEXTURE_2D_ARRAY'],
+];
+
+const BUFFER_BINDING_STATE = [
+  ['arrayBufferBinding', 'ARRAY_BUFFER_BINDING', 'ARRAY_BUFFER'],
+  [
+    'elementArrayBufferBinding',
+    'ELEMENT_ARRAY_BUFFER_BINDING',
+    'ELEMENT_ARRAY_BUFFER',
+  ],
+];
+
+const PIXEL_STORE_STATE = [
+  ['packAlignment', 'PACK_ALIGNMENT', 4],
+  ['unpackAlignment', 'UNPACK_ALIGNMENT', 4],
+  ['unpackFlipY', 'UNPACK_FLIP_Y_WEBGL', false],
+  ['unpackPremultiplyAlpha', 'UNPACK_PREMULTIPLY_ALPHA_WEBGL', false],
+  [
+    'unpackColorspaceConversion',
+    'UNPACK_COLORSPACE_CONVERSION_WEBGL',
+    'BROWSER_DEFAULT_WEBGL',
+  ],
+  ['packRowLength', 'PACK_ROW_LENGTH', 0],
+  ['packSkipRows', 'PACK_SKIP_ROWS', 0],
+  ['packSkipPixels', 'PACK_SKIP_PIXELS', 0],
+  ['unpackRowLength', 'UNPACK_ROW_LENGTH', 0],
+  ['unpackImageHeight', 'UNPACK_IMAGE_HEIGHT', 0],
+  ['unpackSkipRows', 'UNPACK_SKIP_ROWS', 0],
+  ['unpackSkipPixels', 'UNPACK_SKIP_PIXELS', 0],
+  ['unpackSkipImages', 'UNPACK_SKIP_IMAGES', 0],
+];
+
+function getSupportedState(gl, stateSpecs) {
+  return stateSpecs.filter(([, valueName]) => gl[valueName] !== undefined);
+}
+
 function resetGLState(gl, shaderCache) {
+  const pixelStoreState = getSupportedState(gl, PIXEL_STORE_STATE);
+
   gl.disable(gl.BLEND);
   gl.disable(gl.CULL_FACE);
   gl.disable(gl.DEPTH_TEST);
@@ -39,10 +81,19 @@ function resetGLState(gl, shaderCache) {
 
   gl.activeTexture(gl.TEXTURE0);
 
+  pixelStoreState.forEach(([, paramName, defaultValue]) => {
+    const value =
+      typeof defaultValue === 'string' ? gl[defaultValue] : defaultValue;
+    gl.pixelStorei(gl[paramName], value);
+  });
+
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   if (gl.DRAW_FRAMEBUFFER) {
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+  }
+  if (gl.bindRenderbuffer) {
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
   }
 
   gl.useProgram(null);
@@ -64,6 +115,9 @@ function resetGLState(gl, shaderCache) {
 }
 
 function saveGLState(gl) {
+  const bufferBindingState = getSupportedState(gl, BUFFER_BINDING_STATE);
+  const pixelStoreState = getSupportedState(gl, PIXEL_STORE_STATE);
+  const textureBindingState = getSupportedState(gl, TEXTURE_BINDING_STATE);
   const state = {
     blend: gl.isEnabled(gl.BLEND),
     cullFace: gl.isEnabled(gl.CULL_FACE),
@@ -113,13 +167,34 @@ function saveGLState(gl) {
     activeTexture: gl.getParameter(gl.ACTIVE_TEXTURE),
 
     framebufferBinding: gl.getParameter(gl.FRAMEBUFFER_BINDING),
+    renderbufferBinding: gl.getParameter(gl.RENDERBUFFER_BINDING),
 
     currentProgram: gl.getParameter(gl.CURRENT_PROGRAM),
     lineWidth: gl.getParameter(gl.LINE_WIDTH),
 
     scissorBox: gl.getParameter(gl.SCISSOR_BOX),
     viewport: gl.getParameter(gl.VIEWPORT),
+    textureBindings: [],
   };
+
+  bufferBindingState.forEach(([stateKey, paramName]) => {
+    state[stateKey] = gl.getParameter(gl[paramName]);
+  });
+
+  pixelStoreState.forEach(([stateKey, paramName]) => {
+    state[stateKey] = gl.getParameter(gl[paramName]);
+  });
+
+  const textureUnitCount = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+  for (let unit = 0; unit < textureUnitCount; unit += 1) {
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    const unitBindings = {};
+    textureBindingState.forEach(([stateKey, bindingName]) => {
+      unitBindings[stateKey] = gl.getParameter(gl[bindingName]);
+    });
+    state.textureBindings.push(unitBindings);
+  }
+  gl.activeTexture(state.activeTexture);
 
   if (gl.SAMPLE_ALPHA_TO_COVERAGE) {
     state.sampleAlphaToCoverage = gl.isEnabled(gl.SAMPLE_ALPHA_TO_COVERAGE);
@@ -136,6 +211,9 @@ function saveGLState(gl) {
 }
 
 function restoreGLState(gl, state) {
+  const bufferBindingState = getSupportedState(gl, BUFFER_BINDING_STATE);
+  const pixelStoreState = getSupportedState(gl, PIXEL_STORE_STATE);
+  const textureBindingState = getSupportedState(gl, TEXTURE_BINDING_STATE);
   const setFlag = (flag, enabled) => {
     if (enabled) gl.enable(flag);
     else gl.disable(flag);
@@ -203,13 +281,14 @@ function restoreGLState(gl, state) {
 
   gl.polygonOffset(state.polygonOffsetFactor, state.polygonOffsetUnits);
 
-  gl.activeTexture(state.activeTexture);
-
   if (gl.DRAW_FRAMEBUFFER && state.drawFramebufferBinding !== undefined) {
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, state.drawFramebufferBinding);
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, state.readFramebufferBinding);
   } else {
     gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebufferBinding);
+  }
+  if (gl.bindRenderbuffer && state.renderbufferBinding !== undefined) {
+    gl.bindRenderbuffer(gl.RENDERBUFFER, state.renderbufferBinding);
   }
 
   gl.useProgram(state.currentProgram);
@@ -223,6 +302,28 @@ function restoreGLState(gl, state) {
   if (gl.bindVertexArray && state.vertexArrayBinding !== undefined) {
     gl.bindVertexArray(state.vertexArrayBinding);
   }
+
+  bufferBindingState.forEach(([stateKey, , targetName]) => {
+    if (state[stateKey] !== undefined) {
+      gl.bindBuffer(gl[targetName], state[stateKey]);
+    }
+  });
+
+  if (state.textureBindings?.length) {
+    state.textureBindings.forEach((unitBindings, unit) => {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      textureBindingState.forEach(([stateKey, , targetName]) => {
+        gl.bindTexture(gl[targetName], unitBindings[stateKey]);
+      });
+    });
+  }
+  gl.activeTexture(state.activeTexture);
+
+  pixelStoreState.forEach(([stateKey, paramName]) => {
+    if (state[stateKey] !== undefined) {
+      gl.pixelStorei(gl[paramName], state[stateKey]);
+    }
+  });
 }
 
 function vtkSharedRenderWindow(publicAPI, model) {
@@ -267,35 +368,43 @@ function vtkSharedRenderWindow(publicAPI, model) {
 
   publicAPI.renderShared = (options = {}) => {
     publicAPI.prepareSharedRender(options);
-    if (model.renderable) {
-      if (renderCallback && !renderEventSubscription) {
-        publicAPI.setRenderCallback(renderCallback);
-      }
+    try {
+      if (model.renderable) {
+        if (renderCallback && !renderEventSubscription) {
+          publicAPI.setRenderCallback(renderCallback);
+        }
 
-      const interactor = getInteractor();
-      let previousEnableRender;
-      if (interactor?.getEnableRender) {
-        previousEnableRender = interactor.getEnableRender();
-        if (!previousEnableRender) {
-          interactor.setEnableRender(true);
+        const interactor = getInteractor();
+        let previousEnableRender;
+        if (interactor?.getEnableRender) {
+          previousEnableRender = interactor.getEnableRender();
+          if (!previousEnableRender) {
+            interactor.setEnableRender(true);
+          }
+        }
+
+        suppressRenderEvent = true;
+        try {
+          model.renderable.preRender?.();
+          if (interactor) {
+            interactor.render();
+          } else {
+            const views = model.renderable.getViews?.() || [];
+            views.forEach((view) => view.traverseAllPasses());
+          }
+        } finally {
+          suppressRenderEvent = false;
+          if (
+            interactor?.setEnableRender &&
+            previousEnableRender !== undefined
+          ) {
+            interactor.setEnableRender(previousEnableRender);
+          }
         }
       }
-
-      suppressRenderEvent = true;
-      model.renderable.preRender?.();
-      if (interactor) {
-        interactor.render();
-      } else {
-        const views = model.renderable.getViews?.() || [];
-        views.forEach((view) => view.traverseAllPasses());
-      }
-      suppressRenderEvent = false;
-
-      if (interactor?.setEnableRender && previousEnableRender !== undefined) {
-        interactor.setEnableRender(previousEnableRender);
-      }
+    } finally {
+      publicAPI.restoreSharedState();
     }
-    publicAPI.restoreSharedState();
   };
 
   publicAPI.get3DContext = (options) => {
