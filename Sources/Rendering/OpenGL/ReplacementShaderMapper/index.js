@@ -119,7 +119,8 @@ function implementBuildShadersWithReplacements(
       model.lastRenderPassShaderReplacement(shaders);
     }
 
-    const openGLSpec = model.renderable.getViewSpecificProperties().OpenGL;
+    const viewSpecProps = model.renderable.getViewSpecificProperties();
+    const openGLSpec = viewSpecProps.OpenGL;
 
     // user specified pre replacements
     publicAPI.applyShaderReplacements(shaders, openGLSpec, true);

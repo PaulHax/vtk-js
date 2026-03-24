@@ -485,15 +485,15 @@ function vtkOpenGLPolyDataMapper(publicAPI, model) {
         ).result;
         FSSource = vtkShaderProgram.substitute(FSSource, '//VTK::Normal::Dec', [
           'varying vec3 normalVCVSOutput;',
+          'uniform int cameraParallel;',
         ]).result;
         FSSource = vtkShaderProgram.substitute(
           FSSource,
           '//VTK::Normal::Impl',
           [
             'vec3 normalVCVSOutput = normalize(normalVCVSOutput);',
-            //  if (!gl_FrontFacing) does not work in intel hd4000 mac
-            //  if (int(gl_FrontFacing) == 0) does not work on mesa
-            '  if (gl_FrontFacing == false) { normalVCVSOutput = -normalVCVSOutput; }',
+            '  if (cameraParallel == 1 && normalVCVSOutput.z < 0.0) { normalVCVSOutput = -1.0 * normalVCVSOutput; }',
+            '  if (cameraParallel == 0 && dot(normalVCVSOutput, vertexVC.xyz) > 0.0) { normalVCVSOutput = -1.0 * normalVCVSOutput; }',
           ]
         ).result;
       } else {
@@ -501,7 +501,11 @@ function vtkOpenGLPolyDataMapper(publicAPI, model) {
           FSSource = vtkShaderProgram.substitute(
             FSSource,
             '//VTK::Normal::Dec',
-            ['uniform mat3 normalMatrix;', 'uniform samplerBuffer textureN;']
+            [
+              'uniform int cameraParallel;',
+              'uniform mat3 normalMatrix;',
+              'uniform samplerBuffer textureN;',
+            ]
           ).result;
           FSSource = vtkShaderProgram.substitute(
             FSSource,
@@ -509,7 +513,8 @@ function vtkOpenGLPolyDataMapper(publicAPI, model) {
             [
               'vec3 normalVCVSOutput = normalize(normalMatrix *',
               '    texelFetchBuffer(textureN, gl_PrimitiveID + PrimitiveIDOffset).xyz);',
-              '  if (gl_FrontFacing == false) { normalVCVSOutput = -normalVCVSOutput; }',
+              '  if (cameraParallel == 1 && normalVCVSOutput.z < 0.0) { normalVCVSOutput = -1.0 * normalVCVSOutput; }',
+              '  if (cameraParallel == 0 && dot(normalVCVSOutput, vertexVC.xyz) > 0.0) { normalVCVSOutput = -1.0 * normalVCVSOutput; }',
             ]
           ).result;
         } else {

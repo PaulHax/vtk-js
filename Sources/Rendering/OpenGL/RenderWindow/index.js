@@ -141,7 +141,7 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
   const previousSize = [0, 0];
   function updateWindow() {
     // Canvas size
-    if (model.renderable) {
+    if (model.renderable && !model.useExternalCanvas) {
       if (
         model.size[0] !== previousSize[0] ||
         model.size[1] !== previousSize[1]
@@ -1317,6 +1317,7 @@ const DEFAULT_VALUES = {
   imageFormat: 'image/png',
   useOffScreen: false,
   useBackgroundImage: false,
+  useExternalCanvas: false,
 };
 
 // ----------------------------------------------------------------------------
