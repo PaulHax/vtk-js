@@ -483,6 +483,40 @@ function vtkDataArray(publicAPI, model) {
     return sortedObj;
   };
 
+  // Like getState(), but preserves TypedArray values without
+  // converting and copying to a plain Array.
+  publicAPI.getTransferableState = () => {
+    if (model.deleted) {
+      return null;
+    }
+    const jsonArchive = { ...model, vtkClass: publicAPI.getClassName() };
+
+    // values stays as TypedArray — no Array.from conversion
+    delete jsonArchive.buffer;
+
+    // Clean any empty data
+    Object.keys(jsonArchive).forEach((keyName) => {
+      if (!jsonArchive[keyName]) {
+        delete jsonArchive[keyName];
+      }
+    });
+
+    // Sort resulting object by key name
+    const sortedObj = {};
+    Object.keys(jsonArchive)
+      .sort()
+      .forEach((name) => {
+        sortedObj[name] = jsonArchive[name];
+      });
+
+    // Remove mtime
+    if (sortedObj.mtime) {
+      delete sortedObj.mtime;
+    }
+
+    return sortedObj;
+  };
+
   /**
    * @param {import("./index").vtkDataArray} other
    */

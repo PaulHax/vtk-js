@@ -1,4 +1,5 @@
 import test from 'tape';
+import vtk from 'vtk.js/Sources/vtk';
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
 import { VtkDataTypes } from 'vtk.js/Sources/Common/Core/DataArray/Constants';
 import * as vtkMath from 'vtk.js/Sources/Common/Core/Math';
@@ -505,6 +506,55 @@ test('Test vtkDataArray resize function', (t) => {
 
   t.ok(da.getNumberOfTuples() === 4, '2 more tuples');
   t.equal(da.getData().buffer, oldData.buffer, 'no array allocation on shrink');
+
+  t.end();
+});
+
+test('Test vtkDataArray getTransferableState preserves TypedArray values', (t) => {
+  const values = new Uint8Array([1, 2, 3, 4, 5]);
+  const da = vtkDataArray.newInstance({ values });
+
+  const state = da.getTransferableState();
+
+  t.ok(ArrayBuffer.isView(state.values), 'values is a TypedArray');
+  t.notOk(Array.isArray(state.values), 'values is not a plain Array');
+  t.ok(state.values instanceof Uint8Array, 'TypedArray type is preserved');
+
+  // Round-trip via vtk() reconstruction should work with TypedArray values
+  const da2 = vtk(state);
+  t.ok(da2, 'Can reconstruct from state with TypedArray values');
+  t.deepEqual(
+    Array.from(da2.getData()),
+    Array.from(values),
+    'Values are preserved after round-trip'
+  );
+  t.equal(
+    da2.getDataType(),
+    'Uint8Array',
+    'Data type preserved after round-trip'
+  );
+
+  t.end();
+});
+
+test('Test vtkDataArray getTransferableState does not OOM on large arrays', (t) => {
+  // Array.from() on a large TypedArray creates a plain JS Array with boxed
+  // Numbers, easily exceeding browser memory limits (RangeError).
+  // Real-world case: 1024x1024x256 labelmap = 268M Uint8 elements (~1.6GB
+  // as boxed Numbers). We use 10M here to keep tests fast while still
+  // being large enough that Array.from() would waste ~80MB of heap.
+  const size = 10_000_000;
+  const values = new Uint8Array(size);
+  values[0] = 42;
+  values[size - 1] = 99;
+
+  const da = vtkDataArray.newInstance({ values });
+
+  const state = da.getTransferableState();
+  t.ok(ArrayBuffer.isView(state.values), 'Large TypedArray preserved in state');
+  t.equal(state.values.length, size, 'Correct length preserved');
+  t.equal(state.values[0], 42, 'First value preserved');
+  t.equal(state.values[size - 1], 99, 'Last value preserved');
 
   t.end();
 });

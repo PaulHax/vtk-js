@@ -11,6 +11,7 @@ const { vtkErrorMacro, vtkWarningMacro } = macro;
 function vtkFieldData(publicAPI, model) {
   model.classHierarchy.push('vtkFieldData');
   const superGetState = publicAPI.getState;
+  const superGetTransferableState = publicAPI.getTransferableState;
 
   // Decode serialized data if any
   if (model.arrays) {
@@ -257,6 +258,16 @@ function vtkFieldData(publicAPI, model) {
     if (result) {
       result.arrays = model.arrays.map((item) => ({
         data: item.data.getState(),
+      }));
+    }
+    return result;
+  };
+
+  publicAPI.getTransferableState = () => {
+    const result = superGetTransferableState();
+    if (result) {
+      result.arrays = model.arrays.map((item) => ({
+        data: item.data.getTransferableState(),
       }));
     }
     return result;
