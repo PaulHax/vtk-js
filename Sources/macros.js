@@ -219,6 +219,13 @@ function getStateArrayMapFunc(item) {
   return item;
 }
 
+function getTransferableStateArrayMapFunc(item) {
+  if (item && item.isA) {
+    return item.getTransferableState();
+  }
+  return item;
+}
+
 // ----------------------------------------------------------------------------
 // setImmediate
 // ----------------------------------------------------------------------------
@@ -441,6 +448,45 @@ export function obj(publicAPI = {}, model = {}) {
   // JSON.stringify will only stringify the return value of this function
   publicAPI.toJSON = function vtkObjToJSON() {
     return publicAPI.getState();
+  };
+
+  // Like getState(), but preserves TypedArrays for efficient structured
+  // clone / postMessage transfer instead of converting them to plain Arrays.
+  publicAPI.getTransferableState = () => {
+    if (model.deleted) {
+      return null;
+    }
+    const jsonArchive = { ...model, vtkClass: publicAPI.getClassName() };
+
+    Object.keys(jsonArchive).forEach((keyName) => {
+      if (
+        jsonArchive[keyName] === null ||
+        jsonArchive[keyName] === undefined ||
+        keyName[0] === '_'
+      ) {
+        delete jsonArchive[keyName];
+      } else if (jsonArchive[keyName].isA) {
+        jsonArchive[keyName] = jsonArchive[keyName].getTransferableState();
+      } else if (Array.isArray(jsonArchive[keyName])) {
+        jsonArchive[keyName] = jsonArchive[keyName].map(
+          getTransferableStateArrayMapFunc
+        );
+      }
+      // TypedArrays are preserved (no Array.from conversion)
+    });
+
+    const sortedObj = {};
+    Object.keys(jsonArchive)
+      .sort()
+      .forEach((name) => {
+        sortedObj[name] = jsonArchive[name];
+      });
+
+    if (sortedObj.mtime) {
+      delete sortedObj.mtime;
+    }
+
+    return sortedObj;
   };
 
   // Allow usage as decorator

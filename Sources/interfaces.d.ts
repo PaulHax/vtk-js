@@ -263,6 +263,21 @@ export interface vtkObject {
   toJSON(): object;
 
   /**
+   * Like getState(), but preserves TypedArrays without converting
+   * and copying to plain Arrays.
+   *
+   * The returned state is compatible with vtk() for reconstruction
+   * and with structured clone / postMessage.
+   *
+   * ```
+   * const state = dataset.getTransferableState();
+   * worker.postMessage(state);
+   * // in worker: const dataset = vtk(state);
+   * ```
+   */
+  getTransferableState(): object;
+
+  /**
    * Try to copy the state of the other to ourselves by just using references.
    *
    * @param {vtkObject} other instance to copy the reference from

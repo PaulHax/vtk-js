@@ -279,6 +279,13 @@ export interface vtkDataArray extends vtkObject {
   getState(): object;
 
   /**
+   * Like getState(), but preserves TypedArray values without
+   * converting and copying to a plain Array.
+   * @returns {object}
+   */
+  getTransferableState(): object;
+
+  /**
    * Deep copy of another vtkDataArray into this one.
    * @param {vtkDataArray} other
    */
