@@ -754,14 +754,16 @@ function vtkOpenGLGlyph3DMapper(publicAPI, model) {
 
     superClass.buildBufferObjects(ren, actor);
 
-    // apply shift + scale to primitives AFTER vtkOpenGLPolyDataMapper.buildBufferObjects
-    // so that the Glyph3DMapper gets the last say in the shift + scale
-    if (useShiftAndScale) {
-      for (let i = primTypes.Start; i < primTypes.End; i++) {
-        model.primitives[i]
-          .getCABO()
-          .setCoordShiftAndScale(coordShift, coordScale);
-      }
+    // Apply shift + scale to primitives AFTER vtkOpenGLPolyDataMapper.buildBufferObjects
+    // so that the Glyph3DMapper gets the last say in the shift + scale. Clear
+    // the previous frame's transform when the current glyph centers no longer
+    // need it; otherwise glyphs keep rendering with stale source-VBO scaling.
+    const sourceCoordShift = useShiftAndScale ? coordShift : null;
+    const sourceCoordScale = useShiftAndScale ? coordScale : null;
+    for (let i = primTypes.Start; i < primTypes.End; i++) {
+      model.primitives[i]
+        .getCABO()
+        .setCoordShiftAndScale(sourceCoordShift, sourceCoordScale);
     }
   };
 }
