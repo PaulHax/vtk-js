@@ -756,12 +756,13 @@ function vtkOpenGLGlyph3DMapper(publicAPI, model) {
 
     // apply shift + scale to primitives AFTER vtkOpenGLPolyDataMapper.buildBufferObjects
     // so that the Glyph3DMapper gets the last say in the shift + scale
-    if (useShiftAndScale) {
-      for (let i = primTypes.Start; i < primTypes.End; i++) {
-        model.primitives[i]
-          .getCABO()
-          .setCoordShiftAndScale(coordShift, coordScale);
-      }
+    for (let i = primTypes.Start; i < primTypes.End; i++) {
+      model.primitives[i]
+        .getCABO()
+        .setCoordShiftAndScale(
+          useShiftAndScale ? coordShift : null,
+          useShiftAndScale ? coordScale : null
+        );
     }
   };
 }
