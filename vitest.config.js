@@ -8,12 +8,10 @@ const webGPU = !!process.env.WEBGPU;
 const testBrowser = process.env.TEST_BROWSER || 'chromium';
 const ci = !!process.env.CI;
 
-// Per-instance launch.headless is load-bearing for Firefox WebGL on Linux CI;
-// the top-level browser.headless takes a different launch path that drops WebGL.
 const firefox = {
   browser: 'firefox',
   launch: {
-    headless: true,
+    headless: false, // Firefox WebGL is fragile in true-headless on Linux CI; xvfb-run gives it a display
     firefoxUserPrefs: {
       'dom.webgpu.enabled': true, // off by default on Linux Firefox
       'webgl.force-enabled': true, // override GPU blocklist (no real GPU on CI)
@@ -22,20 +20,19 @@ const firefox = {
   },
 };
 
+// One browser per process. In CI we run a separate matrix job per browser
+// because Chromium + Firefox in the same runner deterministically breaks
+// Firefox WebGL (Chromium leaves state that Firefox's GL context can't recover
+// from). Locally TEST_BROWSER picks the one to run; defaults to chromium.
 function buildBrowserInstances() {
-  if (ci) {
-    return [
-      {
-        browser: 'chromium',
-        launch: {
-          headless: true,
-          args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader'],
-        },
-      },
-      firefox,
-    ];
-  }
-  return [testBrowser === 'firefox' ? firefox : { browser: 'chromium', launch: { headless: true } }];
+  if (testBrowser === 'firefox') return [firefox];
+  return [{
+    browser: 'chromium',
+    launch: {
+      headless: true,
+      args: ci ? ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader'] : [],
+    },
+  }];
 }
 
 export default defineConfig({
@@ -81,7 +78,7 @@ export default defineConfig({
     allowOnly: !ci,
     browser: {
       enabled: true,
-      headless: true,
+      headless: true, // suppresses Vitest's UI iframe; per-instance launch.headless overrides for the actual browser launches
       provider: playwright(),
       instances: buildBrowserInstances(),
     },
