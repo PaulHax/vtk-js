@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
+import { webdriverio } from '@vitest/browser-webdriverio';
 import path from 'path';
 import { createVtkPlugins } from './Utilities/build/plugins.mjs';
 
@@ -8,14 +9,17 @@ const webGPU = !!process.env.WEBGPU;
 const testBrowser = process.env.TEST_BROWSER || 'chromium';
 const ci = !!process.env.CI;
 
+// Webdriverio uses geckodriver against stock Firefox (the same launch path
+// karma used and works). Prefs go under capabilities.moz:firefoxOptions.
 const firefox = {
   browser: 'firefox',
-  launch: {
-    headless: false, // Firefox WebGL is fragile in true-headless on Linux CI; xvfb-run gives it a display
-    firefoxUserPrefs: {
-      'dom.webgpu.enabled': true, // off by default on Linux Firefox
-      'webgl.force-enabled': true, // override GPU blocklist (no real GPU on CI)
-      'webgl.disable-fail-if-major-performance-caveat': true, // accept llvmpipe
+  capabilities: {
+    'moz:firefoxOptions': {
+      prefs: {
+        'dom.webgpu.enabled': true,
+        'webgl.force-enabled': true,
+        'webgl.disable-fail-if-major-performance-caveat': true,
+      },
     },
   },
 };
@@ -78,8 +82,10 @@ export default defineConfig({
     allowOnly: !ci,
     browser: {
       enabled: true,
-      headless: true, // suppresses Vitest's UI iframe; per-instance launch.headless overrides for the actual browser launches
-      provider: playwright(),
+      headless: true, // suppresses Vitest's UI iframe
+      // Test: use webdriverio for Firefox (matches Mozilla's stock launch path
+      // that karma used and worked). Stay on playwright for Chromium.
+      provider: testBrowser === 'firefox' ? webdriverio() : playwright(),
       instances: buildBrowserInstances(),
     },
   },

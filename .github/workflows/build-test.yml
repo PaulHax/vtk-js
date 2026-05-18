@@ -29,10 +29,28 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ matrix.os }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
       - name: Install Playwright browser
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        if: matrix.browser == 'chromium' && steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install ${{ matrix.browser }}
       - name: Install Playwright system deps
+        if: matrix.browser == 'chromium'
         run: sudo npx playwright install-deps ${{ matrix.browser }}
+      - name: Install Firefox + geckodriver (webdriverio path)
+        if: matrix.browser == 'firefox'
+        run: |
+          sudo install -d -m 0755 /etc/apt/keyrings
+          wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- | sudo tee /etc/apt/keyrings/packages.mozilla.org.asc > /dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" | sudo tee /etc/apt/sources.list.d/mozilla.list
+          echo "Package: *
+          Pin: origin packages.mozilla.org
+          Pin-Priority: 1000" | sudo tee /etc/apt/preferences.d/mozilla
+          sudo apt-get update
+          sudo apt-get install -y firefox
+          GECKODRIVER_VERSION=0.36.0
+          wget -q https://github.com/mozilla/geckodriver/releases/download/v${GECKODRIVER_VERSION}/geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz
+          tar -xzf geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz
+          sudo mv geckodriver /usr/local/bin/
+          geckodriver --version
+          firefox --version
       - name: Build
         run: npm run build:release
       - name: Archive build output

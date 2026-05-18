@@ -51,6 +51,7 @@
     "@types/node": "22.13.1",
     "@vitest/browser": "4.1.6",
     "@vitest/browser-playwright": "4.1.6",
+    "@vitest/browser-webdriverio": "^4.1.6",
     "@vitest/ui": "4.1.6",
     "autoprefixer": "10.4.7",
     "commitizen": "4.3.1",
