@@ -83,6 +83,8 @@ export default defineConfig({
       enabled: true,
       headless: true,
       provider: playwright(),
+      // Test daker's hypothesis: tracing on failure may stabilize Firefox WebGL.
+      trace: 'retain-on-failure',
       instances: buildBrowserInstances(),
     },
   },
