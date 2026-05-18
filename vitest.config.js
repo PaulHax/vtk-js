@@ -8,12 +8,10 @@ const webGPU = !!process.env.WEBGPU;
 const testBrowser = process.env.TEST_BROWSER || 'chromium';
 const ci = !!process.env.CI;
 
-// Per-instance launch.headless is load-bearing for Firefox WebGL on Linux CI;
-// the top-level browser.headless takes a different launch path that drops WebGL.
 const firefox = {
   browser: 'firefox',
   launch: {
-    headless: true,
+    headless: false, // Firefox WebGL is fragile in true-headless on Linux CI; xvfb-run gives it a display
     firefoxUserPrefs: {
       'dom.webgpu.enabled': true, // off by default on Linux Firefox
       'webgl.force-enabled': true, // override GPU blocklist (no real GPU on CI)
@@ -81,7 +79,7 @@ export default defineConfig({
     allowOnly: !ci,
     browser: {
       enabled: true,
-      headless: true,
+      headless: true, // suppresses Vitest's UI iframe; per-instance launch.headless overrides for the actual browser launches
       provider: playwright(),
       instances: buildBrowserInstances(),
     },
