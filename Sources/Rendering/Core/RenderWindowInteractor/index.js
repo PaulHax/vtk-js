@@ -549,8 +549,9 @@ function vtkRenderWindowInteractor(publicAPI, model) {
   //----------------------------------------------------------------------
   publicAPI.requestPointerLock = () => {
     if (model.container) {
-      model.container.requestPointerLock();
+      return model.container.requestPointerLock();
     }
+    return undefined;
   };
 
   //----------------------------------------------------------------------
@@ -697,9 +698,8 @@ function vtkRenderWindowInteractor(publicAPI, model) {
         if (
           !(buttonIdx in model.lastGamepadValues[gamepad.index][hand].buttons)
         ) {
-          model.lastGamepadValues[gamepad.index][hand].buttons[
-            buttonIdx
-          ] = false;
+          model.lastGamepadValues[gamepad.index][hand].buttons[buttonIdx] =
+            false;
         }
         if (
           model.lastGamepadValues[gamepad.index][hand].buttons[buttonIdx] !==
