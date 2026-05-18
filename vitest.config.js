@@ -78,7 +78,11 @@ export default defineConfig({
     allowOnly: !ci,
     browser: {
       enabled: true,
-      headless: true, // suppresses Vitest's UI iframe; per-instance launch.headless overrides for the actual browser launches
+      // Test: keep the Vitest UI iframe to see if its presence stabilizes
+      // Firefox WebGL on CI. Drop the top-level browser.headless suppression
+      // and let ui default to !isCI (off in CI, on locally) — i.e., we're
+      // actually testing without suppression locally; CI keeps default.
+      ui: true,
       provider: playwright(),
       instances: buildBrowserInstances(),
     },
