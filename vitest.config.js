@@ -80,6 +80,7 @@ export default defineConfig({
       enabled: true,
       headless: true, // suppresses Vitest's UI iframe; per-instance launch.headless overrides for the actual browser launches
       provider: playwright(),
+      trace: 'retain-on-failure', // daker's hypothesis: tracing stabilizes Firefox WebGL
       instances: buildBrowserInstances(),
     },
   },
