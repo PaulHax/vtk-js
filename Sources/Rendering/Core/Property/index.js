@@ -62,18 +62,6 @@ function vtkProperty(publicAPI, model) {
     return [].concat(model.color);
   };
 
-  publicAPI.setSpecularPower = (specularPower) => {
-    const roughness = 1 / Math.max(1.0, specularPower);
-    if (
-      model.roughness !== roughness ||
-      model.specularPower !== specularPower
-    ) {
-      model.specularPower = specularPower; // Specular power still needs to be set as long as webgl is using it (otherwise testShaderReplacementsClear fails)
-      model.roughness = roughness;
-      publicAPI.modified();
-    }
-  };
-
   publicAPI.addShaderVariable = notImplemented('AddShaderVariable');
 
   publicAPI.setInterpolationToFlat = () =>
