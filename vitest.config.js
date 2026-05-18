@@ -8,12 +8,13 @@ const webGPU = !!process.env.WEBGPU;
 const testBrowser = process.env.TEST_BROWSER || 'chromium';
 const ci = !!process.env.CI;
 
-// Per-instance launch.headless is load-bearing for Firefox WebGL on Linux CI;
-// the top-level browser.headless takes a different launch path that drops WebGL.
+// Firefox WebGL in fully-headless mode is fragile on Linux CI (Mozilla bug
+// 1375585). Run Firefox windowed inside xvfb-run instead — the X server gives
+// us llvmpipe and Firefox sees a "real" display.
 const firefox = {
   browser: 'firefox',
   launch: {
-    headless: true,
+    headless: false,
     firefoxUserPrefs: {
       'dom.webgpu.enabled': true, // off by default on Linux Firefox
       'webgl.force-enabled': true, // override GPU blocklist (no real GPU on CI)
