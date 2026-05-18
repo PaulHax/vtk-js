@@ -22,16 +22,8 @@ const firefox = {
 
 function buildBrowserInstances() {
   if (ci) {
-    return [
-      {
-        browser: 'chromium',
-        launch: {
-          headless: true,
-          args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader'],
-        },
-      },
-      firefox,
-    ];
+    // Isolation test: Firefox only, no Chromium sharing the runner.
+    return [firefox];
   }
   return [testBrowser === 'firefox' ? firefox : { browser: 'chromium', launch: { headless: true } }];
 }
