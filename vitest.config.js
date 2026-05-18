@@ -8,16 +8,15 @@ const webGPU = !!process.env.WEBGPU;
 const testBrowser = process.env.TEST_BROWSER || 'chromium';
 const ci = !!process.env.CI;
 
+const firefoxUserPrefs = {
+  'dom.webgpu.enabled': true, // off by default on Linux Firefox
+  'webgl.force-enabled': true, // override GPU blocklist (no real GPU on CI)
+  'webgl.disable-fail-if-major-performance-caveat': true, // accept llvmpipe
+};
+
 const firefox = {
   browser: 'firefox',
-  launch: {
-    headless: false, // Firefox WebGL is fragile in true-headless on Linux CI; xvfb-run gives it a display
-    firefoxUserPrefs: {
-      'dom.webgpu.enabled': true, // off by default on Linux Firefox
-      'webgl.force-enabled': true, // override GPU blocklist (no real GPU on CI)
-      'webgl.disable-fail-if-major-performance-caveat': true, // accept llvmpipe
-    },
-  },
+  headless: false, // supported Vitest Browser option; xvfb-run supplies the display on CI
 };
 
 // One browser per process. In CI we run a separate matrix job per browser
@@ -78,8 +77,10 @@ export default defineConfig({
     allowOnly: !ci,
     browser: {
       enabled: true,
-      headless: true, // suppresses Vitest's UI iframe; per-instance launch.headless overrides for the actual browser launches
-      provider: playwright(),
+      headless: true,
+      provider: playwright({
+        launchOptions: testBrowser === 'firefox' ? { firefoxUserPrefs } : {},
+      }),
       instances: buildBrowserInstances(),
     },
   },
