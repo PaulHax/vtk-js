@@ -384,12 +384,9 @@ async function init() {
       camera.setProjectionMatrix(projectionMatrix);
       camera.modified();
 
-      // Shared rendering does not preserve host GL state, so restore any state
-      // this layer changes after vtk.js renders.
-      // MapLibre's projection includes a handedness flip, so compensate while
-      // rendering vtk.js geometry in the shared context.
+      // vtk.js renders with its own winding (CCW front faces) and does not
+      // preserve host GL state, so restore MapLibre's winding afterward.
       const previousFrontFace = renderGl.getParameter(renderGl.FRONT_FACE);
-      renderGl.frontFace(renderGl.CW);
       try {
         openglRenderWindow.renderShared();
       } finally {
