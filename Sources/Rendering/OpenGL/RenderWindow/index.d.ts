@@ -95,6 +95,11 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    */
   setCanvas(canvas: Nullable<HTMLCanvasElement>): boolean;
 
+  /**
+   * When true (default), vtk.js owns the canvas: it resizes and styles it and
+   * installs webglcontextlost/webglcontextrestored handlers. Set false when
+   * the canvas belongs to another library (see vtkSharedRenderWindow).
+   */
   getManageCanvas(): boolean;
 
   setManageCanvas(manageCanvas: boolean): boolean;
@@ -353,7 +358,9 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    * be multiplied by the current renderwindow size to compute the screenshot
    * size.  If no `size` or `scale` are provided, the current renderwindow
    * size is assumed.  The default format is "image/png". Returns a promise
-   * that resolves to the captured screenshot.
+   * that resolves to the captured screenshot. The promise rejects when the
+   * capture needs to resize the canvas or reset cameras while
+   * `manageCanvas` is false.
    * @param {String} format
    * @param {ICaptureOptions} options
    */

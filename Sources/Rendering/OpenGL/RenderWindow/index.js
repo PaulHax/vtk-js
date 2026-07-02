@@ -129,14 +129,17 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
 
   publicAPI.getViewNodeFactory = () => model.myFactory;
 
-  // prevent default context lost handler
-  model.canvas.addEventListener('webglcontextlost', _preventDefault, false);
+  // prevent default context lost handler; an externally owned canvas
+  // (manageCanvas=false) keeps its host's context-loss handling
+  if (model.manageCanvas) {
+    model.canvas.addEventListener('webglcontextlost', _preventDefault, false);
 
-  model.canvas.addEventListener(
-    'webglcontextrestored',
-    publicAPI.restoreContext,
-    false
-  );
+    model.canvas.addEventListener(
+      'webglcontextrestored',
+      publicAPI.restoreContext,
+      false
+    );
+  }
 
   // Auto update style
   const previousSize = [0, 0];
@@ -560,11 +563,17 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
       requestedSize !== null &&
       (requestedSize[0] !== model.size[0] ||
         requestedSize[1] !== model.size[1]);
-    const screenshotSize = requiresCanvasResize ? requestedSize : null;
+    // resetCamera is only applied in the two-pass capture path, so a
+    // same-size request must still go through it to honor the reset.
+    const requiresTwoPassCapture =
+      requiresCanvasResize || (!!resetCamera && requestedSize !== null);
+    const screenshotSize = requiresTwoPassCapture ? requestedSize : null;
 
-    if (!model.manageCanvas && requiresCanvasResize) {
-      throw new Error(
-        'Resizing screenshot capture requires manageCanvas=true on vtkOpenGLRenderWindow'
+    if (!model.manageCanvas && requiresTwoPassCapture) {
+      return Promise.reject(
+        new Error(
+          'Screenshot captures that resize the canvas or reset cameras require manageCanvas=true on vtkOpenGLRenderWindow'
+        )
       );
     }
 
