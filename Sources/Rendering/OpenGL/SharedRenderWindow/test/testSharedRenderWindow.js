@@ -258,13 +258,69 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       originalDisplay
     );
 
-    expect(
-      () =>
-        sharedWindow.captureNextImage('image/png', {
-          size: [100, 100],
-        }),
+    const rejection = expect(
+      sharedWindow.captureNextImage('image/png', {
+        size: [100, 100],
+      }),
       'Resize capture rejects when canvas management is disabled'
-    ).toThrow(/manageCanvas=true/);
+    ).rejects.toThrow(/manageCanvas=true/);
+
+    return rejection.finally(gc.releaseResources);
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'Test shared render window redirects vtk render requests to the host',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const container = document.querySelector('body');
+    const renderWindowContainer = gc.registerDOMElement(
+      document.createElement('div')
+    );
+    container.appendChild(renderWindowContainer);
+
+    const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
+    const renderer = gc.registerResource(vtkRenderer.newInstance());
+    renderWindow.addRenderer(renderer);
+
+    const glWindow = gc.registerResource(renderWindow.newAPISpecificView());
+    glWindow.setContainer(renderWindowContainer);
+    renderWindow.addView(glWindow);
+    glWindow.setSize(200, 200);
+
+    const glProxy = glWindow.get3DContext();
+    const gl = glProxy?.[GET_UNDERLYING_CONTEXT]?.();
+    expect(gl, 'Shared WebGL context created').toBeTruthy();
+
+    const sharedWindow = gc.registerResource(
+      vtkSharedRenderWindow.createFromContext(glWindow.getCanvas(), gl)
+    );
+    renderWindow.removeView(glWindow);
+    renderWindow.addView(sharedWindow);
+
+    let hostRenderRequests = 0;
+    sharedWindow.setRenderCallback(() => {
+      hostRenderRequests += 1;
+    });
+
+    renderWindow.render();
+    expect(
+      hostRenderRequests,
+      'renderWindow.render() is redirected to the host callback'
+    ).toBe(1);
+
+    sharedWindow.renderShared();
+    expect(
+      hostRenderRequests,
+      'renderShared() draws without re-entering the host callback'
+    ).toBe(1);
+
+    sharedWindow.setRenderCallback(null);
+    renderWindow.render();
+    expect(
+      hostRenderRequests,
+      'clearing the callback restores direct rendering'
+    ).toBe(1);
 
     gc.releaseResources();
   }
