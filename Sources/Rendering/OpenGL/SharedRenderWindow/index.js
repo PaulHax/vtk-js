@@ -22,8 +22,22 @@ const PIXEL_STORE_STATE = [
   ['unpackSkipImages', 'UNPACK_SKIP_IMAGES', 0],
 ];
 
-function getSupportedState(gl, stateSpecs) {
-  return stateSpecs.filter(([, valueName]) => gl[valueName] !== undefined);
+// Supported pixel-store params and MAX_DRAW_BUFFERS never change for a given
+// context; resetGLState runs in the host's render loop, so compute them once.
+const contextConstantsCache = new WeakMap();
+
+function getContextConstants(gl) {
+  let constants = contextConstantsCache.get(gl);
+  if (!constants) {
+    constants = {
+      pixelStoreState: PIXEL_STORE_STATE.filter(
+        ([, valueName]) => gl[valueName] !== undefined
+      ),
+      maxDrawBuffers: gl.drawBuffers ? gl.getParameter(gl.MAX_DRAW_BUFFERS) : 0,
+    };
+    contextConstantsCache.set(gl, constants);
+  }
+  return constants;
 }
 
 function isWebGL2Context(gl) {
@@ -33,10 +47,8 @@ function isWebGL2Context(gl) {
   );
 }
 
-function getDefaultDrawBuffers(gl) {
-  const framebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+function getDefaultDrawBuffers(gl, framebuffer, max) {
   if (!framebuffer) return [gl.BACK];
-  const max = gl.getParameter(gl.MAX_DRAW_BUFFERS);
   const buffers = [];
   for (let i = 0; i < max; i += 1) {
     buffers.push(gl.getParameter(gl.DRAW_BUFFER0 + i));
@@ -61,8 +73,9 @@ function applyVTKRenderDefaults(gl) {
   gl.enable(gl.BLEND);
 }
 
-function resetGLState(gl, shaderCache, options = {}) {
-  const pixelStoreState = getSupportedState(gl, PIXEL_STORE_STATE);
+function resetGLState(gl, shaderCache) {
+  const { pixelStoreState, maxDrawBuffers } = getContextConstants(gl);
+  const framebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
 
   gl.disable(gl.BLEND);
   gl.disable(gl.CULL_FACE);
@@ -123,9 +136,7 @@ function resetGLState(gl, shaderCache, options = {}) {
   gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, null);
 
   // Reset readBuffer to the default for the bound framebuffer.
-  gl.readBuffer(
-    gl.getParameter(gl.FRAMEBUFFER_BINDING) ? gl.COLOR_ATTACHMENT0 : gl.BACK
-  );
+  gl.readBuffer(framebuffer ? gl.COLOR_ATTACHMENT0 : gl.BACK);
 
   gl.useProgram(null);
 
@@ -141,7 +152,7 @@ function resetGLState(gl, shaderCache, options = {}) {
   }
 
   if (gl.drawBuffers) {
-    gl.drawBuffers(options.drawBuffers || getDefaultDrawBuffers(gl));
+    gl.drawBuffers(getDefaultDrawBuffers(gl, framebuffer, maxDrawBuffers));
   }
 
   applyVTKRenderDefaults(gl);
@@ -158,72 +169,37 @@ function vtkSharedRenderWindow(publicAPI, model) {
     .getViewNodeFactory()
     .registerOverride('vtkRenderer', vtkSharedRenderer.newInstance);
 
-  let renderEventSubscription = null;
   let renderCallback = null;
-  let suppressRenderEvent = false;
-  let savedEnableRender = null;
+  let inSharedRender = false;
   const superGet3DContext = publicAPI.get3DContext;
+  const superTraverseAllPasses = publicAPI.traverseAllPasses;
 
-  function getInteractor() {
-    return model.renderable?.getInteractor?.();
-  }
-
-  function clearRenderEventSubscription() {
-    if (renderEventSubscription) {
-      renderEventSubscription.unsubscribe();
-      renderEventSubscription = null;
-    }
-  }
-
-  function bindRenderEvent(interactor) {
-    if (!interactor?.onRenderEvent || !renderCallback) {
+  // Every vtk-side render request — interactor forceRender, widget updates,
+  // renderWindow.render() — reaches this view as a traverseAllPasses call.
+  // Redirecting here (rather than at the interactor RenderEvent) keeps all
+  // shared-context draws inside renderShared() with or without an interactor.
+  publicAPI.traverseAllPasses = () => {
+    if (renderCallback && !inSharedRender) {
+      renderCallback();
       return;
     }
+    superTraverseAllPasses();
+  };
 
-    renderEventSubscription = interactor.onRenderEvent(() => {
-      if (!suppressRenderEvent) {
-        renderCallback?.();
-      }
-    });
-  }
+  publicAPI.setRenderCallback = (callback) => {
+    renderCallback = callback || null;
+  };
 
-  publicAPI.renderShared = (options = {}) => {
-    publicAPI.prepareSharedRender(options);
+  publicAPI.renderShared = () => {
+    publicAPI.prepareSharedRender();
+    inSharedRender = true;
     try {
       if (model.renderable) {
-        if (renderCallback && !renderEventSubscription) {
-          publicAPI.setRenderCallback(renderCallback);
-        }
-
-        const interactor = getInteractor();
-        let previousEnableRender;
-        if (interactor?.getEnableRender) {
-          previousEnableRender = interactor.getEnableRender();
-          if (!previousEnableRender) {
-            interactor.setEnableRender(true);
-          }
-        }
-
-        suppressRenderEvent = true;
-        try {
-          model.renderable.preRender?.();
-          if (interactor) {
-            interactor.render();
-          } else {
-            const views = model.renderable.getViews?.() || [];
-            views.forEach((view) => view.traverseAllPasses());
-          }
-        } finally {
-          suppressRenderEvent = false;
-          if (
-            interactor?.setEnableRender &&
-            previousEnableRender !== undefined
-          ) {
-            interactor.setEnableRender(previousEnableRender);
-          }
-        }
+        model.renderable.preRender?.();
+        superTraverseAllPasses();
       }
     } finally {
+      inSharedRender = false;
       const shaderCache = publicAPI.getShaderCache();
       if (shaderCache) {
         shaderCache.setLastShaderProgramBound(null);
@@ -250,60 +226,26 @@ function vtkSharedRenderWindow(publicAPI, model) {
     return publicAPI.setSize(width, height);
   };
 
-  publicAPI.prepareSharedRender = (options = {}) => {
+  publicAPI.prepareSharedRender = () => {
     publicAPI.syncSizeFromCanvas();
     const gl = model.context;
     if (!gl) return;
-    resetGLState(gl, publicAPI.getShaderCache(), options);
-  };
-
-  publicAPI.setRenderCallback = (callback) => {
-    renderCallback = callback || null;
-    clearRenderEventSubscription();
-
-    const interactor = getInteractor();
-    if (renderCallback && interactor?.onRenderEvent) {
-      // Render requests flow through the interactor RenderEvent; redirect those
-      // to the host render loop while keeping draw calls inside renderShared().
-      if (savedEnableRender === null && interactor.getEnableRender) {
-        savedEnableRender = interactor.getEnableRender();
-      }
-      interactor?.setEnableRender?.(false);
-      bindRenderEvent(interactor);
-      return;
-    }
-
-    if (!renderCallback && interactor && savedEnableRender !== null) {
-      interactor.setEnableRender?.(savedEnableRender);
-      savedEnableRender = null;
-    }
+    resetGLState(gl, publicAPI.getShaderCache());
   };
 
   publicAPI.delete = macro.chain(() => {
-    clearRenderEventSubscription();
-    if (savedEnableRender !== null) {
-      const interactor = getInteractor();
-      interactor?.setEnableRender?.(savedEnableRender);
-      savedEnableRender = null;
-    }
     renderCallback = null;
   }, publicAPI.delete);
 }
 
 const DEFAULT_VALUES = {
   autoClear: false,
-  autoClearColor: true,
-  autoClearDepth: true,
 };
 
 export function extend(publicAPI, model, initialValues = {}) {
   const mergedValues = { ...DEFAULT_VALUES, ...initialValues };
   extendOpenGLRenderWindow(publicAPI, model, mergedValues);
-  macro.setGet(publicAPI, model, [
-    'autoClear',
-    'autoClearColor',
-    'autoClearDepth',
-  ]);
+  macro.setGet(publicAPI, model, ['autoClear']);
   vtkSharedRenderWindow(publicAPI, model);
 }
 
