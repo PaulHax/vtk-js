@@ -2,7 +2,7 @@ import { it, expect } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
 import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
-import createSharedWindow from './helpers';
+import createExternalContextWindow from './helpers';
 
 function createDirtyHostResources(gl) {
   return {
@@ -109,15 +109,15 @@ function deleteHostFramebuffer(gl, fbo) {
 }
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'Test renderShared resets host GL state and applies vtk.js defaults',
+  'Test renderExternal resets host GL state and applies vtk.js defaults',
   () => {
     const gc = testUtils.createGarbageCollector();
-    const { gl, sharedWindow } = createSharedWindow(gc);
+    const { gl, externalWindow } = createExternalContextWindow(gc);
 
     const hostResources = createDirtyHostResources(gl);
     dirtyHostGLState(gl, hostResources);
 
-    sharedWindow.prepareSharedRender();
+    externalWindow.prepareExternalRender();
 
     expect(gl.isEnabled(gl.BLEND), 'Blending is enabled').toBe(true);
     expect(
@@ -148,7 +148,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       'PIXEL_UNPACK_BUFFER unbound'
     ).toBe(null);
 
-    sharedWindow.renderShared();
+    externalWindow.renderExternal();
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     const px = new Uint8Array(4);
@@ -164,10 +164,10 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'Test renderShared draws into the currently bound host framebuffer',
+  'Test renderExternal draws into the currently bound host framebuffer',
   () => {
     const gc = testUtils.createGarbageCollector();
-    const { gl, sharedWindow } = createSharedWindow(gc);
+    const { gl, externalWindow } = createExternalContextWindow(gc);
 
     const hostFramebuffer = createHostFramebuffer(gl, 400, 400);
     gl.bindFramebuffer(gl.FRAMEBUFFER, hostFramebuffer.framebuffer);
@@ -177,7 +177,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     ).toBe(gl.FRAMEBUFFER_COMPLETE);
     gl.drawBuffers([gl.NONE]);
 
-    sharedWindow.renderShared();
+    externalWindow.renderExternal();
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, hostFramebuffer.framebuffer);
     const px = new Uint8Array(4);

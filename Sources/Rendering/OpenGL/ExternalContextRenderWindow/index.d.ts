@@ -2,23 +2,23 @@ import vtkOpenGLRenderWindow, {
   IOpenGLRenderWindowInitialValues,
 } from '../RenderWindow';
 
-export interface ISharedRenderWindowInitialValues extends IOpenGLRenderWindowInitialValues {
+export interface IExternalContextRenderWindowInitialValues extends IOpenGLRenderWindowInitialValues {
   autoClear?: boolean;
 }
 
-export type SharedRenderCallback = () => void;
+export type ExternalRenderCallback = () => void;
 
-export interface vtkSharedRenderWindow extends vtkOpenGLRenderWindow {
+export interface vtkExternalContextRenderWindow extends vtkOpenGLRenderWindow {
   /**
    * Reset vtk.js render state and render into a host-owned WebGL2 context.
    * Call this from the host's render loop. vtk.js renders with its own GL
    * conventions (counter-clockwise front faces, back-face culling state
    * reset); hosts needing different winding must restore it afterward.
    */
-  renderShared(): void;
+  renderExternal(): void;
 
   /** Reset vtk.js GL state and sync size before shared-context rendering. */
-  prepareSharedRender(): void;
+  prepareExternalRender(): void;
 
   syncSizeFromCanvas(): boolean;
 
@@ -26,9 +26,9 @@ export interface vtkSharedRenderWindow extends vtkOpenGLRenderWindow {
    * Redirect vtk-side render requests (interactor renders, widget updates,
    * renderWindow.render()) to the host render loop instead of drawing
    * immediately. The callback should schedule a host repaint that ends up
-   * calling renderShared().
+   * calling renderExternal().
    */
-  setRenderCallback(callback?: SharedRenderCallback | null): void;
+  setRenderCallback(callback?: ExternalRenderCallback | null): void;
 
   setAutoClear(autoClear: boolean): boolean;
   getAutoClear(): boolean;
@@ -37,22 +37,22 @@ export interface vtkSharedRenderWindow extends vtkOpenGLRenderWindow {
 export function extend(
   publicAPI: object,
   model: object,
-  initialValues?: ISharedRenderWindowInitialValues
+  initialValues?: IExternalContextRenderWindowInitialValues
 ): void;
 
 export function newInstance(
-  initialValues?: ISharedRenderWindowInitialValues
-): vtkSharedRenderWindow;
+  initialValues?: IExternalContextRenderWindowInitialValues
+): vtkExternalContextRenderWindow;
 
 export function createFromContext(
   canvas: HTMLCanvasElement,
   gl: WebGL2RenderingContext,
-  options?: ISharedRenderWindowInitialValues
-): vtkSharedRenderWindow;
+  options?: IExternalContextRenderWindowInitialValues
+): vtkExternalContextRenderWindow;
 
-export declare const vtkSharedRenderWindow: {
+export declare const vtkExternalContextRenderWindow: {
   newInstance: typeof newInstance;
   extend: typeof extend;
   createFromContext: typeof createFromContext;
 };
-export default vtkSharedRenderWindow;
+export default vtkExternalContextRenderWindow;
