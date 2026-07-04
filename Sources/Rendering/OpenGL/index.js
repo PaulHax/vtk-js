@@ -6,6 +6,8 @@ import vtkCellArrayBufferObject from './CellArrayBufferObject';
 import vtkConvolution2DPass from './Convolution2DPass';
 import './CubeAxesActor';
 import vtkCutterMapper from './CutterMapper';
+import vtkExternalContextRenderer from './ExternalContextRenderer';
+import vtkExternalContextRenderWindow from './ExternalContextRenderWindow';
 import vtkForwardPass from './ForwardPass';
 import vtkFramebuffer from './Framebuffer';
 import vtkGlyph3DMapper from './Glyph3DMapper';
@@ -41,6 +43,8 @@ export default {
   vtkCellArrayBufferObject,
   vtkCutterMapper,
   vtkConvolution2DPass,
+  vtkExternalContextRenderer,
+  vtkExternalContextRenderWindow,
   vtkForwardPass,
   vtkFramebuffer,
   vtkGlyph3DMapper,
