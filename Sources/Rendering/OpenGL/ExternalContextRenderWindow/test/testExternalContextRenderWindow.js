@@ -7,10 +7,12 @@ import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
 import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
 import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
 import vtkConeSource from 'vtk.js/Sources/Filters/Sources/ConeSource';
+import vtkPixelSpaceCallbackMapper from 'vtk.js/Sources/Rendering/Core/PixelSpaceCallbackMapper';
 import vtkSphereSource from 'vtk.js/Sources/Filters/Sources/SphereSource';
 import vtkCubeSource from 'vtk.js/Sources/Filters/Sources/CubeSource';
 import vtkExternalContextRenderWindow from 'vtk.js/Sources/Rendering/OpenGL/ExternalContextRenderWindow';
 import { GET_UNDERLYING_CONTEXT } from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow/ContextProxy';
+import createExternalContextWindow from './helpers';
 
 import baseline from '../../../Core/RenderWindow/test/testMultipleRenderers.png';
 import baseline2 from '../../../Core/RenderWindow/test/testMultipleRenderers2.png';
@@ -320,6 +322,54 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     expect(
       hostRenderRequests,
       'clearing the callback restores direct rendering'
+    ).toBe(1);
+
+    gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'Test external context render window defers re-entrant render requests',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const { externalWindow, renderWindow, renderer } =
+      createExternalContextWindow(gc);
+
+    let hostRenderRequests = 0;
+    externalWindow.setRenderCallback(() => {
+      hostRenderRequests += 1;
+    });
+
+    // Fire a vtk render request from inside the in-progress external render:
+    // a PixelSpaceCallbackMapper invokes its callback mid-traversal, standing
+    // in for any observer that mutates state while a render is running.
+    let requestedMidRender = false;
+    const source = gc.registerResource(vtkConeSource.newInstance());
+    const callbackMapper = gc.registerResource(
+      vtkPixelSpaceCallbackMapper.newInstance()
+    );
+    callbackMapper.setInputConnection(source.getOutputPort());
+    callbackMapper.setCallback(() => {
+      if (!requestedMidRender) {
+        requestedMidRender = true;
+        renderWindow.render();
+      }
+    });
+    const callbackActor = gc.registerResource(vtkActor.newInstance());
+    callbackActor.setMapper(callbackMapper);
+    renderer.addActor(callbackActor);
+
+    externalWindow.renderExternal();
+    expect(requestedMidRender, 'a render request fired mid-render').toBe(true);
+    expect(
+      hostRenderRequests,
+      'the mid-render request is deferred and forwarded to the host once'
+    ).toBe(1);
+
+    externalWindow.renderExternal();
+    expect(
+      hostRenderRequests,
+      'a render without mid-render requests forwards nothing'
     ).toBe(1);
 
     gc.releaseResources();
