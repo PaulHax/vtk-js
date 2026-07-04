@@ -1,8 +1,8 @@
 import macro from 'vtk.js/Sources/macros';
 import { extend as extendOpenGLRenderer } from 'vtk.js/Sources/Rendering/OpenGL/Renderer';
 
-function vtkSharedRenderer(publicAPI, model) {
-  model.classHierarchy.push('vtkSharedRenderer');
+function vtkExternalContextRenderer(publicAPI, model) {
+  model.classHierarchy.push('vtkExternalContextRenderer');
 
   const superClear = publicAPI.clear;
 
@@ -25,9 +25,12 @@ function vtkSharedRenderer(publicAPI, model) {
 
 export function extend(publicAPI, model, initialValues = {}) {
   extendOpenGLRenderer(publicAPI, model, initialValues);
-  vtkSharedRenderer(publicAPI, model);
+  vtkExternalContextRenderer(publicAPI, model);
 }
 
-export const newInstance = macro.newInstance(extend, 'vtkSharedRenderer');
+export const newInstance = macro.newInstance(
+  extend,
+  'vtkExternalContextRenderer'
+);
 
 export default { newInstance, extend };

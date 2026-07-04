@@ -13,7 +13,7 @@ import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
 import vtkRenderer from '@kitware/vtk.js/Rendering/Core/Renderer';
 import vtkRenderWindow from '@kitware/vtk.js/Rendering/Core/RenderWindow';
 import vtkLight from '@kitware/vtk.js/Rendering/Core/Light';
-import vtkSharedRenderWindow from '@kitware/vtk.js/Rendering/OpenGL/SharedRenderWindow';
+import vtkExternalContextRenderWindow from '@kitware/vtk.js/Rendering/OpenGL/ExternalContextRenderWindow';
 import { mat4, vec3 } from 'gl-matrix';
 
 // ----------------------------------------------------------------------------
@@ -344,7 +344,10 @@ async function init() {
 
     onAdd(mapInstance, gl) {
       const canvas = mapInstance.getCanvas();
-      openglRenderWindow = vtkSharedRenderWindow.createFromContext(canvas, gl);
+      openglRenderWindow = vtkExternalContextRenderWindow.createFromContext(
+        canvas,
+        gl
+      );
       renderWindow.addView(openglRenderWindow);
     },
 
@@ -388,7 +391,7 @@ async function init() {
       // preserve host GL state, so restore MapLibre's winding afterward.
       const previousFrontFace = renderGl.getParameter(renderGl.FRONT_FACE);
       try {
-        openglRenderWindow.renderShared();
+        openglRenderWindow.renderExternal();
       } finally {
         renderGl.frontFace(previousFrontFace);
       }
