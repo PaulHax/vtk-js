@@ -98,7 +98,7 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
   /**
    * When true (default), vtk.js owns the canvas: it resizes and styles it and
    * installs webglcontextlost/webglcontextrestored handlers. Set false when
-   * the canvas belongs to another library (see vtkSharedRenderWindow).
+   * the canvas belongs to another library (see vtkExternalContextRenderWindow).
    */
   getManageCanvas(): boolean;
 
