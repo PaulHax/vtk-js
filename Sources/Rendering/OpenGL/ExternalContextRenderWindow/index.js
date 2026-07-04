@@ -73,9 +73,16 @@ function applyVTKRenderDefaults(gl) {
   gl.enable(gl.BLEND);
 }
 
-function resetGLState(gl, shaderCache) {
+function resetGLState(gl, shaderCache, hostState) {
   const { pixelStoreState, maxDrawBuffers } = getContextConstants(gl);
-  const framebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+  // Every gl.getParameter is a synchronous CPU/GPU sync point that stalls the
+  // calling thread until prior GPU work drains. A host that declares its
+  // framebuffer binding (and, for FBO targets, its draw-buffer list) makes
+  // this reset — and thus the whole render — free of GL readbacks.
+  const framebuffer =
+    hostState && 'framebuffer' in hostState
+      ? hostState.framebuffer
+      : gl.getParameter(gl.FRAMEBUFFER_BINDING);
 
   gl.disable(gl.BLEND);
   gl.disable(gl.CULL_FACE);
@@ -152,7 +159,10 @@ function resetGLState(gl, shaderCache) {
   }
 
   if (gl.drawBuffers) {
-    gl.drawBuffers(getDefaultDrawBuffers(gl, framebuffer, maxDrawBuffers));
+    gl.drawBuffers(
+      hostState?.drawBuffers ??
+        getDefaultDrawBuffers(gl, framebuffer, maxDrawBuffers)
+    );
   }
 
   applyVTKRenderDefaults(gl);
@@ -190,8 +200,8 @@ function vtkExternalContextRenderWindow(publicAPI, model) {
     renderCallback = callback || null;
   };
 
-  publicAPI.renderExternal = () => {
-    publicAPI.prepareExternalRender();
+  publicAPI.renderExternal = (hostState) => {
+    publicAPI.prepareExternalRender(hostState);
     inExternalRender = true;
     try {
       if (model.renderable) {
@@ -226,11 +236,17 @@ function vtkExternalContextRenderWindow(publicAPI, model) {
     return publicAPI.setSize(width, height);
   };
 
-  publicAPI.prepareExternalRender = () => {
+  publicAPI.prepareExternalRender = (hostState) => {
     publicAPI.syncSizeFromCanvas();
     const gl = model.context;
     if (!gl) return;
-    resetGLState(gl, publicAPI.getShaderCache());
+    resetGLState(gl, publicAPI.getShaderCache(), hostState);
+    // Seed the JS-side framebuffer-binding tracker (when the base render
+    // window provides one) so vtk's internal FBO save/restore also runs
+    // without readbacks.
+    if (hostState && 'framebuffer' in hostState) {
+      publicAPI.setFramebufferBinding?.(hostState.framebuffer);
+    }
   };
 
   publicAPI.delete = macro.chain(() => {
