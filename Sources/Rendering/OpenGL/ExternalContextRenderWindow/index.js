@@ -1,6 +1,6 @@
 import macro from 'vtk.js/Sources/macros';
 import { extend as extendOpenGLRenderWindow } from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow';
-import vtkSharedRenderer from 'vtk.js/Sources/Rendering/OpenGL/SharedRenderer';
+import vtkExternalContextRenderer from 'vtk.js/Sources/Rendering/OpenGL/ExternalContextRenderer';
 
 const PIXEL_STORE_STATE = [
   ['packAlignment', 'PACK_ALIGNMENT', 4],
@@ -162,24 +162,24 @@ function resetGLState(gl, shaderCache) {
   }
 }
 
-function vtkSharedRenderWindow(publicAPI, model) {
-  model.classHierarchy.push('vtkSharedRenderWindow');
+function vtkExternalContextRenderWindow(publicAPI, model) {
+  model.classHierarchy.push('vtkExternalContextRenderWindow');
 
   publicAPI
     .getViewNodeFactory()
-    .registerOverride('vtkRenderer', vtkSharedRenderer.newInstance);
+    .registerOverride('vtkRenderer', vtkExternalContextRenderer.newInstance);
 
   let renderCallback = null;
-  let inSharedRender = false;
+  let inExternalRender = false;
   const superGet3DContext = publicAPI.get3DContext;
   const superTraverseAllPasses = publicAPI.traverseAllPasses;
 
   // Every vtk-side render request — interactor forceRender, widget updates,
   // renderWindow.render() — reaches this view as a traverseAllPasses call.
   // Redirecting here (rather than at the interactor RenderEvent) keeps all
-  // shared-context draws inside renderShared() with or without an interactor.
+  // external-context draws inside renderExternal() with or without an interactor.
   publicAPI.traverseAllPasses = () => {
-    if (renderCallback && !inSharedRender) {
+    if (renderCallback && !inExternalRender) {
       renderCallback();
       return;
     }
@@ -190,16 +190,16 @@ function vtkSharedRenderWindow(publicAPI, model) {
     renderCallback = callback || null;
   };
 
-  publicAPI.renderShared = () => {
-    publicAPI.prepareSharedRender();
-    inSharedRender = true;
+  publicAPI.renderExternal = () => {
+    publicAPI.prepareExternalRender();
+    inExternalRender = true;
     try {
       if (model.renderable) {
         model.renderable.preRender?.();
         superTraverseAllPasses();
       }
     } finally {
-      inSharedRender = false;
+      inExternalRender = false;
       const shaderCache = publicAPI.getShaderCache();
       if (shaderCache) {
         shaderCache.setLastShaderProgramBound(null);
@@ -226,7 +226,7 @@ function vtkSharedRenderWindow(publicAPI, model) {
     return publicAPI.setSize(width, height);
   };
 
-  publicAPI.prepareSharedRender = () => {
+  publicAPI.prepareExternalRender = () => {
     publicAPI.syncSizeFromCanvas();
     const gl = model.context;
     if (!gl) return;
@@ -246,18 +246,21 @@ export function extend(publicAPI, model, initialValues = {}) {
   const mergedValues = { ...DEFAULT_VALUES, ...initialValues };
   extendOpenGLRenderWindow(publicAPI, model, mergedValues);
   macro.setGet(publicAPI, model, ['autoClear']);
-  vtkSharedRenderWindow(publicAPI, model);
+  vtkExternalContextRenderWindow(publicAPI, model);
 }
 
-export const newInstance = macro.newInstance(extend, 'vtkSharedRenderWindow');
+export const newInstance = macro.newInstance(
+  extend,
+  'vtkExternalContextRenderWindow'
+);
 
 export function createFromContext(canvas, gl, options = {}) {
   if (!isWebGL2Context(gl)) {
-    throw new Error('vtkSharedRenderWindow requires a WebGL2 context');
+    throw new Error('vtkExternalContextRenderWindow requires a WebGL2 context');
   }
   if (gl.canvas && gl.canvas !== canvas) {
     throw new Error(
-      'vtkSharedRenderWindow requires the provided canvas to match gl.canvas'
+      'vtkExternalContextRenderWindow requires the provided canvas to match gl.canvas'
     );
   }
 

@@ -5,10 +5,10 @@ import vtkMapper from 'vtk.js/Sources/Rendering/Core/Mapper';
 import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
 import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
 import vtkConeSource from 'vtk.js/Sources/Filters/Sources/ConeSource';
-import vtkSharedRenderWindow from 'vtk.js/Sources/Rendering/OpenGL/SharedRenderWindow';
+import vtkExternalContextRenderWindow from 'vtk.js/Sources/Rendering/OpenGL/ExternalContextRenderWindow';
 import { GET_UNDERLYING_CONTEXT } from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow/ContextProxy';
 
-export default function createSharedWindow(
+export default function createExternalContextWindow(
   gc,
   { width = 400, height = 400, background = [0.2, 0.3, 0.4] } = {}
 ) {
@@ -39,14 +39,14 @@ export default function createSharedWindow(
   const gl = glProxy?.[GET_UNDERLYING_CONTEXT]?.();
   expect(gl, 'WebGL context created').toBeTruthy();
 
-  const sharedWindow = gc.registerResource(
-    vtkSharedRenderWindow.createFromContext(glWindow.getCanvas(), gl)
+  const externalWindow = gc.registerResource(
+    vtkExternalContextRenderWindow.createFromContext(glWindow.getCanvas(), gl)
   );
-  sharedWindow.setAutoClear(true);
-  sharedWindow.setSize(width, height);
+  externalWindow.setAutoClear(true);
+  externalWindow.setSize(width, height);
   renderWindow.removeView(glWindow);
-  renderWindow.addView(sharedWindow);
+  renderWindow.addView(externalWindow);
   renderer.resetCamera();
 
-  return { gl, sharedWindow, renderer, renderWindow };
+  return { gl, externalWindow, renderer, renderWindow };
 }
