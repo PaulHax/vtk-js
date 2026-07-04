@@ -181,6 +181,7 @@ function vtkExternalContextRenderWindow(publicAPI, model) {
 
   let renderCallback = null;
   let inExternalRender = false;
+  let renderRequestedDuringExternal = false;
   const superGet3DContext = publicAPI.get3DContext;
   const superTraverseAllPasses = publicAPI.traverseAllPasses;
 
@@ -188,8 +189,18 @@ function vtkExternalContextRenderWindow(publicAPI, model) {
   // renderWindow.render() — reaches this view as a traverseAllPasses call.
   // Redirecting here (rather than at the interactor RenderEvent) keeps all
   // external-context draws inside renderExternal() with or without an interactor.
+  //
+  // A request that arrives while renderExternal is drawing must not start a
+  // nested render pass, and bouncing it straight to the host would schedule
+  // a redundant repaint of the frame being painted right now. Defer it: at
+  // most one deferred request is forwarded to the host after the in-progress
+  // render completes.
   publicAPI.traverseAllPasses = () => {
-    if (renderCallback && !inExternalRender) {
+    if (inExternalRender) {
+      renderRequestedDuringExternal = true;
+      return;
+    }
+    if (renderCallback) {
       renderCallback();
       return;
     }
@@ -203,6 +214,7 @@ function vtkExternalContextRenderWindow(publicAPI, model) {
   publicAPI.renderExternal = (hostState) => {
     publicAPI.prepareExternalRender(hostState);
     inExternalRender = true;
+    renderRequestedDuringExternal = false;
     try {
       if (model.renderable) {
         model.renderable.preRender?.();
@@ -213,6 +225,10 @@ function vtkExternalContextRenderWindow(publicAPI, model) {
       const shaderCache = publicAPI.getShaderCache();
       if (shaderCache) {
         shaderCache.setLastShaderProgramBound(null);
+      }
+      if (renderRequestedDuringExternal) {
+        renderRequestedDuringExternal = false;
+        renderCallback?.();
       }
     }
   };
