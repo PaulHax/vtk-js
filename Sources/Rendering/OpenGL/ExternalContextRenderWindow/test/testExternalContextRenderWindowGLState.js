@@ -164,6 +164,45 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'Test host-declared GL state removes framebuffer readbacks from the render path',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const { gl, externalWindow } = createExternalContextWindow(gc);
+
+    // Warm up: first render compiles shaders and fills the per-context
+    // constants cache (MAX_DRAW_BUFFERS), which legitimately query.
+    externalWindow.renderExternal({ framebuffer: null });
+
+    const originalGetParameter = gl.getParameter.bind(gl);
+    const framebufferReadbacks = [];
+    gl.getParameter = (pname) => {
+      if (
+        pname === gl.FRAMEBUFFER_BINDING ||
+        (pname >= gl.DRAW_BUFFER0 && pname < gl.DRAW_BUFFER0 + 16)
+      ) {
+        framebufferReadbacks.push(pname);
+      }
+      return originalGetParameter(pname);
+    };
+
+    externalWindow.prepareExternalRender({ framebuffer: null });
+    expect(
+      framebufferReadbacks.length,
+      'prepareExternalRender with host state queries no framebuffer state'
+    ).toBe(0);
+
+    externalWindow.prepareExternalRender();
+    expect(
+      framebufferReadbacks.length,
+      'prepareExternalRender without host state falls back to querying'
+    ).toBeGreaterThan(0);
+
+    gl.getParameter = originalGetParameter;
+    gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'Test renderExternal draws into the currently bound host framebuffer',
   () => {
     const gc = testUtils.createGarbageCollector();
