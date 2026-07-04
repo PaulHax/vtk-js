@@ -2,13 +2,13 @@ import vtkViewNode, {
   IViewNodeInitialValues,
 } from '../../../Rendering/SceneGraph/ViewNode';
 
-export interface ISharedRendererInitialValues extends IViewNodeInitialValues {
+export interface IExternalContextRendererInitialValues extends IViewNodeInitialValues {
   context?: WebGLRenderingContext | WebGL2RenderingContext | null;
   selector?: any;
   _openGLRenderWindow?: any;
 }
 
-export interface vtkSharedRenderer extends vtkViewNode {
+export interface vtkExternalContextRenderer extends vtkViewNode {
   buildPass(prepass: boolean): void;
 
   updateLights(): number;
@@ -44,15 +44,15 @@ export interface vtkSharedRenderer extends vtkViewNode {
 export function extend(
   publicAPI: object,
   model: object,
-  initialValues?: ISharedRendererInitialValues
+  initialValues?: IExternalContextRendererInitialValues
 ): void;
 
 export function newInstance(
-  initialValues?: ISharedRendererInitialValues
-): vtkSharedRenderer;
+  initialValues?: IExternalContextRendererInitialValues
+): vtkExternalContextRenderer;
 
-export declare const vtkSharedRenderer: {
+export declare const vtkExternalContextRenderer: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };
-export default vtkSharedRenderer;
+export default vtkExternalContextRenderer;

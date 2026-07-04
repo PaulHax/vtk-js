@@ -32,7 +32,7 @@ export function extend(publicAPI, model, initialValues = {}) {
   Object.assign(model, DEFAULT_VALUES, initialValues);
 
   // Each factory inherits the shared OpenGL mappings while still allowing
-  // instance-local overrides such as vtkSharedRenderer.
+  // instance-local overrides such as vtkExternalContextRenderer.
   model.overrides = Object.create(CLASS_MAPPING);
 
   // Inheritance

@@ -2,7 +2,7 @@ import { it, expect } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
 import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
-import createSharedWindow from './helpers';
+import createExternalContextWindow from './helpers';
 
 const VERT_SRC = `
   attribute vec2 aPos;
@@ -69,10 +69,10 @@ function hostDraw(gl, prog) {
 }
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'Test host raw WebGL rendering can resume after renderShared when state is rebound',
+  'Test host raw WebGL rendering can resume after renderExternal when state is rebound',
   () => {
     const gc = testUtils.createGarbageCollector();
-    const { gl, sharedWindow } = createSharedWindow(gc, {
+    const { gl, externalWindow } = createExternalContextWindow(gc, {
       background: [0.1, 0.1, 0.2],
     });
 
@@ -84,7 +84,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     setupHostState(gl, hostProg, hostVAO, W, H);
     hostDraw(gl, hostProg);
 
-    sharedWindow.renderShared();
+    externalWindow.renderExternal();
 
     setupHostState(gl, hostProg, hostVAO, W, H);
     hostDraw(gl, hostProg);
