@@ -64,6 +64,11 @@ export interface vtkExternalContextRenderWindow extends vtkOpenGLRenderWindow {
    */
   setRenderCallback(callback?: ExternalRenderCallback | null): void;
 
+  /**
+   * When true, each renderer applies its preserveColorBuffer and
+   * preserveDepthBuffer settings. When false, renderer clears leave the host
+   * framebuffer contents unchanged.
+   */
   setAutoClear(autoClear: boolean): boolean;
   getAutoClear(): boolean;
 }
