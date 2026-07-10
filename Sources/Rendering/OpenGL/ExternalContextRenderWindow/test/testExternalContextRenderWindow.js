@@ -196,6 +196,82 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'Test external context render window honors layered renderer clear policies',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const { gl, externalWindow, renderer, renderWindow } =
+      createExternalContextWindow(gc);
+
+    renderWindow.setNumberOfLayers(2);
+    renderer.getActors()[0].setVisibility(false);
+    renderer.setPreserveColorBuffer(true);
+    renderer.setPreserveDepthBuffer(true);
+
+    const overlayRenderer = gc.registerResource(vtkRenderer.newInstance());
+    overlayRenderer.setLayer(1);
+    overlayRenderer.setPreserveColorBuffer(true);
+    overlayRenderer.setPreserveDepthBuffer(true);
+    renderWindow.addRenderer(overlayRenderer);
+
+    const overlayActor = gc.registerResource(vtkActor.newInstance());
+    overlayActor.getProperty().setColor(1, 0, 0);
+    overlayActor.getProperty().setAmbient(1);
+    overlayActor.getProperty().setDiffuse(0);
+    overlayRenderer.addActor(overlayActor);
+
+    const overlayMapper = gc.registerResource(vtkMapper.newInstance());
+    overlayActor.setMapper(overlayMapper);
+
+    const overlaySource = gc.registerResource(vtkCubeSource.newInstance());
+    overlayMapper.setInputConnection(overlaySource.getOutputPort());
+    overlayRenderer.resetCamera();
+
+    const seedHostFramebuffer = () => {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.disable(gl.SCISSOR_TEST);
+      gl.colorMask(true, true, true, true);
+      gl.depthMask(true);
+      gl.clearColor(0, 0, 1, 1);
+      gl.clearDepth(0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+    };
+    const readPixel = (x, y) => {
+      const pixel = new Uint8Array(4);
+      gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+      return pixel;
+    };
+    const isBlue = (pixel) => pixel[2] > 200 && pixel[0] < 30 && pixel[1] < 30;
+    const isRed = (pixel) => pixel[0] > 150 && pixel[1] < 80 && pixel[2] < 80;
+
+    seedHostFramebuffer();
+    externalWindow.renderExternal({ framebuffer: null });
+    const preservedCenter = readPixel(200, 200);
+    expect(
+      isBlue(preservedCenter),
+      `Preserved host depth occludes the overlay, got rgba(${preservedCenter.join(',')})`
+    ).toBeTruthy();
+
+    seedHostFramebuffer();
+    overlayRenderer.setPreserveDepthBuffer(false);
+    externalWindow.renderExternal({ framebuffer: null });
+    const clearedCenter = readPixel(200, 200);
+    expect(
+      isRed(clearedCenter),
+      `Overlay depth clear reveals its actor, got rgba(${clearedCenter.join(',')})`
+    ).toBeTruthy();
+
+    const preservedCorner = readPixel(10, 10);
+    expect(
+      isBlue(preservedCorner),
+      `Both layers preserve host color outside the actor, got rgba(${preservedCorner.join(',')})`
+    ).toBeTruthy();
+
+    gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'Test external context render window rejects WebGL1 contexts',
   () => {
     const canvas = document.createElement('canvas');
