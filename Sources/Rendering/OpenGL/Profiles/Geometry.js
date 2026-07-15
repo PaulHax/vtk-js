@@ -7,6 +7,7 @@ import 'vtk.js/Sources/Rendering/OpenGL/Actor';
 import 'vtk.js/Sources/Rendering/OpenGL/Actor2D';
 import 'vtk.js/Sources/Rendering/OpenGL/CubeAxesActor';
 import 'vtk.js/Sources/Rendering/OpenGL/CutterMapper';
+import 'vtk.js/Sources/Rendering/OpenGL/PointGaussianMapper';
 import 'vtk.js/Sources/Rendering/OpenGL/PolyDataMapper';
 import 'vtk.js/Sources/Rendering/OpenGL/PolyDataMapper2D';
 import 'vtk.js/Sources/Rendering/OpenGL/ScalarBarActor';
