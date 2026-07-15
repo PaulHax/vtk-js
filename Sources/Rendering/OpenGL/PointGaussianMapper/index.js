@@ -6,8 +6,11 @@ import vtkBufferObject from 'vtk.js/Sources/Rendering/OpenGL/BufferObject';
 import vtkShaderProgram from 'vtk.js/Sources/Rendering/OpenGL/ShaderProgram';
 import vtkOpenGLPolyDataMapper from 'vtk.js/Sources/Rendering/OpenGL/PolyDataMapper';
 
+import vtkDataSet from 'vtk.js/Sources/Common/DataModel/DataSet';
 import { registerOverride } from 'vtk.js/Sources/Rendering/OpenGL/ViewNodeFactory';
 import { computeCoordShiftAndScale } from 'vtk.js/Sources/Rendering/OpenGL/CellArrayBufferObject/helpers';
+
+const { FieldAssociations } = vtkDataSet;
 
 // ----------------------------------------------------------------------------
 // vtkOpenGLPointGaussianMapper methods
@@ -29,6 +32,124 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
 
   // Capture 'parentClass' api for internal use
   const superClass = { ...publicAPI };
+
+  function getColorState(poly) {
+    const renderable = model.renderable;
+    const scalarVisibility = renderable.getScalarVisibility();
+    if (!scalarVisibility) {
+      return { scalarVisibility };
+    }
+    const scalarMode = renderable.getScalarMode();
+    const arrayAccessMode = renderable.getArrayAccessMode();
+    const colorByArrayName = renderable.getColorByArrayName();
+    const colorMode = renderable.getColorMode();
+    const fieldDataTupleId = renderable.getFieldDataTupleId();
+    const interpolateScalarsBeforeMapping =
+      renderable.getInterpolateScalarsBeforeMapping();
+    const useLookupTableScalarRange = renderable.getUseLookupTableScalarRange();
+    const scalarRange = renderable.getScalarRange();
+    const { scalars } = renderable.getAbstractScalars(
+      poly,
+      scalarMode,
+      arrayAccessMode,
+      undefined,
+      colorByArrayName
+    );
+    const lookupTable = scalars ? renderable.getLookupTable() : null;
+
+    return {
+      scalarVisibility,
+      scalarMode,
+      arrayAccessMode,
+      colorByArrayName,
+      colorMode,
+      fieldDataTupleId,
+      interpolateScalarsBeforeMapping,
+      useLookupTableScalarRange,
+      scalarRange: `${scalarRange[0]},${scalarRange[1]}`,
+      scalars,
+      scalarsMTime: scalars ? scalars.getMTime() : 0,
+      lookupTable,
+      lookupTableMTime: lookupTable ? lookupTable.getMTime() : 0,
+    };
+  }
+
+  function isSameColorState(a, b) {
+    return (
+      a &&
+      b &&
+      a.scalarVisibility === b.scalarVisibility &&
+      a.scalarMode === b.scalarMode &&
+      a.arrayAccessMode === b.arrayAccessMode &&
+      a.colorByArrayName === b.colorByArrayName &&
+      a.colorMode === b.colorMode &&
+      a.fieldDataTupleId === b.fieldDataTupleId &&
+      a.interpolateScalarsBeforeMapping === b.interpolateScalarsBeforeMapping &&
+      a.useLookupTableScalarRange === b.useLookupTableScalarRange &&
+      a.scalarRange === b.scalarRange &&
+      a.scalars === b.scalars &&
+      a.scalarsMTime === b.scalarsMTime &&
+      a.lookupTable === b.lookupTable &&
+      a.lookupTableMTime === b.lookupTableMTime
+    );
+  }
+
+  function getVBOState() {
+    const poly = model.currentInput;
+    if (!poly) {
+      return null;
+    }
+    const points = poly.getPoints();
+    return {
+      poly,
+      points,
+      pointsMTime: points.getMTime(),
+      color: getColorState(poly),
+      context: model.context,
+    };
+  }
+
+  function isSameVBOState(a, b) {
+    return (
+      a &&
+      b &&
+      a.poly === b.poly &&
+      a.points === b.points &&
+      a.pointsMTime === b.pointsMTime &&
+      a.context === b.context &&
+      isSameColorState(a.color, b.color)
+    );
+  }
+
+  publicAPI.getNeedToRebuildBufferObjects = () =>
+    !isSameVBOState(model.pointGaussianVBOState, getVBOState());
+
+  publicAPI.renderPiece = (ren, actor) => {
+    const selector = model._openGLRenderer?.getSelector();
+    if (
+      selector &&
+      selector.getFieldAssociation() ===
+        FieldAssociations.FIELD_ASSOCIATION_CELLS
+    ) {
+      // This mapper has no topology: its vertex stream does not represent cell
+      // ids, so cell hardware selection must not fabricate them.
+      return;
+    }
+    superClass.renderPiece(ren, actor);
+  };
+
+  publicAPI.updateMaximumPointCellIds = () => {
+    const selector = model._openGLRenderer.getSelector();
+    if (
+      selector &&
+      selector.getFieldAssociation() ===
+        FieldAssociations.FIELD_ASSOCIATION_POINTS
+    ) {
+      selector.setMaximumPointId(
+        Math.max(0, model.currentInput.getPoints().getNumberOfPoints() - 1)
+      );
+    }
+  };
 
   publicAPI.replaceShaderValues = (shaders, ren, actor) => {
     if (model.renderable.getCircle()) {
@@ -68,7 +189,11 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       return;
     }
 
-    model.renderable.mapScalars(poly, 1.0);
+    const vboState = getVBOState();
+    if (!isSameColorState(model.pointGaussianColorState, vboState.color)) {
+      model.renderable.mapScalars(poly, 1.0);
+      model.pointGaussianColorState = getColorState(poly);
+    }
     const c = model.renderable.getColorMapColors();
 
     // One vertex per point, drawn as gl.POINTS from the Points primitive.
@@ -134,15 +259,25 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       vbo.getColorBO().upload(packedUCVBO, ObjectType.ARRAY_BUFFER);
     }
 
+    model.pointGaussianVBOState = getVBOState();
     model.VBOBuildTime.modified();
   };
+
+  publicAPI.delete = macro.chain(() => {
+    for (let i = model.primTypes.Start; i < model.primTypes.End; i++) {
+      model.primitives[i].releaseGraphicsResources();
+    }
+  }, publicAPI.delete);
 }
 
 // ----------------------------------------------------------------------------
 // Object factory
 // ----------------------------------------------------------------------------
 
-const DEFAULT_VALUES = {};
+const DEFAULT_VALUES = {
+  pointGaussianColorState: null,
+  pointGaussianVBOState: null,
+};
 
 // ----------------------------------------------------------------------------
 
