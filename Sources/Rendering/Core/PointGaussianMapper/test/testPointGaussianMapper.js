@@ -1,4 +1,4 @@
-import { it, expect } from 'vitest';
+import { it, expect, vi } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
 import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
@@ -66,12 +66,18 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 
     const numPoints = 5;
     const coords = [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0.5, 0.5, 1];
-    const polyData = gc.registerResource(makePointCloud(coords));
+    const polyData = gc.registerResource(
+      makePointCloud(
+        coords,
+        [255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 255, 0, 255]
+      )
+    );
     const mapper = gc.registerResource(vtkPointGaussianMapper.newInstance());
     const actor = gc.registerResource(vtkActor.newInstance());
 
     mapper.setInputData(polyData);
-    mapper.setScalarVisibility(false);
+    mapper.setColorModeToDirectScalars();
+    mapper.setScalarVisibility(true);
     actor.setMapper(mapper);
     renderer.addActor(actor);
     renderer.resetCamera();
@@ -91,17 +97,28 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       'N input points upload N vertices, not 3N'
     ).toBe(numPoints);
 
-    // Releasing the mapper's OpenGL node frees the GPU buffers.
     const openGLMapper = openGLRenderWindow.getViewNodeFor(mapper);
-    openGLMapper
-      .getReferenceByName('primitives')
-      .forEach((primitive) =>
-        primitive.releaseGraphicsResources(openGLRenderWindow)
-      );
+    const pointCABO = cabos[0];
+    const positionHandle = pointCABO.getHandle();
+    const colorBO = pointCABO.getColorBO();
+    const colorHandle = colorBO.getHandle();
+    const deleteBuffer = vi.spyOn(
+      openGLRenderWindow.getContext(),
+      'deleteBuffer'
+    );
+
+    // Exercise the normal scene-graph lifecycle rather than reaching into a
+    // primitive. Removing the actor makes its mapper view node release both
+    // the point and color allocations as it is pruned on the next traversal.
+    renderer.removeActor(actor);
+    renderWindow.render();
+
     expect(
-      getActivePrimitiveCABOs(openGLRenderWindow, mapper).length,
-      'releasing graphics resources empties every VBO'
-    ).toBe(0);
+      deleteBuffer.mock.calls.map(([handle]) => handle),
+      'scene removal deletes the point and color buffer handles'
+    ).toEqual(expect.arrayContaining([positionHandle, colorHandle]));
+    expect(pointCABO.getAllocatedGPUMemoryInBytes()).toBe(0);
+    deleteBuffer.mockRestore();
 
     gc.releaseResources();
   }
@@ -154,10 +171,17 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       .captureNextImage()
       .then(imageDataFromDataURI)
       .then(({ data, width, height }) => {
-        const center = (Math.floor(height / 2) * width + Math.floor(width / 2)) * 4;
+        const center =
+          (Math.floor(height / 2) * width + Math.floor(width / 2)) * 4;
         const [r, g, b] = [data[center], data[center + 1], data[center + 2]];
-        expect(g, 'green channel 200 renders bright, not wrapped dark').toBeGreaterThan(150);
-        expect(b, 'blue channel 250 renders bright, not wrapped dark').toBeGreaterThan(150);
+        expect(
+          g,
+          'green channel 200 renders bright, not wrapped dark'
+        ).toBeGreaterThan(150);
+        expect(
+          b,
+          'blue channel 250 renders bright, not wrapped dark'
+        ).toBeGreaterThan(150);
         expect(r, 'red channel 10 stays dark').toBeLessThan(90);
       })
       .finally(gc.releaseResources);
