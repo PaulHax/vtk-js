@@ -22,6 +22,7 @@ export interface IOpenGLRenderWindowInitialValues {
   context?: WebGLRenderingContext | WebGL2RenderingContext;
   context2D?: CanvasRenderingContext2D;
   canvas?: HTMLCanvasElement;
+  manageCanvas?: boolean;
   cursorVisibility?: boolean;
   cursor?: string;
   textureUnitManager?: null;
@@ -93,6 +94,19 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    * Set the webgl canvas.
    */
   setCanvas(canvas: Nullable<HTMLCanvasElement>): boolean;
+
+  /**
+   * When true (default), vtk.js owns the canvas: it resizes and styles it and
+   * installs webglcontextlost/webglcontextrestored handlers. Set false when
+   * the canvas belongs to another library (see vtkExternalContextRenderWindow).
+   */
+  getManageCanvas(): boolean;
+
+  /**
+   * Set whether vtk.js owns the canvas and may resize, style, and install
+   * webglcontextlost/webglcontextrestored handlers on it.
+   */
+  setManageCanvas(manageCanvas: boolean): boolean;
 
   /**
    * Check if a point is in the viewport.
@@ -348,7 +362,9 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    * be multiplied by the current renderwindow size to compute the screenshot
    * size.  If no `size` or `scale` are provided, the current renderwindow
    * size is assumed.  The default format is "image/png". Returns a promise
-   * that resolves to the captured screenshot.
+   * that resolves to the captured screenshot. The promise rejects when an
+   * explicit `size` or `scale` is given while `manageCanvas` is false, since
+   * those captures resize the canvas.
    * @param {String} format
    * @param {ICaptureOptions} options
    */
