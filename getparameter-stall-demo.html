@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  gl.getParameter stall demo: why per-draw GL state readbacks hurt inside a
+  busy shared WebGL context (Kitware/vtk-js perf PR companion).
+
+  vtk.js's OpenGL Helper used to call gl.getParameter(gl.DEPTH_WRITEMASK) on
+  EVERY drawArrays, and vtkFramebuffer queried FRAMEBUFFER_BINDING on every
+  save. Standalone that is harmless: browsers answer dynamic-state queries
+  from CPU-side state in ~0.5 µs. But when vtk.js renders inside another
+  renderer's context (here: a MapLibre terrain map custom layer), each query
+  becomes a GPU-process round-trip, and the FIRST query of the frame also
+  waits for the host's queued GPU work to drain (tens of ms).
+
+  This page contains no vtk.js at all; the custom layer just issues N
+  getParameter(DEPTH_WRITEMASK) calls per frame, N selectable below.
+  N=200 models a 200-actor vtk.js scene before the fix; N=0 is the fix.
+  Effect is Chromium-specific (command-buffer IPC); Safari/WebKitGTK answer
+  these queries CPU-side and show no stall.
+-->
+<head>
+  <meta charset="utf-8" />
+  <title>gl.getParameter stall in a shared WebGL context</title>
+  <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" />
+  <style>
+    html, body { margin: 0; height: 100%; }
+    #map { position: absolute; inset: 0; }
+    #hud {
+      position: absolute; top: 10px; left: 10px; z-index: 10;
+      background: rgba(20, 20, 24, 0.88); color: #eee;
+      font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace;
+      padding: 12px 14px; border-radius: 8px; max-width: 430px;
+    }
+    #hud h1 { font-size: 14px; margin: 0 0 6px; }
+    #hud p { margin: 6px 0; color: #bbb; }
+    #hud table { border-collapse: collapse; margin-top: 6px; }
+    #hud td { padding: 1px 10px 1px 0; }
+    #hud td.v { color: #ffd479; text-align: right; min-width: 72px; }
+    #hud button {
+      font: inherit; margin: 6px 6px 0 0; padding: 3px 10px;
+      background: #333; color: #eee; border: 1px solid #666;
+      border-radius: 5px; cursor: pointer;
+    }
+    #hud button.active { background: #b45309; border-color: #ffd479; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="hud">
+    <h1>gl.getParameter() stall in a shared WebGL context</h1>
+    <p>
+      The custom layer below issues <b><span id="nLabel">0</span>
+      × getParameter(DEPTH_WRITEMASK)</b> per frame and nothing else:
+      the readback pattern vtk.js's draw path used to have (one per drawn
+      polydata). Pick a count and watch the frame time:
+    </p>
+    <div id="buttons"></div>
+    <table>
+      <tr><td>frame time p50 / p95</td><td class="v" id="frame">–</td></tr>
+      <tr><td>fps</td><td class="v" id="fps">–</td></tr>
+      <tr><td>1st query of frame p50 / max</td><td class="v" id="first">–</td></tr>
+      <tr><td>subsequent queries, each</td><td class="v" id="rest">–</td></tr>
+      <tr><td>whole probe block p50</td><td class="v" id="block">–</td></tr>
+    </table>
+    <p id="glinfo"></p>
+    <p style="font-size:11px">Basemap © OpenStreetMap contributors ·
+      Terrain: Mapzen/AWS Open Data terrain tiles</p>
+  </div>
+
+  <script>
+    const COUNTS = [0, 1, 50, 200, 400];
+    const state = { n: 0 };
+    const firstMs = [], restUs = [], blockMs = [], frameMs = [];
+    const push = (arr, v) => { arr.push(v); if (arr.length > 180) arr.shift(); };
+    const q = (arr, p) => {
+      if (!arr.length) return NaN;
+      const s = [...arr].sort((a, b) => a - b);
+      return s[Math.min(s.length - 1, Math.round(p * (s.length - 1)))];
+    };
+    const fmt = (v, digits = 1) => (Number.isFinite(v) ? v.toFixed(digits) : '–');
+
+    const buttonBox = document.getElementById('buttons');
+    COUNTS.forEach((n) => {
+      const b = document.createElement('button');
+      b.textContent = n === 0 ? '0 (fixed vtk.js)' : n === 200 ? '200 (≈200-actor scene)' : String(n);
+      b.onclick = () => {
+        state.n = n;
+        document.getElementById('nLabel').textContent = n;
+        [firstMs, restUs, blockMs, frameMs].forEach((a) => (a.length = 0));
+        [...buttonBox.children].forEach((c) => c.classList.toggle('active', c === b));
+      };
+      buttonBox.appendChild(b);
+    });
+    buttonBox.children[0].classList.add('active');
+
+    const map = new maplibregl.Map({
+      container: 'map',
+      zoom: 12,
+      center: [11.39085, 47.27574], // Innsbruck: real relief for the terrain
+      pitch: 70,
+      maxPitch: 85,
+      antialias: true,
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: 'raster',
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            maxzoom: 19,
+            attribution: '© OpenStreetMap contributors',
+          },
+          // Two source entries for the same tiles: MapLibre wants hillshade
+          // and terrain on separate sources.
+          dem: {
+            type: 'raster-dem',
+            tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+            encoding: 'terrarium',
+            tileSize: 256,
+            maxzoom: 12,
+          },
+          hillshadeDem: {
+            type: 'raster-dem',
+            tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+            encoding: 'terrarium',
+            tileSize: 256,
+            maxzoom: 12,
+          },
+        },
+        layers: [
+          { id: 'osm', type: 'raster', source: 'osm' },
+          { id: 'hills', type: 'hillshade', source: 'hillshadeDem' },
+        ],
+        terrain: { source: 'dem', exaggeration: 1 },
+      },
+    });
+
+    map.on('load', () => {
+      map.addLayer({
+        id: 'query-probe',
+        type: 'custom',
+        renderingMode: '3d',
+        onAdd(_, gl) {
+          const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+          document.getElementById('glinfo').textContent =
+            'GL: ' + (dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'renderer masked');
+        },
+        // Runs after MapLibre has queued this frame's terrain/raster draws,
+        // where an embedded renderer (a vtk.js layer) would start drawing.
+        render(gl) {
+          const n = state.n;
+          if (n === 0) return;
+          const t0 = performance.now();
+          gl.getParameter(gl.DEPTH_WRITEMASK);
+          const t1 = performance.now();
+          for (let i = 1; i < n; i++) gl.getParameter(gl.DEPTH_WRITEMASK);
+          const t2 = performance.now();
+          push(firstMs, t1 - t0);
+          if (n > 1) push(restUs, ((t2 - t1) / (n - 1)) * 1000);
+          push(blockMs, t2 - t0);
+        },
+      });
+
+      // Continuous rotation: every frame is a full host repaint.
+      let prev = 0;
+      const tick = (ts) => {
+        if (prev) push(frameMs, ts - prev);
+        prev = ts;
+        map.jumpTo({ bearing: (map.getBearing() + 0.4) % 360 });
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+
+    setInterval(() => {
+      const set = (id, text) => (document.getElementById(id).textContent = text);
+      set('frame', `${fmt(q(frameMs, 0.5))} / ${fmt(q(frameMs, 0.95))} ms`);
+      set('fps', fmt(1000 / q(frameMs, 0.5), 0));
+      set('first', state.n ? `${fmt(q(firstMs, 0.5), 2)} / ${fmt(q(firstMs, 1), 1)} ms` : '–');
+      set('rest', state.n > 1 ? `${fmt(q(restUs, 0.5), 1)} µs` : '–');
+      set('block', state.n ? `${fmt(q(blockMs, 0.5), 2)} ms` : '–');
+    }, 500);
+  </script>
+</body>
+</html>
