@@ -364,49 +364,66 @@ export function obj(publicAPI = {}, model = {}) {
   };
 
   // Add serialization support
-  publicAPI.getState = ({ preserveTypedArrays = false } = {}) => {
+  publicAPI.getState = (
+    { preserveTypedArrays = false } = {},
+    _ancestors = new WeakSet()
+  ) => {
     if (model.deleted) {
       return null;
     }
-    const options = { preserveTypedArrays };
-    const jsonArchive = { ...model, vtkClass: publicAPI.getClassName() };
+    // Break reference cycles: an object already being serialized higher up
+    // the call chain serializes as null, like a deleted object. Shared
+    // references that do not cycle serialize at every occurrence.
+    if (_ancestors.has(model)) {
+      return null;
+    }
+    _ancestors.add(model);
+    try {
+      const options = { preserveTypedArrays };
+      const jsonArchive = { ...model, vtkClass: publicAPI.getClassName() };
 
-    // Convert every vtkObject to its serializable form
-    Object.keys(jsonArchive).forEach((keyName) => {
-      if (
-        jsonArchive[keyName] === null ||
-        jsonArchive[keyName] === undefined ||
-        keyName[0] === '_' // protected members start with _
-      ) {
-        delete jsonArchive[keyName];
-      } else if (jsonArchive[keyName].isA) {
-        jsonArchive[keyName] = jsonArchive[keyName].getState(options);
-      } else if (Array.isArray(jsonArchive[keyName])) {
-        jsonArchive[keyName] = jsonArchive[keyName].map((item) =>
-          item && item.isA ? item.getState(options) : item
-        );
-      } else if (isTypedArray(jsonArchive[keyName])) {
-        if (!preserveTypedArrays) {
-          jsonArchive[keyName] = Array.from(jsonArchive[keyName]);
+      // Convert every vtkObject to its serializable form
+      Object.keys(jsonArchive).forEach((keyName) => {
+        if (
+          jsonArchive[keyName] === null ||
+          jsonArchive[keyName] === undefined ||
+          keyName[0] === '_' // protected members start with _
+        ) {
+          delete jsonArchive[keyName];
+        } else if (jsonArchive[keyName].isA) {
+          jsonArchive[keyName] = jsonArchive[keyName].getState(
+            options,
+            _ancestors
+          );
+        } else if (Array.isArray(jsonArchive[keyName])) {
+          jsonArchive[keyName] = jsonArchive[keyName].map((item) =>
+            item && item.isA ? item.getState(options, _ancestors) : item
+          );
+        } else if (isTypedArray(jsonArchive[keyName])) {
+          if (!preserveTypedArrays) {
+            jsonArchive[keyName] = Array.from(jsonArchive[keyName]);
+          }
+          // else: keep TypedArray as-is for structured clone / postMessage
         }
-        // else: keep TypedArray as-is for structured clone / postMessage
-      }
-    });
-
-    // Sort resulting object by key name
-    const sortedObj = {};
-    Object.keys(jsonArchive)
-      .sort()
-      .forEach((name) => {
-        sortedObj[name] = jsonArchive[name];
       });
 
-    // Remove mtime
-    if (sortedObj.mtime) {
-      delete sortedObj.mtime;
-    }
+      // Sort resulting object by key name
+      const sortedObj = {};
+      Object.keys(jsonArchive)
+        .sort()
+        .forEach((name) => {
+          sortedObj[name] = jsonArchive[name];
+        });
 
-    return sortedObj;
+      // Remove mtime
+      if (sortedObj.mtime) {
+        delete sortedObj.mtime;
+      }
+
+      return sortedObj;
+    } finally {
+      _ancestors.delete(model);
+    }
   };
 
   // Add shallowCopy(otherInstance) support
