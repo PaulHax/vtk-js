@@ -11,13 +11,13 @@ export default function addRegistrationAPI(publicAPI, model) {
     if (!proxy) {
       return;
     }
-    model.proxyIdMapping[proxy.getProxyId()] = proxy;
+    model._proxyIdMapping[proxy.getProxyId()] = proxy;
     const group = proxy.getProxyGroup();
-    if (!model.proxyByGroup[group]) {
-      model.proxyByGroup[group] = [];
+    if (!model._proxyByGroup[group]) {
+      model._proxyByGroup[group] = [];
     }
-    if (model.proxyByGroup[group].indexOf(proxy) === -1) {
-      model.proxyByGroup[group].push(proxy);
+    if (model._proxyByGroup[group].indexOf(proxy) === -1) {
+      model._proxyByGroup[group].push(proxy);
     }
     proxy.setProxyManager(publicAPI);
 
@@ -37,18 +37,18 @@ export default function addRegistrationAPI(publicAPI, model) {
 
   function unRegisterProxy(proxyOrId) {
     const id = proxyOrId.getProxyId ? proxyOrId.getProxyId() : proxyOrId;
-    const proxy = model.proxyIdMapping[id];
+    const proxy = model._proxyIdMapping[id];
 
     // Unregister proxy in any group
-    Object.keys(model.proxyByGroup).forEach((groupName) => {
-      const proxyList = model.proxyByGroup[groupName];
+    Object.keys(model._proxyByGroup).forEach((groupName) => {
+      const proxyList = model._proxyByGroup[groupName];
       const index = proxyList.indexOf(proxy);
       if (index !== -1) {
         proxyList.splice(index, 1);
       }
     });
 
-    delete model.proxyIdMapping[id];
+    delete model._proxyIdMapping[id];
     proxy.gcPropertyLinks('application');
     proxy.gcPropertyLinks('source');
     proxy.setProxyManager(null);
@@ -96,23 +96,23 @@ export default function addRegistrationAPI(publicAPI, model) {
 
   // --------------------------------------------------------------------------
 
-  publicAPI.getProxyById = (id) => model.proxyIdMapping[id];
+  publicAPI.getProxyById = (id) => model._proxyIdMapping[id];
 
   // --------------------------------------------------------------------------
 
-  publicAPI.getProxyGroups = () => Object.keys(model.proxyByGroup);
+  publicAPI.getProxyGroups = () => Object.keys(model._proxyByGroup);
 
   // --------------------------------------------------------------------------
 
   publicAPI.getProxyInGroup = (name) =>
-    [].concat(model.proxyByGroup[name] || []);
+    [].concat(model._proxyByGroup[name] || []);
 
   // --------------------------------------------------------------------------
 
-  publicAPI.getSources = () => [].concat(model.proxyByGroup.Sources || []);
+  publicAPI.getSources = () => [].concat(model._proxyByGroup.Sources || []);
   publicAPI.getRepresentations = () =>
-    [].concat(model.proxyByGroup.Representations || []);
-  publicAPI.getViews = () => [].concat(model.proxyByGroup.Views || []);
+    [].concat(model._proxyByGroup.Representations || []);
+  publicAPI.getViews = () => [].concat(model._proxyByGroup.Views || []);
 
   // --------------------------------------------------------------------------
 

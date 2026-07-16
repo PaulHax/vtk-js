@@ -1492,9 +1492,6 @@ export function proxy(publicAPI, model) {
     parentDelete();
   };
 
-  // @todo fix infinite recursion due to active source
-  publicAPI.getState = () => null;
-
   function registerLinks() {
     // Allow dynamic registration of links at the application level
     if (model.links) {
