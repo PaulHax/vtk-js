@@ -3,6 +3,7 @@ import vtkMapper, { IMapperInitialValues } from '../Mapper';
 export interface IPointGaussianMapperInitialValues extends IMapperInitialValues {
   scaleFactor?: number;
   circle?: boolean;
+  worldSize?: number;
 }
 
 export interface vtkPointGaussianMapper extends vtkMapper {
@@ -27,6 +28,24 @@ export interface vtkPointGaussianMapper extends vtkMapper {
    * @param circle false (opaque square) by default.
    */
   setCircle(circle: boolean): boolean;
+
+  /**
+   * Get the world-space point diameter (0 when screen-space sizing is active).
+   */
+  getWorldSize(): number;
+
+  /**
+   * Point diameter in model units. When > 0, each point's pixel size is
+   * derived from its distance to the camera (perspective) or the parallel
+   * scale (orthographic), multiplied by scaleFactor and the actor
+   * transform's scale (assumed isotropic — anisotropic actor scaling uses
+   * the x-axis norm). The screen-space actor point size acts as the pixel
+   * floor (sub-pixel splats keep the classic fixed-size look) and the
+   * implementation's gl_PointSize range caps the ceiling.
+   * When 0 (default), points use the actor point size in screen pixels.
+   * @param worldSize 0 by default.
+   */
+  setWorldSize(worldSize: number): boolean;
 }
 
 /**
