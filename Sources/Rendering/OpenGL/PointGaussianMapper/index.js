@@ -1,6 +1,7 @@
 import { ObjectType } from 'vtk.js/Sources/Rendering/OpenGL/BufferObject/Constants';
 
 import * as macro from 'vtk.js/Sources/macros';
+import * as vtkMath from 'vtk.js/Sources/Common/Core/Math';
 
 import vtkBufferObject from 'vtk.js/Sources/Rendering/OpenGL/BufferObject';
 import vtkShaderProgram from 'vtk.js/Sources/Rendering/OpenGL/ShaderProgram';
@@ -23,7 +24,9 @@ const { FieldAssociations } = vtkDataSet;
 // emits gl.POINTS, injects `gl_PointSize = pointSize` (valued from the actor's
 // point size, in screen pixels), and folds the VBO coord shift/scale back out
 // through MCPCMatrix — so this class only overrides buffer construction plus a
-// scaleFactor multiplier and an optional round-splat fragment discard.
+// scaleFactor multiplier, an optional round-splat fragment discard, and an
+// optional world-space size mode (worldSize > 0) that rewrites the assembled
+// gl_PointSize line to perspective-scale a world-unit diameter per point.
 // ----------------------------------------------------------------------------
 
 function vtkOpenGLPointGaussianMapper(publicAPI, model) {
@@ -166,6 +169,33 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       ).result;
     }
     superClass.replaceShaderValues(shaders, ren, actor);
+    if (model.renderable.getWorldSize() > 0) {
+      // Post-process the assembled vertex source: by now the Helper has
+      // emitted `gl_PointSize = pointSize;` directly after the gl_Position
+      // assignment, so gl_Position.w (the view depth under a perspective
+      // projection, 1.0 under a parallel one) is available to scale a
+      // world-unit diameter into pixels. The screen-space point size stays
+      // as the pixel floor, so far-away (sub-pixel) splats keep the classic
+      // fixed-size look and world sizing only grows points to close holes
+      // up close. This also replaces the picking pass's fixed point size —
+      // picked extents match the drawn splats.
+      shaders.Vertex = vtkShaderProgram.substitute(
+        shaders.Vertex,
+        'uniform float pointSize;',
+        [
+          'uniform float pointSize;',
+          'uniform float worldPointSizeFactor;',
+          'uniform float maxPointSize;',
+        ]
+      ).result;
+      shaders.Vertex = vtkShaderProgram.substitute(
+        shaders.Vertex,
+        'gl_PointSize = pointSize;',
+        [
+          'gl_PointSize = clamp(worldPointSizeFactor / gl_Position.w, pointSize, maxPointSize);',
+        ]
+      ).result;
+    }
   };
 
   publicAPI.setMapperShaderParameters = (cellBO, ren, actor) => {
@@ -179,6 +209,52 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
         'pointSize',
         actor.getProperty().getPointSize() * model.renderable.getScaleFactor()
       );
+    }
+
+    if (program.isUniformUsed('worldPointSizeFactor')) {
+      // Pixels per world unit: at unit view depth for a perspective camera
+      // (the shader divides by gl_Position.w), absolute for a parallel one
+      // (w stays 1). worldSize is in model units; gl_Position.w is in
+      // post-actor-matrix units, so fold the actor's (isotropic) scale in —
+      // e.g. an anchor matrix mapping local meters into Web-Mercator units.
+      let actorScale = 1.0;
+      if (!actor.getIsIdentity()) {
+        const mcwc = model.openGLActor.getKeyMatrices().mcwc;
+        const norm = Math.hypot(mcwc[0], mcwc[1], mcwc[2]);
+        if (Number.isFinite(norm) && norm > 0) {
+          actorScale = norm;
+        }
+      }
+      const cam = ren.getActiveCamera();
+      const size = model._openGLRenderer.getTiledSizeAndOrigin();
+      let pixelsPerUnit;
+      if (cam.getParallelProjection()) {
+        pixelsPerUnit = size.vsize / (2.0 * cam.getParallelScale());
+      } else {
+        const tanHalfAngle = Math.tan(
+          vtkMath.radiansFromDegrees(cam.getViewAngle()) / 2.0
+        );
+        const pixels = cam.getUseHorizontalViewAngle()
+          ? size.usize
+          : size.vsize;
+        pixelsPerUnit = pixels / (2.0 * tanHalfAngle);
+      }
+      program.setUniformf(
+        'worldPointSizeFactor',
+        model.renderable.getWorldSize() *
+          model.renderable.getScaleFactor() *
+          actorScale *
+          pixelsPerUnit
+      );
+      // ALIASED_POINT_SIZE_RANGE is a static context capability (not dynamic
+      // GL state); query it once per context.
+      if (model.pointSizeRangeContext !== model.context) {
+        model.pointSizeRangeContext = model.context;
+        model.aliasedPointSizeRange = model.context.getParameter(
+          model.context.ALIASED_POINT_SIZE_RANGE
+        );
+      }
+      program.setUniformf('maxPointSize', model.aliasedPointSizeRange[1]);
     }
   };
 
@@ -277,6 +353,8 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
 const DEFAULT_VALUES = {
   pointGaussianColorState: null,
   pointGaussianVBOState: null,
+  pointSizeRangeContext: null,
+  aliasedPointSizeRange: null,
 };
 
 // ----------------------------------------------------------------------------
