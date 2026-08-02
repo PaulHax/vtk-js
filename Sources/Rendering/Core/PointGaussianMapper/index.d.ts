@@ -4,6 +4,7 @@ export interface IPointGaussianMapperInitialValues extends IMapperInitialValues 
   scaleFactor?: number;
   circle?: boolean;
   worldSize?: number;
+  maximumPointCount?: number;
 }
 
 export interface vtkPointGaussianMapper extends vtkMapper {
@@ -46,6 +47,21 @@ export interface vtkPointGaussianMapper extends vtkMapper {
    * @param worldSize 0 by default.
    */
   setWorldSize(worldSize: number): boolean;
+
+  /**
+   * Get the maximum input prefix submitted to the GPU. A negative value means
+   * all input points.
+   */
+  getMaximumPointCount(): number;
+
+  /**
+   * Limit drawing to a prefix of the already-uploaded point buffer. Finite
+   * values are truncated and clamped to the available input; a negative value
+   * restores the full input. Non-finite values are ignored. Changing this does
+   * not rebuild the point or color VBO.
+   * @param maximumPointCount -1 by default.
+   */
+  setMaximumPointCount(maximumPointCount: number): boolean;
 }
 
 /**

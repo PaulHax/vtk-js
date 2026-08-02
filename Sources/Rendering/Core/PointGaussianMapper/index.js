@@ -25,6 +25,11 @@ const DEFAULT_VALUES = {
   // in pixels and capped by the implementation's gl_PointSize range.
   // 0: screen-space sizing from the actor point size.
   worldSize: 0,
+  // Maximum prefix of the input points to draw. A negative value draws the
+  // whole input. This only changes the submitted vertex count; the complete
+  // point and color buffers stay resident so restoring density needs no
+  // upload.
+  maximumPointCount: -1,
 };
 
 // ----------------------------------------------------------------------------
@@ -36,6 +41,15 @@ export function extend(publicAPI, model, initialValues = {}) {
   vtkMapper.extend(publicAPI, model, initialValues);
 
   macro.setGet(publicAPI, model, ['scaleFactor', 'circle', 'worldSize']);
+  macro.get(publicAPI, model, ['maximumPointCount']);
+  publicAPI.setMaximumPointCount = (value) => {
+    if (!Number.isFinite(value)) return false;
+    const next = value < 0 ? -1 : Math.floor(value);
+    if (next === model.maximumPointCount) return false;
+    model.maximumPointCount = next;
+    publicAPI.modified();
+    return true;
+  };
 
   // Object methods
   vtkPointGaussianMapper(publicAPI, model);
