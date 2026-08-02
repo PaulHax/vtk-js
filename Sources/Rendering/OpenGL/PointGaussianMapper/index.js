@@ -141,6 +141,35 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     superClass.renderPiece(ren, actor);
   };
 
+  const effectivePointCount = () => {
+    const available = model.currentInput.getPoints().getNumberOfPoints();
+    const maximum = model.renderable.getMaximumPointCount();
+    return maximum < 0
+      ? available
+      : Math.min(available, Math.max(0, Math.floor(maximum)));
+  };
+
+  publicAPI.renderPieceDraw = (ren, actor) => {
+    const cabo = model.primitives[model.primTypes.Points].getCABO();
+    const available = cabo.getElementCount();
+    const drawCount = Math.min(available, effectivePointCount());
+    if (drawCount === available) {
+      superClass.renderPieceDraw(ren, actor);
+      return;
+    }
+
+    // The CABO owns the complete uploaded allocation. Its element count is
+    // also the count the inherited draw path submits, so scope a temporary
+    // cap to that call and restore the allocation's full logical size after.
+    // No point/color data or VBO-build timestamp changes here.
+    cabo.setElementCount(drawCount);
+    try {
+      superClass.renderPieceDraw(ren, actor);
+    } finally {
+      cabo.setElementCount(available);
+    }
+  };
+
   publicAPI.updateMaximumPointCellIds = () => {
     const selector = model._openGLRenderer.getSelector();
     if (
@@ -148,9 +177,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       selector.getFieldAssociation() ===
         FieldAssociations.FIELD_ASSOCIATION_POINTS
     ) {
-      selector.setMaximumPointId(
-        Math.max(0, model.currentInput.getPoints().getNumberOfPoints() - 1)
-      );
+      selector.setMaximumPointId(Math.max(0, effectivePointCount() - 1));
     }
   };
 
