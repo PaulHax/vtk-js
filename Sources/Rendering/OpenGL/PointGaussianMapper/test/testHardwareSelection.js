@@ -81,6 +81,13 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     openGLRenderer.setSelector(null);
     expect(selector.getMaximumPointId()).toBe(0x01000000);
     expect(selector.passRequired(PassTypes.ID_HIGH24)).toBe(true);
+
+    scene.mapper.setMaximumPointCount(7);
+    openGLRenderer.setSelector(selector);
+    scene.openGLMapper.updateMaximumPointCellIds();
+    openGLRenderer.setSelector(null);
+    expect(selector.getMaximumPointId()).toBe(6);
+    expect(selector.passRequired(PassTypes.ID_HIGH24)).toBe(false);
     scene.polyData.setPoints(originalPoints);
 
     scene.gc.releaseResources();
