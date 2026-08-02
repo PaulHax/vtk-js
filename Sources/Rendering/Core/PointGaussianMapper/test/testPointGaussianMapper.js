@@ -50,6 +50,18 @@ function imageDataFromDataURI(dataURI) {
   });
 }
 
+it('vtkPointGaussianMapper normalizes its progressive draw count', () => {
+  const mapper = vtkPointGaussianMapper.newInstance();
+  expect(mapper.getMaximumPointCount()).toBe(-1);
+  expect(mapper.setMaximumPointCount(3.8)).toBe(true);
+  expect(mapper.getMaximumPointCount()).toBe(3);
+  expect(mapper.setMaximumPointCount(Number.NaN)).toBe(false);
+  expect(mapper.getMaximumPointCount()).toBe(3);
+  expect(mapper.setMaximumPointCount(-20)).toBe(true);
+  expect(mapper.getMaximumPointCount()).toBe(-1);
+  mapper.delete();
+});
+
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'vtkPointGaussianMapper uploads one vertex per input point (not 3N)',
   () => {
@@ -120,6 +132,72 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     expect(pointCABO.getAllocatedGPUMemoryInBytes()).toBe(0);
     deleteBuffer.mockRestore();
 
+    gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper changes its draw prefix without rebuilding VBOs',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const container = document.querySelector('body');
+    const renderWindowContainer = gc.registerDOMElement(
+      document.createElement('div')
+    );
+    container.appendChild(renderWindowContainer);
+
+    const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
+    const renderer = gc.registerResource(vtkRenderer.newInstance());
+    renderWindow.addRenderer(renderer);
+    const polyData = gc.registerResource(
+      makePointCloud(
+        [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0.5, 0.5, 1],
+        [255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 255, 0, 255]
+      )
+    );
+    const mapper = gc.registerResource(vtkPointGaussianMapper.newInstance());
+    const actor = gc.registerResource(vtkActor.newInstance());
+    mapper.setInputData(polyData);
+    mapper.setColorModeToDirectScalars();
+    actor.setMapper(mapper);
+    renderer.addActor(actor);
+    renderer.resetCamera();
+
+    const openGLRenderWindow = gc.registerResource(
+      renderWindow.newAPISpecificView()
+    );
+    openGLRenderWindow.setContainer(renderWindowContainer);
+    renderWindow.addView(openGLRenderWindow);
+    openGLRenderWindow.setSize(50, 50);
+    renderWindow.render();
+
+    const gl = openGLRenderWindow.getContext();
+    const drawArrays = vi.spyOn(gl, 'drawArrays');
+    const bufferData = vi.spyOn(gl, 'bufferData');
+
+    mapper.setMaximumPointCount(2);
+    renderWindow.render();
+    expect(
+      drawArrays.mock.calls.some(
+        ([mode, first, count]) =>
+          mode === gl.POINTS && first === 0 && count === 2
+      )
+    ).toBe(true);
+    expect(bufferData).not.toHaveBeenCalled();
+
+    drawArrays.mockClear();
+    mapper.setMaximumPointCount(-1);
+    renderWindow.render();
+    expect(
+      drawArrays.mock.calls.some(
+        ([mode, first, count]) =>
+          mode === gl.POINTS && first === 0 && count === 5
+      )
+    ).toBe(true);
+    expect(bufferData).not.toHaveBeenCalled();
+
+    drawArrays.mockRestore();
+    bufferData.mockRestore();
     gc.releaseResources();
   }
 );
