@@ -23,6 +23,15 @@ export function createContextProxyHandler() {
     };
   }
 
+  const bindFramebufferHandler = {
+    apply(target, gl, args) {
+      if (args[0] !== gl.READ_FRAMEBUFFER) {
+        cache.set(gl.FRAMEBUFFER_BINDING, args[1]);
+      }
+      return target.apply(gl, args);
+    },
+  };
+
   // When a property is accessed on the webgl context proxy,
   // it's accessed is intercepted. If the property name matches
   // any of the keys of `propHandlers`, then that handler is called
@@ -42,6 +51,11 @@ export function createContextProxyHandler() {
   // Sets depthMask(flag) as a cached setter proxy.
   propHandlers.depthMask = (gl, prop, receiver, propValue) =>
     new Proxy(propValue.bind(gl), cachedSetterHandler(gl.DEPTH_WRITEMASK));
+
+  // FRAMEBUFFER_BINDING aliases the draw framebuffer binding in WebGL2.
+  // Binding READ_FRAMEBUFFER alone must not update it.
+  propHandlers.bindFramebuffer = (gl, prop, receiver, propValue) =>
+    new Proxy(propValue.bind(gl), bindFramebufferHandler);
 
   return {
     get(gl, prop, receiver) {
