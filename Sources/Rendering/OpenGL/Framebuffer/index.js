@@ -2,6 +2,7 @@ import * as macro from 'vtk.js/Sources/macros';
 import vtkOpenGLTexture from 'vtk.js/Sources/Rendering/OpenGL/Texture';
 import { VtkDataTypes } from 'vtk.js/Sources/Common/Core/DataArray/Constants';
 import { Filter } from 'vtk.js/Sources/Rendering/OpenGL/Texture/Constants';
+import { getFramebufferBindingState } from 'vtk.js/Sources/Rendering/OpenGL/Framebuffer/BindingState';
 
 // ----------------------------------------------------------------------------
 // vtkFramebuffer methods
@@ -10,19 +11,16 @@ function vtkFramebuffer(publicAPI, model) {
   // Set our className
   model.classHierarchy.push('vtkFramebuffer');
 
+  function trackBinding(binding) {
+    const state = getFramebufferBindingState(model._openGLRenderWindow);
+    if (state?.known) {
+      state.binding = binding;
+    }
+  }
+
   publicAPI.getBothMode = () => model.context.FRAMEBUFFER;
   // publicAPI.getDrawMode = () => model.context.DRAW_FRAMEBUFFER;
   // publicAPI.getReadMode = () => model.context.READ_FRAMEBUFFER;
-
-  // Keep the render window's JS-side binding mirror in step with binds made
-  // through this class. Inert until someone seeds the tracker (see
-  // OpenGLRenderWindow.setFramebufferBinding).
-  function syncTrackedBinding(binding) {
-    const renderWindow = model._openGLRenderWindow;
-    if (renderWindow && renderWindow.getFramebufferBinding() !== undefined) {
-      renderWindow.setFramebufferBinding(binding);
-    }
-  }
 
   publicAPI.saveCurrentBindingsAndBuffers = (modeIn) => {
     const mode =
@@ -39,14 +37,11 @@ function vtkFramebuffer(publicAPI, model) {
       return;
     }
 
-    // gl.getParameter(FRAMEBUFFER_BINDING) is a synchronous CPU/GPU sync
-    // point; prefer the render window's JS-side mirror when it is seeded.
     const gl = model.context;
-    const tracked = model._openGLRenderWindow.getFramebufferBinding();
-    model.previousDrawBinding =
-      tracked !== undefined
-        ? tracked
-        : gl.getParameter(model.context.FRAMEBUFFER_BINDING);
+    const state = getFramebufferBindingState(model._openGLRenderWindow);
+    model.previousDrawBinding = state?.known
+      ? state.binding
+      : gl.getParameter(gl.FRAMEBUFFER_BINDING);
     model.previousActiveFramebuffer =
       model._openGLRenderWindow.getActiveFramebuffer();
   };
@@ -72,7 +67,7 @@ function vtkFramebuffer(publicAPI, model) {
 
     const gl = model.context;
     gl.bindFramebuffer(gl.FRAMEBUFFER, model.previousDrawBinding);
-    syncTrackedBinding(model.previousDrawBinding);
+    trackBinding(model.previousDrawBinding);
     model._openGLRenderWindow.setActiveFramebuffer(
       model.previousActiveFramebuffer
     );
@@ -88,7 +83,9 @@ function vtkFramebuffer(publicAPI, model) {
       mode = model.context.FRAMEBUFFER;
     }
     model.context.bindFramebuffer(mode, model.glFramebuffer);
-    syncTrackedBinding(model.glFramebuffer);
+    if (mode !== model.context.READ_FRAMEBUFFER) {
+      trackBinding(model.glFramebuffer);
+    }
     for (let i = 0; i < model.colorBuffers.length; i++) {
       model.colorBuffers[i].bind();
     }

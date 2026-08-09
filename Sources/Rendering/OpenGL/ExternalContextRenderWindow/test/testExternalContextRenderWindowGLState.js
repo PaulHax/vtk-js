@@ -164,7 +164,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'Test host-declared GL state removes framebuffer readbacks from the render path',
+  'Test host-declared framebuffer state avoids readbacks',
   () => {
     const gc = testUtils.createGarbageCollector();
     const { gl, externalWindow } = createExternalContextWindow(gc);
@@ -172,6 +172,8 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     // Warm up: first render compiles shaders and fills the per-context
     // constants cache (MAX_DRAW_BUFFERS), which legitimately query.
     externalWindow.renderExternal({ framebuffer: null });
+
+    const hostFramebuffer = createHostFramebuffer(gl, 400, 400);
 
     const originalGetParameter = gl.getParameter.bind(gl);
     const framebufferReadbacks = [];
@@ -185,19 +187,36 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       return originalGetParameter(pname);
     };
 
-    externalWindow.prepareExternalRender({ framebuffer: null });
+    // The host changes bindings through the shared context. Declaring the new
+    // value lets vtk restore it without querying WebGL.
+    gl.bindFramebuffer(gl.FRAMEBUFFER, hostFramebuffer.framebuffer);
+    externalWindow.renderExternal({
+      framebuffer: hostFramebuffer.framebuffer,
+      drawBuffers: [gl.COLOR_ATTACHMENT0],
+    });
     expect(
       framebufferReadbacks.length,
-      'prepareExternalRender with host state queries no framebuffer state'
+      'renderExternal with host state queries no framebuffer state'
     ).toBe(0);
 
-    externalWindow.prepareExternalRender();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    externalWindow.renderExternal({ framebuffer: null });
     expect(
       framebufferReadbacks.length,
-      'prepareExternalRender without host state falls back to querying'
+      'switching back to the default framebuffer also avoids a query'
+    ).toBe(0);
+
+    // Without host state, vtk must read the shared context.
+    gl.bindFramebuffer(gl.FRAMEBUFFER, hostFramebuffer.framebuffer);
+    externalWindow.renderExternal();
+    expect(
+      framebufferReadbacks.length,
+      'renderExternal without host state falls back to querying'
     ).toBeGreaterThan(0);
 
     gl.getParameter = originalGetParameter;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    deleteHostFramebuffer(gl, hostFramebuffer);
     gc.releaseResources();
   }
 );
