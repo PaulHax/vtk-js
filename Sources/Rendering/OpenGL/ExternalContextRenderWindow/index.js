@@ -1,5 +1,6 @@
 import macro from 'vtk.js/Sources/macros';
 import { extend as extendOpenGLRenderWindow } from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow';
+import { initializeFramebufferBinding } from 'vtk.js/Sources/Rendering/OpenGL/Framebuffer/BindingState';
 import vtkExternalContextRenderer from 'vtk.js/Sources/Rendering/OpenGL/ExternalContextRenderer';
 
 const PIXEL_STORE_STATE = [
@@ -73,7 +74,7 @@ function applyVTKRenderDefaults(gl) {
   gl.enable(gl.BLEND);
 }
 
-function resetGLState(gl, shaderCache, hostState) {
+function resetGLState(gl, framebufferState, shaderCache, hostState) {
   const { pixelStoreState, maxDrawBuffers } = getContextConstants(gl);
   // Every gl.getParameter is a synchronous CPU/GPU sync point that stalls the
   // calling thread until prior GPU work drains. A host that declares its
@@ -83,6 +84,10 @@ function resetGLState(gl, shaderCache, hostState) {
     hostState && 'framebuffer' in hostState
       ? hostState.framebuffer
       : gl.getParameter(gl.FRAMEBUFFER_BINDING);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+  framebufferState.binding = framebuffer;
+  framebufferState.known = true;
 
   gl.disable(gl.BLEND);
   gl.disable(gl.CULL_FACE);
@@ -172,7 +177,7 @@ function resetGLState(gl, shaderCache, hostState) {
   }
 }
 
-function vtkExternalContextRenderWindow(publicAPI, model) {
+function vtkExternalContextRenderWindow(publicAPI, model, framebufferState) {
   model.classHierarchy.push('vtkExternalContextRenderWindow');
 
   publicAPI
@@ -256,13 +261,7 @@ function vtkExternalContextRenderWindow(publicAPI, model) {
     publicAPI.syncSizeFromCanvas();
     const gl = model.context;
     if (!gl) return;
-    resetGLState(gl, publicAPI.getShaderCache(), hostState);
-    // Seed the JS-side framebuffer-binding tracker (when the base render
-    // window provides one) so vtk's internal FBO save/restore also runs
-    // without readbacks.
-    if (hostState && 'framebuffer' in hostState) {
-      publicAPI.setFramebufferBinding?.(hostState.framebuffer);
-    }
+    resetGLState(gl, framebufferState, publicAPI.getShaderCache(), hostState);
   };
 
   publicAPI.delete = macro.chain(() => {
@@ -277,8 +276,9 @@ const DEFAULT_VALUES = {
 export function extend(publicAPI, model, initialValues = {}) {
   const mergedValues = { ...DEFAULT_VALUES, ...initialValues };
   extendOpenGLRenderWindow(publicAPI, model, mergedValues);
+  const framebufferState = initializeFramebufferBinding(publicAPI);
   macro.setGet(publicAPI, model, ['autoClear']);
-  vtkExternalContextRenderWindow(publicAPI, model);
+  vtkExternalContextRenderWindow(publicAPI, model, framebufferState);
 }
 
 export const newInstance = macro.newInstance(
