@@ -12,9 +12,68 @@ export interface ITextureInitialValues {
   imageLoaded?: boolean;
   mipLevel?: number;
   resizable?: boolean;
+  flipY?: boolean;
+}
+
+export interface TextureSampler {
+  magFilter: 'nearest' | 'linear';
+  minFilter:
+    | 'nearest'
+    | 'linear'
+    | 'nearest-mipmap-nearest'
+    | 'linear-mipmap-nearest'
+    | 'nearest-mipmap-linear'
+    | 'linear-mipmap-linear';
+  wrapS: 'clamp-to-edge' | 'mirrored-repeat' | 'repeat';
+  wrapT: 'clamp-to-edge' | 'mirrored-repeat' | 'repeat';
+}
+
+export type CompressedTextureFormat =
+  | 'astc-4x4'
+  | 'bc7'
+  | 'etc2-rgba8'
+  | 's3tc-dxt5';
+
+export interface CompressedTextureLevel {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+
+export interface CompressedTextureData {
+  format: CompressedTextureFormat;
+  width: number;
+  height: number;
+  srgb: boolean;
+  levels: CompressedTextureLevel[];
 }
 
 export interface vtkTexture extends vtkAlgorithm {
+  getSampler(): Nullable<TextureSampler>;
+  setSampler(sampler: Nullable<TextureSampler>): boolean;
+  getFlipY(): boolean;
+  setFlipY(flipY: boolean): boolean;
+  /** Returns whether this texture currently owns a compressed payload. */
+  hasCompressedData(): boolean;
+
+  /** Returns whether the compressed mip prefix reaches 1x1. */
+  isCompressedDataComplete(): boolean;
+
+  /**
+   * Returns an owned copy of the compressed 2D texture payload, if present.
+   */
+  getCompressedData(): Nullable<CompressedTextureData>;
+
+  /**
+   * Sets an ordered compressed mip prefix. The first level must match the base
+   * dimensions and each following level must halve both logical dimensions.
+   * This source is mutually exclusive with image, canvas, and pipeline inputs.
+   */
+  setCompressedData(data: Nullable<CompressedTextureData>): boolean;
+
+  /** Clears the compressed texture payload. */
+  clearCompressedData(): boolean;
+
   /**
    * Returns the canvas used by the texture.
    */

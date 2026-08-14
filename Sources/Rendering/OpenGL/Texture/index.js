@@ -9,11 +9,30 @@ import vtkViewNode from 'vtk.js/Sources/Rendering/SceneGraph/ViewNode';
 import { registerOverride } from 'vtk.js/Sources/Rendering/OpenGL/ViewNodeFactory';
 
 import supportsNorm16Linear from './supportsNorm16Linear';
+import { getCompressedTextureInternalFormat } from './compressedFormats';
 
 const { Wrap, Filter } = Constants;
 const { VtkDataTypes } = vtkDataArray;
 const { vtkDebugMacro, vtkErrorMacro, vtkWarningMacro, requiredParam } = macro;
 const { toHalf } = HalfFloat;
+
+const SAMPLER_FILTERS = new Map([
+  ['nearest', Filter.NEAREST],
+  ['linear', Filter.LINEAR],
+  ['nearest-mipmap-nearest', Filter.NEAREST_MIPMAP_NEAREST],
+  ['linear-mipmap-nearest', Filter.LINEAR_MIPMAP_NEAREST],
+  ['nearest-mipmap-linear', Filter.NEAREST_MIPMAP_LINEAR],
+  ['linear-mipmap-linear', Filter.LINEAR_MIPMAP_LINEAR],
+]);
+const SAMPLER_WRAPS = new Map([
+  ['clamp-to-edge', Wrap.CLAMP_TO_EDGE],
+  ['mirrored-repeat', Wrap.MIRRORED_REPEAT],
+  ['repeat', Wrap.REPEAT],
+]);
+const samplerUsesMipmaps = (sampler) =>
+  sampler?.minFilter.includes('mipmap') ?? false;
+const samplerBaseFilter = (filter) =>
+  filter.startsWith('nearest') ? Filter.NEAREST : Filter.LINEAR;
 
 // ----------------------------------------------------------------------------
 // vtkOpenGLTexture methods
@@ -36,18 +55,43 @@ function vtkOpenGLTexture(publicAPI, model) {
   // Renders myself
   publicAPI.render = (renWin = null) => {
     if (renWin) {
-      model._openGLRenderWindow = renWin;
+      publicAPI.setOpenGLRenderWindow(renWin);
     } else {
       model._openGLRenderer =
         publicAPI.getFirstAncestorOfType('vtkOpenGLRenderer');
       // sync renderable properties
-      model._openGLRenderWindow = model._openGLRenderer.getLastAncestorOfType(
-        'vtkOpenGLRenderWindow'
+      publicAPI.setOpenGLRenderWindow(
+        model._openGLRenderer.getLastAncestorOfType('vtkOpenGLRenderWindow')
       );
     }
-    model.context = model._openGLRenderWindow.getContext();
-    if (model.renderable.getInterpolate()) {
-      if (model.generateMipmap) {
+    const nextContext = model._openGLRenderWindow.getContext();
+    if (model.context && model.context !== nextContext && model.handle) {
+      publicAPI.destroyTexture();
+    }
+    model.context = nextContext;
+    const hasCompressedData = model.renderable.hasCompressedData?.() ?? false;
+    const completeCompressedChain =
+      hasCompressedData && model.renderable.isCompressedDataComplete();
+    const sampler = model.renderable.getSampler?.() ?? null;
+    const wantsMipmaps = sampler
+      ? samplerUsesMipmaps(sampler)
+      : model.renderable.getInterpolate();
+    if (hasCompressedData) {
+      publicAPI.setGenerateMipmap(false);
+    }
+    if (sampler) {
+      publicAPI.setMinificationFilter(
+        hasCompressedData &&
+          !completeCompressedChain &&
+          samplerUsesMipmaps(sampler)
+          ? samplerBaseFilter(sampler.minFilter)
+          : SAMPLER_FILTERS.get(sampler.minFilter)
+      );
+      publicAPI.setMagnificationFilter(SAMPLER_FILTERS.get(sampler.magFilter));
+      publicAPI.setWrapS(SAMPLER_WRAPS.get(sampler.wrapS));
+      publicAPI.setWrapT(SAMPLER_WRAPS.get(sampler.wrapT));
+    } else if (model.renderable.getInterpolate()) {
+      if (completeCompressedChain || model.generateMipmap) {
         publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
       } else {
         publicAPI.setMinificationFilter(Filter.LINEAR);
@@ -57,7 +101,7 @@ function vtkOpenGLTexture(publicAPI, model) {
       publicAPI.setMinificationFilter(Filter.NEAREST);
       publicAPI.setMagnificationFilter(Filter.NEAREST);
     }
-    if (model.renderable.getRepeat()) {
+    if (!sampler && model.renderable.getRepeat()) {
       publicAPI.setWrapR(Wrap.REPEAT);
       publicAPI.setWrapS(Wrap.REPEAT);
       publicAPI.setWrapT(Wrap.REPEAT);
@@ -71,10 +115,25 @@ function vtkOpenGLTexture(publicAPI, model) {
       !model.handle ||
       model.renderable.getMTime() > model.textureBuildTime.getMTime()
     ) {
+      if (model.compressed && !hasCompressedData) {
+        publicAPI.destroyTexture();
+      }
+      if (hasCompressedData) {
+        const compressedData = model.renderable.getCompressedData();
+        if (model.handle) {
+          publicAPI.destroyTexture();
+        }
+        if (publicAPI.create2DFromCompressed(compressedData)) {
+          publicAPI.activate();
+          publicAPI.sendParameters();
+          model.textureBuildTime.modified();
+        }
+      }
       if (model.renderable.getImageBitmap() !== null) {
-        if (model.renderable.getInterpolate()) {
+        if (wantsMipmaps) {
           model.generateMipmap = true;
-          publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
+          if (!sampler)
+            publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
         }
         // Have an Image which may not be complete
         if (
@@ -89,9 +148,10 @@ function vtkOpenGLTexture(publicAPI, model) {
       }
       // if we have an Image
       if (model.renderable.getImage() !== null) {
-        if (model.renderable.getInterpolate()) {
+        if (wantsMipmaps) {
           model.generateMipmap = true;
-          publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
+          if (!sampler)
+            publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
         }
         // Have an Image which may not be complete
         if (model.renderable.getImage() && model.renderable.getImageLoaded()) {
@@ -103,9 +163,10 @@ function vtkOpenGLTexture(publicAPI, model) {
       }
       // if we have a canvas
       if (model.renderable.getCanvas() !== null) {
-        if (model.renderable.getInterpolate()) {
+        if (wantsMipmaps) {
           model.generateMipmap = true;
-          publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
+          if (!sampler)
+            publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
         }
         const canvas = model.renderable.getCanvas();
         publicAPI.create2DFromRaw({
@@ -123,9 +184,10 @@ function vtkOpenGLTexture(publicAPI, model) {
       // if we have jsImageData
       if (model.renderable.getJsImageData() !== null) {
         const jsid = model.renderable.getJsImageData();
-        if (model.renderable.getInterpolate()) {
+        if (wantsMipmaps) {
           model.generateMipmap = true;
-          publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
+          if (!sampler)
+            publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
         }
         publicAPI.create2DFromRaw({
           width: jsid.width,
@@ -133,7 +195,7 @@ function vtkOpenGLTexture(publicAPI, model) {
           numComps: 4,
           dataType: VtkDataTypes.UNSIGNED_CHAR,
           data: jsid.data,
-          flip: true,
+          flip: model.renderable.getFlipY?.() ?? true,
         });
         publicAPI.activate();
         publicAPI.sendParameters();
@@ -156,12 +218,10 @@ function vtkOpenGLTexture(publicAPI, model) {
             data.push(scalars);
           }
         }
-        if (
-          model.renderable.getInterpolate() &&
-          inScalars.getNumberOfComponents() === 4
-        ) {
+        if (wantsMipmaps && inScalars.getNumberOfComponents() === 4) {
           model.generateMipmap = true;
-          publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
+          if (!sampler)
+            publicAPI.setMinificationFilter(Filter.LINEAR_MIPMAP_LINEAR);
         }
         if (data.length % 6 === 0) {
           publicAPI.createCubeFromRaw({
@@ -217,6 +277,10 @@ function vtkOpenGLTexture(publicAPI, model) {
     model.width = 0;
     model.height = 0;
     model.depth = 0;
+    model.compressed = false;
+    model.baseLevel = 0;
+    model.maxLevel = 1000;
+    model.allocatedGPUMemoryInBytes = 0;
     publicAPI.resetFormatAndType();
   };
 
@@ -303,6 +367,9 @@ function vtkOpenGLTexture(publicAPI, model) {
       model.width = 0;
       model.height = 0;
       model.depth = 0;
+      model.compressed = false;
+      model.baseLevel = 0;
+      model.maxLevel = 1000;
       model.allocatedGPUMemoryInBytes = 0;
     }
     if (model.shaderProgram) {
@@ -911,6 +978,107 @@ function vtkOpenGLTexture(publicAPI, model) {
         getNorm16Ext(),
         publicAPI.useHalfFloat()
       );
+    publicAPI.deactivate();
+    return true;
+  };
+
+  //----------------------------------------------------------------------------
+
+  publicAPI.create2DFromCompressed = (payload) => {
+    if (typeof payload?.srgb !== 'boolean') {
+      vtkErrorMacro('Compressed texture srgb must be a boolean.');
+      return false;
+    }
+    const internalFormat = getCompressedTextureInternalFormat(
+      model.context,
+      payload?.format,
+      payload?.srgb
+    );
+    if (
+      !internalFormat ||
+      !Array.isArray(payload?.levels) ||
+      !payload.levels.length
+    ) {
+      vtkErrorMacro(
+        `Unsupported compressed texture format: ${payload?.format ?? 'missing'}`
+      );
+      return false;
+    }
+
+    let expectedWidth = payload.width;
+    let expectedHeight = payload.height;
+    const validLevels = payload.levels.every((level) => {
+      const expectedByteLength =
+        Math.ceil(expectedWidth / 4) * Math.ceil(expectedHeight / 4) * 16;
+      const valid =
+        level?.width === expectedWidth &&
+        level?.height === expectedHeight &&
+        level.data instanceof Uint8Array &&
+        level.data.byteLength === expectedByteLength;
+      expectedWidth = Math.max(1, expectedWidth >> 1);
+      expectedHeight = Math.max(1, expectedHeight >> 1);
+      return valid;
+    });
+    const maximumLevelCount =
+      Math.floor(Math.log2(Math.max(payload.width, payload.height))) + 1;
+    if (
+      !Number.isInteger(payload.width) ||
+      payload.width <= 0 ||
+      !Number.isInteger(payload.height) ||
+      payload.height <= 0 ||
+      payload.levels.length > maximumLevelCount ||
+      !validLevels
+    ) {
+      vtkErrorMacro('Invalid compressed texture mip levels.');
+      return false;
+    }
+
+    if (model.handle) {
+      publicAPI.destroyTexture();
+    }
+    model.target = model.context.TEXTURE_2D;
+    model.internalFormat = internalFormat;
+    model.format = 0;
+    model.openGLDataType = 0;
+    model.components = 4;
+    model.width = payload.width;
+    model.height = payload.height;
+    model.depth = 1;
+    model.numberOfDimensions = 2;
+    model.baseLevel = 0;
+    model.maxLevel = payload.levels.length - 1;
+    model.generateMipmap = false;
+    model.compressed = true;
+    const completeChain =
+      payload.levels.at(-1).width === 1 && payload.levels.at(-1).height === 1;
+    if (
+      !completeChain &&
+      model.minificationFilter >= Filter.NEAREST_MIPMAP_NEAREST
+    ) {
+      const linear =
+        model.minificationFilter === Filter.LINEAR_MIPMAP_NEAREST ||
+        model.minificationFilter === Filter.LINEAR_MIPMAP_LINEAR;
+      model.minificationFilter = linear ? Filter.LINEAR : Filter.NEAREST;
+    }
+
+    model._openGLRenderWindow.activateTexture(publicAPI);
+    publicAPI.createTexture();
+    publicAPI.bind();
+    payload.levels.forEach((level, index) => {
+      model.context.compressedTexImage2D(
+        model.target,
+        index,
+        internalFormat,
+        level.width,
+        level.height,
+        0,
+        level.data
+      );
+    });
+    model.allocatedGPUMemoryInBytes = payload.levels.reduce(
+      (total, level) => total + level.data.byteLength,
+      0
+    );
     publicAPI.deactivate();
     return true;
   };
@@ -1766,7 +1934,7 @@ function vtkOpenGLTexture(publicAPI, model) {
     if (model._openGLRenderWindow === rw) {
       return;
     }
-    publicAPI.releaseGraphicsResources();
+    publicAPI.releaseGraphicsResources(model._openGLRenderWindow);
     model._openGLRenderWindow = rw;
     model.context = null;
     if (rw) {
@@ -1822,6 +1990,7 @@ const DEFAULT_VALUES = {
   generateMipmap: false,
   oglNorm16Ext: null,
   allocatedGPUMemoryInBytes: 0,
+  compressed: false,
   // by default it is enabled
   enableUseHalfFloat: true,
   // but by default we don't know if we can use half float base on the data range
