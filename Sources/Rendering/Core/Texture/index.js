@@ -1,6 +1,178 @@
 /* eslint-disable no-bitwise */
 import macro from 'vtk.js/Sources/macros';
 
+const COMPRESSED_FORMATS = new Set([
+  'astc-4x4',
+  'bc7',
+  'etc2-rgba8',
+  's3tc-dxt5',
+]);
+const MAG_FILTERS = new Set(['nearest', 'linear']);
+const MIN_FILTERS = new Set([
+  'nearest',
+  'linear',
+  'nearest-mipmap-nearest',
+  'linear-mipmap-nearest',
+  'nearest-mipmap-linear',
+  'linear-mipmap-linear',
+]);
+const WRAP_MODES = new Set(['clamp-to-edge', 'mirrored-repeat', 'repeat']);
+
+function cloneSampler(sampler) {
+  if (sampler === null) return null;
+  if (!sampler || typeof sampler !== 'object') {
+    throw new TypeError('texture sampler must be an object or null');
+  }
+  if (!MAG_FILTERS.has(sampler.magFilter)) {
+    throw new TypeError(`unsupported texture magFilter: ${sampler.magFilter}`);
+  }
+  if (!MIN_FILTERS.has(sampler.minFilter)) {
+    throw new TypeError(`unsupported texture minFilter: ${sampler.minFilter}`);
+  }
+  if (!WRAP_MODES.has(sampler.wrapS) || !WRAP_MODES.has(sampler.wrapT)) {
+    throw new TypeError('unsupported texture wrap mode');
+  }
+  return {
+    magFilter: sampler.magFilter,
+    minFilter: sampler.minFilter,
+    wrapS: sampler.wrapS,
+    wrapT: sampler.wrapT,
+  };
+}
+
+function samplerEquals(left, right) {
+  return (
+    left === right ||
+    (left &&
+      right &&
+      left.magFilter === right.magFilter &&
+      left.minFilter === right.minFilter &&
+      left.wrapS === right.wrapS &&
+      left.wrapT === right.wrapT)
+  );
+}
+
+function assertPositiveInteger(value, name) {
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value <= 0) {
+    throw new TypeError(`${name} must be a positive finite integer`);
+  }
+}
+
+function compressedLevelByteLength(width, height) {
+  return Math.ceil(width / 4) * Math.ceil(height / 4) * 16;
+}
+
+function cloneCompressedData(payload) {
+  if (payload === null) {
+    return null;
+  }
+  if (!payload || typeof payload !== 'object') {
+    throw new TypeError('compressed data must be an object or null');
+  }
+  if (!COMPRESSED_FORMATS.has(payload.format)) {
+    throw new TypeError(
+      `unsupported compressed texture format: ${payload.format}`
+    );
+  }
+  assertPositiveInteger(payload.width, 'compressed texture width');
+  assertPositiveInteger(payload.height, 'compressed texture height');
+  if (typeof payload.srgb !== 'boolean') {
+    throw new TypeError('compressed texture srgb must be a boolean');
+  }
+  if (!Array.isArray(payload.levels) || payload.levels.length === 0) {
+    throw new TypeError('compressed texture levels must be a non-empty array');
+  }
+
+  const maximumLevelCount =
+    Math.floor(Math.log2(Math.max(payload.width, payload.height))) + 1;
+  if (payload.levels.length > maximumLevelCount) {
+    throw new TypeError('compressed texture has levels beyond 1x1');
+  }
+
+  let expectedWidth = payload.width;
+  let expectedHeight = payload.height;
+  const levels = payload.levels.map((level, index) => {
+    if (!level || typeof level !== 'object') {
+      throw new TypeError(
+        `compressed texture level ${index} must be an object`
+      );
+    }
+    assertPositiveInteger(
+      level.width,
+      `compressed texture level ${index} width`
+    );
+    assertPositiveInteger(
+      level.height,
+      `compressed texture level ${index} height`
+    );
+    if (level.width !== expectedWidth || level.height !== expectedHeight) {
+      throw new TypeError(
+        `compressed texture level ${index} must be ${expectedWidth}x${expectedHeight}`
+      );
+    }
+    if (!(level.data instanceof Uint8Array)) {
+      throw new TypeError(
+        `compressed texture level ${index} data must be a Uint8Array`
+      );
+    }
+    const expectedByteLength = compressedLevelByteLength(
+      level.width,
+      level.height
+    );
+    if (level.data.byteLength !== expectedByteLength) {
+      throw new TypeError(
+        `compressed texture level ${index} data must contain ${expectedByteLength} bytes`
+      );
+    }
+    const result = {
+      width: level.width,
+      height: level.height,
+      data: new Uint8Array(level.data),
+    };
+    expectedWidth = Math.max(1, expectedWidth >> 1);
+    expectedHeight = Math.max(1, expectedHeight >> 1);
+    return result;
+  });
+
+  return {
+    format: payload.format,
+    width: payload.width,
+    height: payload.height,
+    srgb: payload.srgb,
+    levels,
+  };
+}
+
+function compressedDataEquals(left, right) {
+  if (left === right) {
+    return true;
+  }
+  if (
+    !left ||
+    !right ||
+    left.format !== right.format ||
+    left.width !== right.width ||
+    left.height !== right.height ||
+    left.srgb !== right.srgb ||
+    left.levels.length !== right.levels.length
+  ) {
+    return false;
+  }
+  return left.levels.every((level, index) => {
+    const other = right.levels[index];
+    if (
+      level.width !== other.width ||
+      level.height !== other.height ||
+      level.data.byteLength !== other.data.byteLength
+    ) {
+      return false;
+    }
+    return level.data.every(
+      (value, byteIndex) => value === other.data[byteIndex]
+    );
+  });
+}
+
 // ----------------------------------------------------------------------------
 // vtkTexture methods
 // ----------------------------------------------------------------------------
@@ -8,6 +180,40 @@ import macro from 'vtk.js/Sources/macros';
 function vtkTexture(publicAPI, model) {
   // Set our className
   model.classHierarchy.push('vtkTexture');
+
+  function clearPendingImageListener() {
+    if (model.image && !model.imageLoaded) {
+      model.image.removeEventListener?.('load', publicAPI.imageLoaded);
+    }
+  }
+
+  function clearCompressedDataForSource(source) {
+    if (source !== null && model.compressedData !== null) {
+      model.compressedData = null;
+      return true;
+    }
+    return false;
+  }
+
+  function clearImageSourcesForPipeline(source) {
+    if (source === null) {
+      return false;
+    }
+    const hadSource =
+      model.image !== null ||
+      model.canvas !== null ||
+      model.jsImageData !== null ||
+      model.imageBitmap !== null ||
+      model.compressedData !== null;
+    clearPendingImageListener();
+    model.image = null;
+    model.canvas = null;
+    model.jsImageData = null;
+    model.imageBitmap = null;
+    model.compressedData = null;
+    model.imageLoaded = false;
+    return hadSource;
+  }
 
   publicAPI.imageLoaded = () => {
     model.image.removeEventListener('load', publicAPI.imageLoaded);
@@ -24,9 +230,11 @@ function vtkTexture(publicAPI, model) {
     if (imageData !== null) {
       publicAPI.setInputData(null);
       publicAPI.setInputConnection(null);
+      clearPendingImageListener();
       model.image = null;
       model.canvas = null;
       model.imageBitmap = null;
+      clearCompressedDataForSource(imageData);
     }
 
     model.jsImageData = imageData;
@@ -43,9 +251,11 @@ function vtkTexture(publicAPI, model) {
     if (imageBitmap !== null) {
       publicAPI.setInputData(null);
       publicAPI.setInputConnection(null);
+      clearPendingImageListener();
       model.image = null;
       model.canvas = null;
       model.jsImageData = null;
+      clearCompressedDataForSource(imageBitmap);
     }
 
     model.imageBitmap = imageBitmap;
@@ -63,9 +273,11 @@ function vtkTexture(publicAPI, model) {
     if (canvas !== null) {
       publicAPI.setInputData(null);
       publicAPI.setInputConnection(null);
+      clearPendingImageListener();
       model.image = null;
       model.imageBitmap = null;
       model.jsImageData = null;
+      clearCompressedDataForSource(canvas);
     }
 
     model.canvas = canvas;
@@ -81,9 +293,11 @@ function vtkTexture(publicAPI, model) {
     if (image !== null) {
       publicAPI.setInputData(null);
       publicAPI.setInputConnection(null);
+      clearPendingImageListener();
       model.canvas = null;
       model.jsImageData = null;
       model.imageBitmap = null;
+      clearCompressedDataForSource(image);
     }
 
     model.image = image;
@@ -97,6 +311,102 @@ function vtkTexture(publicAPI, model) {
 
     publicAPI.modified();
   };
+
+  const setInputData = publicAPI.setInputData;
+  publicAPI.setInputData = (data, port = 0) => {
+    const validPort = Number.isInteger(port) && port >= 0;
+    if (!validPort) {
+      return;
+    }
+    if (
+      data !== null &&
+      !publicAPI.isDeleted() &&
+      port < model.numberOfInputs
+    ) {
+      clearImageSourcesForPipeline(data);
+    }
+    setInputData(data, port);
+  };
+
+  const setInputConnection = publicAPI.setInputConnection;
+  publicAPI.setInputConnection = (connection, port = 0) => {
+    const validPort = Number.isInteger(port) && port >= 0;
+    if (!validPort) {
+      return;
+    }
+    const cleared =
+      connection !== null &&
+      !publicAPI.isDeleted() &&
+      port < model.numberOfInputs
+        ? clearImageSourcesForPipeline(connection)
+        : false;
+    setInputConnection(connection, port);
+    if (cleared) {
+      publicAPI.modified();
+    }
+  };
+
+  function getPortToFill() {
+    let port = model.numberOfInputs;
+    while (
+      port &&
+      !model.inputData[port - 1] &&
+      !model.inputConnection[port - 1]
+    ) {
+      port -= 1;
+    }
+    if (port === model.numberOfInputs) {
+      model.numberOfInputs += 1;
+    }
+    return port;
+  }
+
+  publicAPI.addInputData = (data) =>
+    publicAPI.setInputData(data, getPortToFill());
+  publicAPI.addInputConnection = (connection) =>
+    publicAPI.setInputConnection(connection, getPortToFill());
+
+  publicAPI.hasCompressedData = () => model.compressedData !== null;
+
+  publicAPI.isCompressedDataComplete = () => {
+    const lastLevel = model.compressedData?.levels.at(-1);
+    return lastLevel?.width === 1 && lastLevel?.height === 1;
+  };
+
+  publicAPI.getCompressedData = () => cloneCompressedData(model.compressedData);
+
+  publicAPI.getSampler = () => cloneSampler(model.sampler);
+
+  publicAPI.setSampler = (sampler) => {
+    const next = cloneSampler(sampler);
+    if (samplerEquals(model.sampler, next)) return false;
+    model.sampler = next;
+    publicAPI.modified();
+    return true;
+  };
+
+  publicAPI.setCompressedData = (payload) => {
+    const next = cloneCompressedData(payload);
+    if (compressedDataEquals(model.compressedData, next)) {
+      return false;
+    }
+
+    if (next !== null) {
+      clearPendingImageListener();
+      model.inputData.fill(null);
+      model.inputConnection.fill(null);
+      model.image = null;
+      model.canvas = null;
+      model.jsImageData = null;
+      model.imageBitmap = null;
+      model.imageLoaded = false;
+    }
+    model.compressedData = next;
+    publicAPI.modified();
+    return true;
+  };
+
+  publicAPI.clearCompressedData = () => publicAPI.setCompressedData(null);
 
   publicAPI.getDimensionality = () => {
     let width = 0;
@@ -124,6 +434,10 @@ function vtkTexture(publicAPI, model) {
     if (model.imageBitmap) {
       width = model.imageBitmap.width;
       height = model.imageBitmap.height;
+    }
+    if (model.compressedData) {
+      width = model.compressedData.width;
+      height = model.compressedData.height;
     }
 
     const dimensionality = (width > 1) + (height > 1) + (depth > 1);
@@ -322,10 +636,13 @@ const DEFAULT_VALUES = {
   canvas: null,
   jsImageData: null,
   imageBitmap: null,
+  compressedData: null,
+  sampler: null,
   imageLoaded: false,
   repeat: false,
   interpolate: false,
   edgeClamp: false,
+  flipY: true,
   mipLevel: 0,
   resizable: false, // must be set at construction time if the texture can be resizable
 };
@@ -333,7 +650,10 @@ const DEFAULT_VALUES = {
 // ----------------------------------------------------------------------------
 
 export function extend(publicAPI, model, initialValues = {}) {
-  Object.assign(model, DEFAULT_VALUES, initialValues);
+  const supportedValues = { ...initialValues };
+  delete supportedValues.compressedData;
+  delete supportedValues.sampler;
+  Object.assign(model, DEFAULT_VALUES, supportedValues);
 
   // Build VTK API
   macro.obj(publicAPI, model);
@@ -352,6 +672,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     'repeat',
     'edgeClamp',
     'interpolate',
+    'flipY',
     'mipLevel',
   ]);
 
