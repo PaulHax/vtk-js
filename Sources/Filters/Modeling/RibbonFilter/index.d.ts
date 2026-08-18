@@ -107,9 +107,8 @@ export interface vtkRibbonFilter extends vtkRibbonFilterBase {
    * Set the default normal used to orient the ribbon when no normals are provided in the input.
    * The default normal is a vector defined by three components (x,y,z). The
    * default is (0,0,1).
-   * @returns true if the default normal is set successfully.
    */
-  setDefaultNormalFrom(defaultNormal: Vector3): boolean;
+  setDefaultNormalFrom(defaultNormal: Vector3): void;
 
   /**
    * Set the method used to generate texture coordinates. By default, texture

@@ -1,10 +1,10 @@
-import { vtkObject } from '../../../interfaces';
+import { EventHandler, vtkObject, vtkSubscription } from '../../../interfaces';
 import vtkRenderPass from '../RenderPass';
 
-export enum PASS_TYPES {
-  'Build',
-  'Render',
-}
+/**
+ * The traversal passes a view node supports, in traversal order.
+ */
+declare const PASS_TYPES: readonly string[];
 
 /**
  *
@@ -73,13 +73,13 @@ export interface vtkViewNode extends vtkObject {
    * Find the first parent/grandparent of the desired type
    * @param type
    */
-  getFirstAncestorOfType(type: any): void;
+  getFirstAncestorOfType(type: any): vtkViewNode | null;
 
   /**
    * Find the last parent/grandparent of the desired type
    * @param type
    */
-  getLastAncestorOfType(type: any): void;
+  getLastAncestorOfType(type: any): vtkViewNode | null;
 
   /**
    *
@@ -109,8 +109,8 @@ export interface vtkViewNode extends vtkObject {
    */
   getVisited(): boolean;
 
-  //invokeEvent
-  //onEvent(callback: (instance: vtkObject) => any): vtkSubscription;
+  invokeEvent(...args: unknown[]): void;
+  onEvent(cb: EventHandler, priority?: number): vtkSubscription;
 
   /**
    *
@@ -167,7 +167,7 @@ export interface vtkViewNode extends vtkObject {
  * @param model object on which data structure will be bounds (protected)
  * @param {IViewNodeInitialValues} [initialValues] (default: {})
  */
-export function extend(
+declare function extend(
   publicAPI: object,
   model: object,
   initialValues?: IViewNodeInitialValues
@@ -177,7 +177,7 @@ export function extend(
  * Method used to create a new instance of vtkViewNode.
  * @param {IViewNodeInitialValues} [initialValues] for pre-setting some of its content
  */
-export function newInstance(
+declare function newInstance(
   initialValues?: IViewNodeInitialValues
 ): vtkViewNode;
 
@@ -193,5 +193,7 @@ export function newInstance(
 export declare const vtkViewNode: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  // constants
+  PASS_TYPES: typeof PASS_TYPES;
 };
 export default vtkViewNode;

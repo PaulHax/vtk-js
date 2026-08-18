@@ -117,13 +117,13 @@ export interface vtkInteractorStyleManipulator extends vtkInteractorStyle {
    * Finds a mouse manipulator with a given control set.
    * @param button which button
    * @param shift shift enabled
-   * @param scroll scroll enabled
+   * @param control control enabled
    * @param alt alt enabled
    */
   findMouseManipulator(
     button: MouseButton,
     shift: boolean,
-    scroll: boolean,
+    control: boolean,
     alt: boolean
   ): Nullable<vtkCompositeMouseManipulator>;
 
@@ -306,9 +306,9 @@ export interface vtkInteractorStyleManipulator extends vtkInteractorStyle {
   getRotationFactor(): number;
 
   getMouseManipulators(): vtkCompositeMouseManipulator[];
-  getMouseManipulators(): vtkCompositeMouseManipulator[];
-  getMouseManipulators(): vtkCompositeMouseManipulator[];
-  getMouseManipulators(): vtkCompositeMouseManipulator[];
+  getKeyboardManipulators(): vtkCompositeKeyboardManipulator[];
+  getVRManipulators(): vtkCompositeVRManipulator[];
+  getGestureManipulators(): vtkCompositeGestureManipulator[];
 
   /**
    * Sets the center of rotation
@@ -320,10 +320,22 @@ export interface vtkInteractorStyleManipulator extends vtkInteractorStyle {
   setCenterOfRotation(xyz: Vector3): boolean;
 
   /**
+   * Sets the center of rotation from an array.
+   * @param {Vector3} xyz
+   */
+  setCenterOfRotationFrom(centerOfRotation: Vector3): void;
+
+  /**
    * Gets the center of rotation.
    * @returns {Vector3}
    */
   getCenterOfRotation(): Vector3;
+
+  /**
+   * Gets the center of rotation by reference.
+   * @returns {Vector3}
+   */
+  getCenterOfRotationByReference(): Vector3;
 }
 
 export interface IInteractorStyleManipulatorInitialValues {

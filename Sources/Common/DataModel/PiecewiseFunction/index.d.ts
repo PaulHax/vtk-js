@@ -216,7 +216,7 @@ export interface vtkPiecewiseFunction extends vtkObject {
    *
    * @param {Range} range
    */
-  setRangeFrom(range: Range): boolean;
+  setRangeFrom(range: Range): void;
 
   /**
 	 * Internal method to sort the vector and update the Range whenever a node

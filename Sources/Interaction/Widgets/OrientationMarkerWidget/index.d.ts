@@ -36,7 +36,7 @@ export interface vtkOrientationMarkerWidget extends vtkObject {
   /**
    *
    */
-  getActor(): vtkActor;
+  getActor(): vtkActor | undefined;
 
   /**
    * Gets the parent renderer, if any.
@@ -51,7 +51,7 @@ export interface vtkOrientationMarkerWidget extends vtkObject {
   /**
    * Get the render window interactor associated with the widget.
    */
-  getInteractor(): vtkRenderWindowInteractor;
+  getInteractor(): vtkRenderWindowInteractor | undefined;
 
   /**
    * Get the maximum side length, in pixels, for the orientation marker widget

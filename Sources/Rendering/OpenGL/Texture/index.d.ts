@@ -1,7 +1,7 @@
 import { Wrap, Filter } from './Constants';
 import vtkOpenGLRenderWindow from '../RenderWindow';
 import { Extent, Nullable } from '../../../types';
-import { VtkDataTypes } from '../../../Common/Core/DataArray';
+import { VtkDataTypes } from '../../../Common/Core/DataArray/Constants';
 import { vtkViewNode } from '../../../Rendering/SceneGraph/ViewNode';
 import { vtkObject, vtkRange } from '../../../interfaces';
 
@@ -184,13 +184,15 @@ export interface vtkOpenGLTexture extends vtkViewNode {
    * @param {string} dataType - The original data type of the input data.
    * @param {Array} data - The input data array that needs to be updated.
    * @param {boolean} [depth=false] - Indicates whether the data is a 3D array.
+   * @param {Array<Extent>} imageExtents only consider these image extents (default: [])
    * @returns {Array} The updated data array that matches the OpenGL data type.
    */
   updateArrayDataTypeForGL(
     dataType: VtkDataTypes,
     data: any,
-    depth?: boolean
-  ): void;
+    depth?: boolean,
+    imageExtents?: Extent[]
+  ): any[];
 
   /**
    * Creates a 2D texture from raw data.

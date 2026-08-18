@@ -110,6 +110,12 @@ export interface vtkVolumeProperty extends vtkObject {
   getLabelOutlineThickness(): number;
 
   /**
+   * Get the label outline thickness array by reference.
+   * This returns the actual internal array, not a copy.
+   */
+  getLabelOutlineThicknessByReference(): number[];
+
+  /**
    * Get the currently set RGB transfer function. Create one if none set.
    * @param {Number} index
    */
@@ -252,6 +258,12 @@ export interface vtkVolumeProperty extends vtkObject {
   setLabelOutlineThickness(labelOutlineThickness: number | number[]): boolean;
 
   /**
+   * Set the label outline thickness array from another array, without a copy.
+   * @param {Number[]} labelOutlineThickness
+   */
+  setLabelOutlineThicknessFrom(labelOutlineThickness: number[]): void;
+
+  /**
    *
    * @param {Number} index
    * @param {Number} value
@@ -382,12 +394,12 @@ export interface vtkVolumeProperty extends vtkObject {
   /**
    *
    */
-  getAverageIPScalarRange(): Range;
+  getIpScalarRange(): Range;
 
   /**
    *
    */
-  getAverageIPScalarRangeByReference(): Range;
+  getIpScalarRangeByReference(): Range;
 
   /**
    * Get the blending coefficient that interpolates between surface and volume rendering
@@ -426,17 +438,30 @@ export interface vtkVolumeProperty extends vtkObject {
   getLAOKernelRadius(): number;
 
   /**
+   * @deprecated use setIpScalarRange
+   * @param x
+   * @param y
+   */
+  setAverageIPScalarRange(x: number, y: number): void;
+
+  /**
    *
    * @param x
    * @param y
    */
-  setAverageIPScalarRange(x: number, y: number): boolean;
+  setIpScalarRange(x: number, y: number): boolean;
 
   /**
    *
-   * @param {Range} averageIPScalarRange
+   * @param {Range} ipScalarRange
    */
-  setAverageIPScalarRangeFrom(averageIPScalarRange: Range): boolean;
+  setIpScalarRange(ipScalarRange: Range): boolean;
+
+  /**
+   *
+   * @param {Range} ipScalarRange
+   */
+  setIpScalarRangeFrom(ipScalarRange: Range): void;
 
   /**
    * Set the normal computation to be dependent on the transfer function.

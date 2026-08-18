@@ -1,4 +1,4 @@
-import { vtkObject } from '../../../interfaces';
+import { vtkObject, vtkSubscription } from '../../../interfaces';
 import { vtkSourceProxy } from '../SourceProxy';
 import { vtkViewProxy } from '../ViewProxy';
 import { vtkAbstractRepresentationProxy } from '../AbstractRepresentationProxy';
@@ -27,14 +27,26 @@ export interface vtkProxyManager extends vtkObject {
   getProxyConfiguration(): ProxyConfiguration;
 
   setActiveSource<T>(sourceProxy: vtkSourceProxy<T>): boolean;
-  getActiveSource<T>(): vtkSourceProxy<T>;
+  getActiveSource<T>(): vtkSourceProxy<T> | undefined;
+  onActiveSourceChange(
+    callback: (source: vtkSourceProxy<any>) => void,
+    priority?: number
+  ): vtkSubscription;
+  invokeActiveSourceChange(source: vtkSourceProxy<any>): void;
 
   setActiveView(viewProxy: vtkViewProxy): boolean;
-  getActiveView(): vtkViewProxy;
+  getActiveView(): vtkViewProxy | undefined;
+  onActiveViewChange(
+    callback: (view: vtkViewProxy) => void,
+    priority?: number
+  ): vtkSubscription;
+  invokeActiveViewChange(view: vtkViewProxy): void;
 
   onProxyRegistrationChange(
-    callback: (changeInfo: ProxyRegistrationChangeInfo) => void
-  );
+    callback: (changeInfo: ProxyRegistrationChangeInfo) => void,
+    priority?: number
+  ): vtkSubscription;
+  invokeProxyRegistrationChange(changeInfo: ProxyRegistrationChangeInfo): void;
 
   getProxyById<T extends VtkProxy>(id: string): T | undefined;
   getProxyGroups(): string[];
@@ -59,9 +71,11 @@ export interface vtkProxyManager extends vtkObject {
 
   // view //
 
+  create3DView(options?: object): vtkViewProxy;
+  create2DView(options?: object): vtkViewProxy;
   render(view?: vtkViewProxy): void;
-  renderAllViews(): void;
-  setAnimationOnAllViews(): void;
+  renderAllViews(blocking?: boolean): void;
+  setAnimationOnAllViews(enable?: boolean): void;
   autoAnimateViews(debounceTimeout: number): void;
   resizeAllViews(): void;
   resetCamera(view?: vtkViewProxy): void;

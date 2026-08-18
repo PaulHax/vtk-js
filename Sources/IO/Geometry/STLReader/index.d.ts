@@ -57,7 +57,7 @@ export interface vtkSTLReader extends vtkSTLReaderBase {
   /**
    *
    */
-  getBaseURL(): string;
+  getBaseURL(): string | undefined;
 
   /**
    *
@@ -81,7 +81,7 @@ export interface vtkSTLReader extends vtkSTLReaderBase {
   /**
    * Get the url of the object to load.
    */
-  getUrl(): string;
+  getUrl(): string | undefined;
 
   /**
    * Get tolerance when removeDuplicateVertices is set

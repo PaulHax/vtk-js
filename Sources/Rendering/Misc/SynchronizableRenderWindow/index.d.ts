@@ -1,3 +1,4 @@
+import { vtkSubscription } from '../../../interfaces';
 import { Nullable } from '../../../types';
 import vtkRenderWindow, {
   IRenderWindowInitialValues,
@@ -31,7 +32,14 @@ export interface ISynchronizerContext {
   setActiveViewId(viewId: string): void;
   getActiveViewId(): string;
 
-  // TODO: fill progresshandler
+  // progressHandler
+  onProgressEvent(
+    cb: (readyCount: number) => void,
+    priority?: number
+  ): vtkSubscription;
+  invokeProgressEvent(readyCount: number): void;
+  onProgressDone(cb: () => void, priority?: number): vtkSubscription;
+  invokeProgressDone(): void;
 }
 
 export interface ISynchronizableRenderWindowInitialValues extends IRenderWindowInitialValues {
@@ -82,7 +90,7 @@ export interface vtkSynchronizableRenderWindow extends vtkRenderWindow {
   /**
    *
    */
-  getSynchronizedViewId(): string;
+  getSynchronizedViewId(): Nullable<string>;
 
   /**
    *
@@ -126,14 +134,14 @@ export function newInstance(
  *
  * @param {String} [name]
  */
-export function getSynchronizerContext(name?: string): ISynchronizerContext;
+declare function getSynchronizerContext(name?: string): ISynchronizerContext;
 
 /**
  *
  * @param {String} name
  * @param {Nullable<ISynchronizerContext>} ctx
  */
-export function setSynchronizerContext(
+declare function setSynchronizerContext(
   name: string,
   ctx: Nullable<ISynchronizerContext>
 );
@@ -142,34 +150,34 @@ export function setSynchronizerContext(
  *
  * @param name of the context to remove and if nothing provided clear them all.
  */
-export function clearSynchronizerContext(name: Nullable<string>);
+declare function clearSynchronizerContext(name: Nullable<string>);
 
 /**
  *
  * @param {vtkRenderWindow} renderWindow
  * @param {String} [name]
  */
-export function decorate(renderWindow: vtkRenderWindow, name?: string): object;
+declare function decorate(renderWindow: vtkRenderWindow, name?: string): object;
 
 /**
  *
  */
-export function createInstanceMap(): object;
+declare function createInstanceMap(): object;
 
 /**
  *
  */
-export function createArrayHandler(): object;
+declare function createArrayHandler(): object;
 
 /**
  *
  */
-export function createProgressHandler(): object;
+declare function createProgressHandler(): object;
 
 /**
  *
  */
-export function createSceneMtimeHandler(): object;
+declare function createSceneMtimeHandler(): object;
 
 /**
  *

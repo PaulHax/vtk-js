@@ -67,10 +67,26 @@ export interface vtkInteractorStyleImage extends vtkInteractorStyleTrackballCame
   setCurrentImageNumber(i: number): boolean;
 
   /**
+   * Gets the current image property.
+   */
+  getCurrentImageProperty(): vtkImageProperty | undefined;
+
+  /**
    * Sets the current image property.
    * @param imageProperty image property
    */
   setCurrentImageProperty(imageProperty: vtkImageProperty): boolean;
+
+  /**
+   * Gets the interaction mode.
+   */
+  getInteractionMode(): 'IMAGE2D' | 'IMAGE3D' | 'IMAGE_SLICING';
+
+  /**
+   * Sets the interaction mode.
+   * @param mode interaction mode
+   */
+  setInteractionMode(mode: 'IMAGE2D' | 'IMAGE3D' | 'IMAGE_SLICING'): boolean;
 }
 
 export interface IInteractorStyleImageInitialValues {

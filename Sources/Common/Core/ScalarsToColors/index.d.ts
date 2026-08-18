@@ -32,7 +32,11 @@ export interface vtkScalarsToColors extends vtkObject {
    * @param numComp
    * @param numTuples
    */
-  convertToRGBA(colors: any, numComp: number, numTuples: number): void;
+  convertToRGBA(
+    colors: any,
+    numComp: number,
+    numTuples: number
+  ): vtkDataArray | null;
 
   /**
    * Specify an additional opacity (alpha) value to blend with.
@@ -43,7 +47,7 @@ export interface vtkScalarsToColors extends vtkObject {
    *
    * @param {Number} idx
    */
-  getAnnotatedValue(idx: number): void;
+  getAnnotatedValue(idx: number): any;
 
   /**
    *
@@ -192,7 +196,11 @@ export interface vtkScalarsToColors extends vtkObject {
    * @param {ColorMode} colorMode
    * @param {Number} componentIn
    */
-  mapScalars(scalars: any, colorMode: ColorMode, componentIn: number): void;
+  mapScalars(
+    scalars: any,
+    colorMode: ColorMode,
+    componentIn: number
+  ): vtkDataArray | null;
 
   /**
    * Map a set of vector values through the table
@@ -290,7 +298,7 @@ export interface vtkScalarsToColors extends vtkObject {
    *
    * @param {Range} mappingRange
    */
-  setMappingRangeFrom(mappingRange: Range): boolean;
+  setMappingRangeFrom(mappingRange: Range): void;
 
   /**
    *

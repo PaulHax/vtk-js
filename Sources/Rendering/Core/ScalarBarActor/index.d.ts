@@ -151,6 +151,26 @@ export interface vtkScalarBarActor extends Omit<
   /**
    *
    */
+  getBarPosition(): Vector2;
+
+  /**
+   *
+   */
+  getBarPositionByReference(): Vector2;
+
+  /**
+   *
+   */
+  getBarSize(): Size;
+
+  /**
+   *
+   */
+  getBarSizeByReference(): Size;
+
+  /**
+   *
+   */
   getNestedProps(): vtkActor[];
 
   /**
@@ -268,7 +288,7 @@ export interface vtkScalarBarActor extends Omit<
    *
    * @param {Vector2} boxPosition
    */
-  setBoxPositionFrom(boxPosition: Vector2): boolean;
+  setBoxPositionFrom(boxPosition: Vector2): void;
 
   /**
    *
@@ -280,7 +300,7 @@ export interface vtkScalarBarActor extends Omit<
    *
    * @param {Size} boxSize
    */
-  setBoxSizeFrom(boxSize: Size): boolean;
+  setBoxSizeFrom(boxSize: Size): void;
 
   /**
    *
@@ -292,7 +312,7 @@ export interface vtkScalarBarActor extends Omit<
    *
    * @param {Vector2} barPosition
    */
-  setBarPositionFrom(barPosition: Vector2): boolean;
+  setBarPositionFrom(barPosition: Vector2): void;
 
   /**
    *
@@ -304,7 +324,7 @@ export interface vtkScalarBarActor extends Omit<
    *
    * @param {Size} barSize
    */
-  setBarSizeFrom(barSize: Size): boolean;
+  setBarSizeFrom(barSize: Size): void;
 
   /**
    *

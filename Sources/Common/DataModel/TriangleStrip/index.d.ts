@@ -160,7 +160,7 @@ export function newInstance(
  * @param {vtkPoints} pts Points of the triangle strip
  * @param {vtkCellArray} polys Cell array to store the resulting triangles
  */
-export function decomposeStrip(pts: vtkPoints, polys: vtkCellArray): void;
+declare function decomposeStrip(pts: vtkPoints, polys: vtkCellArray): void;
 
 /**
  * vtkTriangleStrip is a concrete implementation of vtkCell to represent a 2D

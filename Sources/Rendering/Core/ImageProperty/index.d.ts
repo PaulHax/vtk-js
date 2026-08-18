@@ -149,6 +149,12 @@ export interface vtkImageProperty extends vtkObject {
   setLabelOutlineThickness(labelOutlineThickness: number | number[]): boolean;
 
   /**
+   * Set the label outline thickness from an array.
+   * @param {Number[]} labelOutlineThickness
+   */
+  setLabelOutlineThicknessFrom(labelOutlineThickness: number[]): void;
+
+  /**
    * Set the ambient lighting coefficient.
    * @param {Number} ambient The ambient lighting coefficient.
    */

@@ -57,7 +57,7 @@ export interface vtkCanvasView extends vtkObject {
   /**
    * Get the size of the canvas view
    */
-  getSizeByReference(): boolean;
+  getSizeByReference(): Size;
 
   /**
    *
@@ -90,7 +90,7 @@ export interface vtkCanvasView extends vtkObject {
    *
    * @param {HTMLElement} container The container HTML element.
    */
-  setContainer(container: HTMLElement): boolean;
+  setContainer(container: HTMLElement): void;
 
   /**
    *
@@ -121,7 +121,7 @@ export interface vtkCanvasView extends vtkObject {
    * Set the size of the canvas view.
    * @param {Size} size The size of the canvas view.
    */
-  setSizeFrom(size: Size): boolean;
+  setSizeFrom(size: Size): void;
 
   /**
    *

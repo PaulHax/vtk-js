@@ -1,5 +1,6 @@
 import vtkDataSetAttributes from '../DataSetAttributes';
 import { vtkObject } from '../../../interfaces';
+import { Bounds, Vector3 } from '../../../types';
 import { FieldAssociations, FieldDataTypes } from './Constants';
 
 /**
@@ -14,6 +15,43 @@ export interface vtkDataSet extends vtkObject {
    * @see vtkFieldData::initialize()
    */
   initialize(): void;
+
+  /**
+   * Compute the (X, Y, Z) bounds of the data.
+   */
+  computeBounds(): void;
+
+  /**
+   * Returns the squared length of the diagonal of the bounding box.
+   */
+  getLength2(): number;
+
+  /**
+   * Returns the length of the diagonal of the bounding box.
+   */
+  getLength(): number;
+
+  /**
+   * Returns the center of the bounding box as [x, y, z].
+   */
+  getCenter(): Vector3;
+
+  /**
+   * Get the bounding box of a cell with the given cellId.
+   * @param {Number} cellId - The id of the cell
+   */
+  getCellBounds(cellId: number): Bounds;
+
+  /**
+   * Get the bounds for this dataset as [xmin, xmax, ymin, ymax, zmin, zmax].
+   * @return {Bounds} The bounds for the dataset.
+   */
+  getBounds(): Bounds;
+
+  /**
+   * Get the bounds for this dataset by reference.
+   */
+  getBoundsByReference(): Bounds;
 
   /**
    * Get dataset's cell data

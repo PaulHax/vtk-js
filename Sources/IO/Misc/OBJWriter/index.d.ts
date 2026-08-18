@@ -23,7 +23,7 @@ export interface vtkOBJWriter extends vtkOBJWriterBase {
   /**
    * Get the MTL file as a string.
    */
-  getMtl(): string;
+  getMtl(): string | undefined;
 
   /**
    *
@@ -84,8 +84,14 @@ export function newInstance(
 /**
  *
  * @param {vktPolyData} polyData
+ * @param {string} [materialFilename]
+ * @param {string} [materialName]
  */
-export function writeOBJ(polyData: vtkPolyData): vtkPolyData;
+declare function writeOBJ(
+  polyData: vtkPolyData,
+  materialFilename?: string,
+  materialName?: string
+): string;
 
 /**
  * vtkOBJWriter writes wavefront obj (.obj) files in ASCII form. OBJ files

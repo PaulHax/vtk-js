@@ -35,7 +35,7 @@ export interface vtkCellArray extends vtkDataArray {
    * Returns the point indices at the given location as a subarray.
    * @param loc
    */
-  getCell(loc: any): void;
+  getCell(loc: number): TypedArray;
 
   /**
    * Insert a cell to this array in the next available slot.
@@ -82,13 +82,13 @@ export function newInstance(
  * @param cellArray
  * @returns {number[]} An array of cell sizes.
  */
-export function extractCellSizes(cellArray: any): number[];
+declare function extractCellSizes(cellArray: any): number[];
 
 /**
  * @static
  * @param cellArray
  */
-export function getNumberOfCells(cellArray: any): any;
+declare function getNumberOfCells(cellArray: any): any;
 
 /**
  * vtkCellArray stores dataset topologies as an explicit connectivity table

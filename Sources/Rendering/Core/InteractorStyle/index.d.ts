@@ -237,7 +237,16 @@ export function extend(
   initialValues?: IInteractorStyleInitialValues
 ): void;
 
+/**
+ * Method used to create a new instance of vtkInteractorStyle
+ * @param {IInteractorStyleInitialValues} [initialValues] for pre-setting some of its content
+ */
+export function newInstance(
+  initialValues?: IInteractorStyleInitialValues
+): vtkInteractorStyle;
+
 export const vtkInteractorStyle: {
+  newInstance: typeof newInstance;
   extend: typeof extend;
 };
 

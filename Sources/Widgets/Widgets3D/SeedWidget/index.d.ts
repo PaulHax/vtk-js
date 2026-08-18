@@ -1,21 +1,27 @@
 import vtkAbstractWidget from '../../Core/AbstractWidget';
 import { Vector3, Bounds } from '../../../types';
+import { vtkWidgetState } from '../../Core/WidgetState';
+import { vtkBoundsMixinState } from '../../Core/StateBuilder/boundsMixin';
+import { vtkColor3MixinState } from '../../Core/StateBuilder/color3Mixin';
+import { vtkDirectionMixinState } from '../../Core/StateBuilder/directionMixin';
+import { vtkManipulatorMixinState } from '../../Core/StateBuilder/manipulatorMixin';
+import { vtkOriginMixinState } from '../../Core/StateBuilder/originMixin';
+import { vtkScale1MixinState } from '../../Core/StateBuilder/scale1Mixin';
+import { vtkVisibleMixinState } from '../../Core/StateBuilder/visibleMixin';
 
-export interface ISeedWidgetHandleState {
-  getOrigin(): Vector3;
-  setOrigin(arg: Vector3): void;
-  getColor3(): string;
-  setColor3(arg: string): void;
-  getScale1(): number;
-  setScale1(arg: number): void;
-  getVisible(): boolean;
-  setVisible(arg: boolean): void;
-  setShape(arg: string): void;
-  getShape(): string;
-}
+export interface ISeedWidgetHandleState
+  extends
+    vtkWidgetState,
+    vtkOriginMixinState,
+    vtkColor3MixinState,
+    vtkScale1MixinState,
+    vtkDirectionMixinState,
+    vtkVisibleMixinState,
+    vtkManipulatorMixinState {}
 
 // The internal state of the widget.
-export interface vtkSeedWidgetState {
+export interface vtkSeedWidgetState
+  extends vtkWidgetState, vtkBoundsMixinState {
   // A handle that defines the location
   getMoveHandle(): ISeedWidgetHandleState;
 }
@@ -52,10 +58,17 @@ export interface vtkSeedWidget {
 
 export interface ISeedWidgetInitialValues {}
 
+export function extend(
+  publicAPI: object,
+  model: object,
+  initialValues?: ISeedWidgetInitialValues
+): void;
+
 export function newInstance(props?: ISeedWidgetInitialValues): vtkSeedWidget;
 
 export const vtkSeedWidget: {
   newInstance: typeof newInstance;
+  extend: typeof extend;
 };
 
 export default vtkSeedWidget;

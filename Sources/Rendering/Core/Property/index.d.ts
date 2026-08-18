@@ -292,7 +292,7 @@ export interface vtkProperty extends vtkObject {
    * Set the ambient surface color from an RGB array
    * @param {RGBColor} ambientColor An Array of the RGB color.
    */
-  setAmbientColorFrom(ambientColor: RGBColor): boolean;
+  setAmbientColorFrom(ambientColor: RGBColor): void;
 
   /**
    * Turn on/off fast culling of polygons based on orientation of normal
@@ -344,7 +344,7 @@ export interface vtkProperty extends vtkObject {
    * Set the diffuse surface color from an RGB array
    * @param {RGBColor} diffuseColor An Array of the RGB color.
    */
-  setDiffuseColorFrom(diffuseColor: RGBColor): boolean;
+  setDiffuseColorFrom(diffuseColor: RGBColor): void;
 
   /**
    * Set the color of primitive edges (if edge visibility is enabled).
@@ -364,7 +364,7 @@ export interface vtkProperty extends vtkObject {
    * Set the color of primitive edges from an RGB array.
    * @param {RGBColor} edgeColor An Array of the RGB color.
    */
-  setEdgeColorFrom(edgeColor: RGBColor): boolean;
+  setEdgeColorFrom(edgeColor: RGBColor): void;
 
   /**
    * Set the opacity of primitive edges. If not set explicitly, edge opacity
@@ -499,7 +499,7 @@ export interface vtkProperty extends vtkObject {
    * Set the specular surface color from an RGB array
    * @param {RGBColor} specularColor An Array of the RGB color.
    */
-  setSpecularColorFrom(specularColor: RGBColor): boolean;
+  setSpecularColorFrom(specularColor: RGBColor): void;
 
   /**
    * Set the specular power.

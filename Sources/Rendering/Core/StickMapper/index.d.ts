@@ -1,4 +1,5 @@
 import vtkMapper, { IMapperInitialValues } from '../Mapper';
+import { Nullable } from '../../../types';
 
 interface IStickMappereInitialValues extends IMapperInitialValues {
   radius?: number;
@@ -16,7 +17,7 @@ export interface vtkStickMapper extends vtkMapper {
   /**
    *
    */
-  getScaleArray(): number[];
+  getScaleArray(): Nullable<string>;
 
   /**
    *

@@ -1,4 +1,4 @@
-import { Bounds } from '../../../types';
+import { Bounds, Nullable } from '../../../types';
 import vtkImageProperty, {
   IImagePropertyInitialValues,
 } from '../ImageProperty';
@@ -38,7 +38,7 @@ export interface vtkImageSlice extends vtkProp3D {
   /**
    *
    */
-  getMapper(): vtkAbstractImageMapper;
+  getMapper(): Nullable<vtkAbstractImageMapper>;
 
   /**
    * Get the minimum X bound

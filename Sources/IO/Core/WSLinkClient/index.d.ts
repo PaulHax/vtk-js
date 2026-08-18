@@ -14,7 +14,7 @@ import vtkImageStream from '../ImageStream';
  *
  * @param smartConnectClass
  */
-export function setSmartConnectClass(smartConnectClass: object): void;
+declare function setSmartConnectClass(smartConnectClass: object): void;
 
 export interface vtkWSLinkClient extends vtkObject {
   /**
@@ -83,7 +83,7 @@ export interface vtkWSLinkClient extends vtkObject {
   /**
    * Get protocols that were either provided in `newInstance` or via its set
    */
-  getProtocols(): Record<string, any>;
+  getProtocols(): Record<string, any> | undefined;
 
   /**
    * Update the list of methods that should be ignore from the busy state monitoring
@@ -117,7 +117,7 @@ export interface vtkWSLinkClient extends vtkObject {
   /**
    * @returns {Function} configDecorator function if any was provided
    */
-  getConfigDecorator(): (config: object) => object;
+  getConfigDecorator(): ((config: object) => object) | undefined;
 
   /**
    *
@@ -127,17 +127,17 @@ export interface vtkWSLinkClient extends vtkObject {
   /**
    *
    */
-  getConfig(): object;
+  getConfig(): object | undefined;
 
   /**
    *
    */
-  getRemote(): Record<string, any>;
+  getRemote(): Record<string, any> | undefined;
 
   /**
    *
    */
-  getImageStream(): vtkImageStream;
+  getImageStream(): vtkImageStream | undefined;
 
   /**
    *

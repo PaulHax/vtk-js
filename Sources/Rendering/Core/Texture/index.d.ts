@@ -153,7 +153,7 @@ export function newInstance(initialValues?: ITextureInitialValues): vtkTexture;
  * @param {GPUTexture} texture - The GPU texture for which mipmaps will be generated.
  * @param {number} mipLevelCount - The total number of mip levels to generate (including the base level).
  */
-export function generateMipmaps(
+declare function generateMipmaps(
   device: any,
   texture: any,
   mipLevelCount: number

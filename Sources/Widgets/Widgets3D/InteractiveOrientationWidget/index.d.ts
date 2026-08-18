@@ -19,7 +19,7 @@ export interface vtkInteractiveOrientationWidget<
   /**
    * @param {ViewTypes} viewType
    */
-  getRepresentationForViewType(viewType: ViewTypes): unknown;
+  getRepresentationsForViewType(viewType: ViewTypes): unknown;
 }
 
 export interface IInteractiveOrientationWidgetInitialValues<

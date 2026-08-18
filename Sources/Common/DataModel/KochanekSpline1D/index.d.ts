@@ -1,7 +1,5 @@
-import vtkSpline1D, {
-  ISpline1DInitialValues,
-  BoundaryCondition,
-} from '../Spline1D';
+import vtkSpline1D, { ISpline1DInitialValues } from '../Spline1D';
+import { BoundaryCondition } from '../Spline1D/Constants';
 
 export interface IKochanekSpline1DInitialValues extends ISpline1DInitialValues {
   tension?: number;

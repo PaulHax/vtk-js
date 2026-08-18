@@ -96,7 +96,7 @@ export interface vtkProp extends vtkObject {
   /**
    *
    */
-  getRendertimemultiplier(): number;
+  getRenderTimeMultiplier(): number;
 
   /**
    * The value is returned in seconds. For simple geometry the accuracy may not be great
@@ -230,7 +230,7 @@ export interface vtkProp extends vtkObject {
    * @see combineDragable
    * @default null
    */
-  setParentProp(parentProp: vtkProp): void;
+  setParentProp(parentProp: vtkProp): boolean;
 
   /**
    * Set whether prop is pickable.

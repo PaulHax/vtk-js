@@ -1,11 +1,17 @@
 import { mat4 } from 'gl-matrix';
 import vtkPolyData from '../../../Common/DataModel/PolyData';
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
+import { Nullable } from '../../../types';
 
-export enum FormatTypes {
+declare enum FormatTypes {
   ASCII,
   BINARY,
 }
+
+/**
+ * The type is public; the value is reached through the module default export.
+ */
+export type { FormatTypes };
 
 /**
  *
@@ -23,7 +29,7 @@ export interface vtkSTLWriter extends vtkSTLWriterBase {
   /**
    *
    */
-  getTransform(): mat4;
+  getTransform(): Nullable<mat4>;
 
   /**
    *
@@ -72,11 +78,11 @@ export function newInstance(
  * @param {FormatTypes} [format]
  * @param {mat4} [transform]
  */
-export function writeSTL(
+declare function writeSTL(
   polyData: vtkPolyData,
   format?: FormatTypes,
   transform?: mat4
-): vtkPolyData;
+): DataView | string;
 
 /**
  * vtkSTLWriter writes stereo lithography (.stl) files in either ASCII or binary

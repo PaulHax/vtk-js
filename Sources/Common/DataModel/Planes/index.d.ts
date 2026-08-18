@@ -1,4 +1,4 @@
-import { Bounds, Vector3 } from '../../../types';
+import { Bounds, Nullable, Vector3 } from '../../../types';
 import vtkDataArray from '../../Core/DataArray';
 import vtkImplicitFunction, {
   IImplicitFunctionInitialValues,
@@ -46,13 +46,13 @@ export interface vtkPlanes extends vtkImplicitFunction {
    * Get the normals of the plane.
    * @returns {vtkDataArray} The normals of the plane.
    */
-  getNormals(): vtkDataArray;
+  getNormals(): Nullable<vtkDataArray>;
 
   /**
    * Get the points of the plane.
    * @returns {vtkPoints} The points of the plane.
    */
-  getPoints(): vtkPoints;
+  getPoints(): Nullable<vtkPoints>;
 
   /**
    * Get the i-th plane

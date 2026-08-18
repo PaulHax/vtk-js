@@ -103,7 +103,7 @@ export function setMaxPoint(
  * @param {Bounds} bounds
  * @param {number} delta
  */
-export function inflate(bounds: Bounds, delta: number): Bounds;
+declare function inflate(bounds: Bounds, delta: number): Bounds;
 
 /**
  * Scales a bounding box.
@@ -267,8 +267,8 @@ export function intersectBox(
   origin: Vector3,
   dir: Vector3,
   coord: Vector3,
-  tolerance: number
-): boolean;
+  tolerance: number[]
+): number;
 
 /**
  * Plane intersection with box
@@ -283,7 +283,7 @@ export function intersectPlane(
   bounds: Bounds,
   origin: Vector3,
   normal: Vector3
-): boolean;
+): number;
 
 /**
  * Do two bounding boxes intersect.

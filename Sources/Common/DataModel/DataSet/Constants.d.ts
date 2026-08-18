@@ -25,3 +25,9 @@ export declare enum FieldDataTypes {
   ROW = 6,
   ROW_DATA = 6,
 }
+
+declare const _default: {
+  FieldDataTypes: typeof FieldDataTypes;
+  FieldAssociations: typeof FieldAssociations;
+};
+export default _default;

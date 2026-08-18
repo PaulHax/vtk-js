@@ -145,7 +145,7 @@ export interface vtkLookupTable extends vtkScalarsToColors {
    * @param range
    * @param p
    */
-  lookupShiftAndScale(range: Range, p: object): boolean;
+  lookupShiftAndScale(range: Range, p: object): void;
 
   /**
    *
@@ -157,7 +157,7 @@ export interface vtkLookupTable extends vtkScalarsToColors {
    *
    * @param aboveRangeColor
    */
-  setAboveRangeColorFrom(aboveRangeColor: RGBAColor): boolean;
+  setAboveRangeColorFrom(aboveRangeColor: RGBAColor): void;
 
   /**
    *
@@ -169,7 +169,7 @@ export interface vtkLookupTable extends vtkScalarsToColors {
    *
    * @param alphaRange
    */
-  setAlphaRangeFrom(alphaRange: Range): boolean;
+  setAlphaRangeFrom(alphaRange: Range): void;
 
   /**
    *
@@ -181,7 +181,7 @@ export interface vtkLookupTable extends vtkScalarsToColors {
    *
    * @param belowRangeColor
    */
-  setBelowRangeColorFrom(belowRangeColor: RGBAColor): boolean;
+  setBelowRangeColorFrom(belowRangeColor: RGBAColor): void;
 
   /**
    *
@@ -193,7 +193,7 @@ export interface vtkLookupTable extends vtkScalarsToColors {
    *
    * @param hueRange
    */
-  setHueRangeFrom(hueRange: Range): boolean;
+  setHueRangeFrom(hueRange: Range): void;
 
   /**
    *
@@ -205,7 +205,7 @@ export interface vtkLookupTable extends vtkScalarsToColors {
    *
    * @param nanColor
    */
-  setNanColorFrom(nanColor: RGBAColor): boolean;
+  setNanColorFrom(nanColor: RGBAColor): void;
 
   /**
    *
@@ -223,7 +223,7 @@ export interface vtkLookupTable extends vtkScalarsToColors {
    *
    * @param saturationRange
    */
-  setSaturationRangeFrom(saturationRange: Range): boolean;
+  setSaturationRangeFrom(saturationRange: Range): void;
 
   /**
    *
@@ -253,7 +253,7 @@ export interface vtkLookupTable extends vtkScalarsToColors {
    *
    * @param valueRange
    */
-  setValueRangeFrom(valueRange: Range): boolean;
+  setValueRangeFrom(valueRange: Range): void;
 }
 
 /**

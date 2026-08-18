@@ -1,5 +1,5 @@
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
-import { DesiredOutputPrecision } from '../../../Common/DataModel/DataSetAttributes';
+import { DesiredOutputPrecision } from '../../../Common/DataModel/DataSetAttributes/Constants';
 import { SolidType } from './Constants';
 
 /**

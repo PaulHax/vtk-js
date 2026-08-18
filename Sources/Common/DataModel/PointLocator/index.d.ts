@@ -141,6 +141,18 @@ export interface vtkPointLocator extends vtkIncrementalPointLocator {
   isInsertedPoint(x: Vector3): number;
 
   /**
+   * Get the divisions of the point locator.
+   * @default [50, 50, 50]
+   */
+  getDivisions(): Vector3;
+
+  /**
+   * Get the divisions of the point locator.
+   * @default [50, 50, 50]
+   */
+  getDivisionsByReference(): Vector3;
+
+  /**
    * Set the divisions of the point locator.
    * @param {Vector3} divisions The number of divisions in each dimension.
    * @returns {Boolean} True if the divisions were set successfully, false otherwise.
@@ -155,6 +167,12 @@ export interface vtkPointLocator extends vtkIncrementalPointLocator {
    * @returns {Boolean} True if the divisions were set successfully, false otherwise.
    */
   setDivisions(x: number, y: number, z: number): boolean;
+
+  /**
+   * Set the divisions of the point locator.
+   * @param {Vector3} divisions The number of divisions in each dimension.
+   */
+  setDivisionsFrom(divisions: Vector3): void;
 
   /**
    * Set the number of points per bucket.

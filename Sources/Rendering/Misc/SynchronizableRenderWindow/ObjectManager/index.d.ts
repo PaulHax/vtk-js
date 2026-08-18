@@ -59,12 +59,17 @@ export interface IObjectManager {
   /**
    * Clear all one time updaters
    */
-  clearOneTimeUpdaters(): void;
+  clearOneTimeUpdaters(ids: string[]): void;
+  clearOneTimeUpdaters(...ids: string[]): void;
 
   /**
    * Update the associated render window
    */
-  updateRenderWindow(): void;
+  updateRenderWindow(
+    instance: vtkObject,
+    props: IViewState,
+    context: ISynchronizerContext
+  ): Promise<Error | void>;
 
   /**
    * Register a new type to exclude

@@ -1,5 +1,3 @@
-import { Nullable } from '../../../types';
-
 /**
  *
  */
@@ -20,15 +18,15 @@ export interface vtkEdgeLocator {
   initialize(): void;
 
   /**
-   * Returns the inserted edge or null if no edge was inserted.
+   * Returns the inserted edge or undefined if no edge was inserted.
    * @param {Number} pointId0 Edge first point id
    * @param {Number} pointId1 Edge last point id
-   * @return {IEdge|null} an edge object ({ key, edgeId, value }) or null
+   * @return {IEdge|undefined} an edge object ({ key, edgeId, value }) or undefined
    */
   isInsertedEdge<T = unknown>(
     pointId0: number,
     pointId1: number
-  ): Nullable<IEdge<T>>;
+  ): IEdge<T> | undefined;
 
   /**
    * Insert edge if it does not already exist.
@@ -68,7 +66,7 @@ export interface vtkEdgeLocator {
  * Method use to create a new instance of vtkEdgeLocator
  * @param {IEdgeLocatorInitialValues} [initialValues] for pre-setting some of its content
  */
-export function newInstance(
+declare function newInstance(
   initialValues?: IEdgeLocatorInitialValues
 ): vtkEdgeLocator;
 

@@ -82,7 +82,7 @@ export interface vtkProperty2D extends vtkObject {
    * @param {Number} g Defines the green component (between 0 and 1).
    * @param {Number} b Defines the blue component (between 0 and 1).
    */
-  setColorFrom(r: number, g: number, b: number): boolean;
+  setColorFrom(r: number, g: number, b: number): void;
 
   /**
    * Set the color of the object. Has the side effect of setting the
@@ -90,7 +90,7 @@ export interface vtkProperty2D extends vtkObject {
    * a quick overall color setting method.
    * @param {RGBColor} color Defines the RGB color array..
    */
-  setColorFrom(color: RGBColor): boolean;
+  setColorFrom(color: RGBColor): void;
 
   /**
    * Turn on/off fast culling of polygons based on orientation of normal

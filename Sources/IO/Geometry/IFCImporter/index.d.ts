@@ -1,4 +1,4 @@
-import { vtkAlgorithm, vtkObject } from '../../../interfaces';
+import { vtkAlgorithm, vtkObject, vtkSubscription } from '../../../interfaces';
 import { vtkRenderer } from '../../../Rendering/Core/Renderer';
 import { HtmlDataAccessHelper } from '../../Core/DataAccessHelper/HtmlDataAccessHelper';
 import { HttpDataAccessHelper } from '../../Core/DataAccessHelper/HttpDataAccessHelper';
@@ -32,7 +32,7 @@ export interface vtkIFCImporter extends vtkIFCImporterBase {
   /**
    *
    */
-  getBaseURL(): string;
+  getBaseURL(): string | undefined;
 
   /**
    *
@@ -46,7 +46,7 @@ export interface vtkIFCImporter extends vtkIFCImporterBase {
   /**
    * Get the url of the object to load.
    */
-  getUrl(): string;
+  getUrl(): string | undefined;
 
   /**
    * Import actors into the renderer.
@@ -97,13 +97,25 @@ export interface vtkIFCImporter extends vtkIFCImporterBase {
    * @param {IIFCImporterOptions} [option] The PLY reader options.
    */
   setUrl(url: string, option?: IIFCImporterOptions): Promise<string | any>;
+
+  /**
+   *
+   * @param {Function} cb The callback to be called.
+   * @param {Number} [priority] The priority of the event.
+   */
+  onReady(cb: () => void, priority?: number): Readonly<vtkSubscription>;
+
+  /**
+   *
+   */
+  invokeReady(): void;
 }
 
 /**
  * Set WebIFC api to be used by vtkIFCImporter
  * @param {object} ifcApi
  */
-export function setIFCAPI(ifcApi: any): void;
+declare function setIFCAPI(ifcApi: any): void;
 
 /**
  * Method used to decorate a given object (publicAPI+model) with vtkIFCImporter characteristics.

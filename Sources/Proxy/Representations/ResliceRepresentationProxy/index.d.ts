@@ -32,5 +32,18 @@ export interface vtkResliceRepresentationProxy extends vtkAbstractRepresentation
   getSlabTrapezoidIntegration(): number;
 }
 
-declare const _default: vtkResliceRepresentationProxy;
-export default _default;
+export function extend(
+  publicAPI: object,
+  model: object,
+  initialValues?: object
+): void;
+
+export function newInstance(
+  initialValues?: object
+): vtkResliceRepresentationProxy;
+
+declare const vtkResliceRepresentationProxy: {
+  newInstance: typeof newInstance;
+  extend: typeof extend;
+};
+export default vtkResliceRepresentationProxy;

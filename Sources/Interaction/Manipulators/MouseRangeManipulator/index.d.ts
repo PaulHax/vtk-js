@@ -3,7 +3,9 @@ import vtkCompositeMouseManipulator, {
 } from '../../../Interaction/Manipulators/CompositeMouseManipulator';
 import { vtkObject } from '../../../interfaces';
 
-export interface IMouseRangeManipulatorInitialValues extends ICompositeMouseManipulatorInitialValues {}
+export interface IMouseRangeManipulatorInitialValues extends ICompositeMouseManipulatorInitialValues {
+  usePointerLock?: boolean;
+}
 
 export interface vtkMouseRangeManipulator
   extends vtkCompositeMouseManipulator, vtkObject {
@@ -11,30 +13,43 @@ export interface vtkMouseRangeManipulator
     min: number,
     max: number,
     step: number,
-    getValue: () => number,
+    getValue: number | (() => number),
     setValue: (v: number) => void,
-    scale?: number
+    scale?: number,
+    exponentialScroll?: boolean
   );
   setVerticalListener(
     min: number,
     max: number,
     step: number,
-    getValue: () => number,
+    getValue: number | (() => number),
     setValue: (v: number) => void,
-    scale?: number
+    scale?: number,
+    exponentialScroll?: boolean
   );
   setScrollListener(
     min: number,
     max: number,
     step: number,
-    getValue: () => number,
+    getValue: number | (() => number),
     setValue: (v: number) => void,
-    scale?: number
+    scale?: number,
+    exponentialScroll?: boolean
   );
   removeHorizontalListener();
   removeVerticalListener();
   removeScrollListener();
   removeAllListeners();
+
+  /**
+   *
+   */
+  getUsePointerLock(): boolean | undefined;
+
+  /**
+   *
+   */
+  setUsePointerLock(usePointerLock: boolean): boolean;
 }
 
 export function extend(

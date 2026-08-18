@@ -56,7 +56,7 @@ export function convertVtkToItkPolyData(
  * vtkITKHelper is a helper which provides a set of functions to work with
  * itk-wasm module.
  */
-export declare const vtkITKHelper: {
+declare const vtkITKHelper: {
   convertItkToVtkImage: typeof convertItkToVtkImage;
   convertVtkToItkImage: typeof convertVtkToItkImage;
   convertItkToVtkPolyData: typeof convertItkToVtkPolyData;

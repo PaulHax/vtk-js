@@ -62,7 +62,7 @@ export interface vtkViewProxy extends VtkProxy {
 
   getCamera(): vtkCamera;
   // getAnnotationOpacity
-  getContainer(): HTMLElement | null;
+  getContainer(): HTMLElement | null | undefined;
   // getCornerAnnotation
   getInteractor(): vtkRenderWindowInteractor;
   getInteractorStyle2D(): vtkInteractorStyle;
@@ -80,9 +80,16 @@ export interface vtkViewProxy extends VtkProxy {
   onResize(
     cb: (size: { width: number; height: number }) => void
   ): vtkSubscription;
+  invokeResize(size: { width: number; height: number }): void;
 
   // TODO proxy property mappings
 }
 
-declare const _default: vtkViewProxy;
-export default _default;
+export function newInstance(initialValues?: object): vtkViewProxy;
+
+export declare const vtkViewProxy: {
+  newInstance: typeof newInstance;
+  extend: (publicAPI: object, model: object, initialValues?: object) => void;
+};
+
+export default vtkViewProxy;

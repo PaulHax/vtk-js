@@ -23,10 +23,21 @@ export interface vtkThresholdPoints extends vtkThresholdPointsBase {
   getCriterias(): ThresholdCriteria[];
 
   /**
+   * Get the desired precision for the output types.
+   */
+  getCriteriasByReference(): ThresholdCriteria[];
+
+  /**
    * Set the desired precision for the output types.
    * @param outputPointsPrecision
    */
   setCriterias(criterias: ThresholdCriteria[]): boolean;
+
+  /**
+   * Set the desired precision for the output types.
+   * @param outputPointsPrecision
+   */
+  setCriteriasFrom(criterias: ThresholdCriteria[]): void;
 
   /**
    *

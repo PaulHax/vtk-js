@@ -1,4 +1,4 @@
-import { vtkAlgorithm, vtkObject } from '../../../interfaces';
+import { vtkObject, vtkSubscription } from '../../../interfaces';
 import { HtmlDataAccessHelper } from '../../Core/DataAccessHelper/HtmlDataAccessHelper';
 import { HttpDataAccessHelper } from '../../Core/DataAccessHelper/HttpDataAccessHelper';
 import { JSZipDataAccessHelper } from '../../Core/DataAccessHelper/JSZipDataAccessHelper';
@@ -39,42 +39,33 @@ export interface IGLTFMaterialVariant {
  */
 export interface IGLTFImporterInitialValues {}
 
-type vtkGLTFImporterBase = vtkObject &
-  Omit<
-    vtkAlgorithm,
-    | 'getInputData'
-    | 'setInputData'
-    | 'setInputConnection'
-    | 'getInputConnection'
-    | 'addInputConnection'
-    | 'addInputData'
-  >;
+type vtkGLTFImporterBase = vtkObject;
 
 export interface vtkGLTFImporter extends vtkGLTFImporterBase {
   /**
    * Get the actors.
    */
-  getActors(): Map<string, vtkActor>;
+  getActors(): Map<string, vtkActor> | undefined;
 
   /**
    * Get the animation mixer.
    */
-  getAnimationMixer(): IGLTFAnimationMixer;
+  getAnimationMixer(): IGLTFAnimationMixer | undefined;
 
   /**
    * Get the animations.
    */
-  getAnimations(): IGLTFAnimation[];
+  getAnimations(): IGLTFAnimation[] | undefined;
 
   /**
    * Get the base url.
    */
-  getBaseURL(): string;
+  getBaseURL(): string | undefined;
 
   /**
    * Get the cameras.
    */
-  getCameras(): Map<string, vtkCamera>;
+  getCameras(): Map<string, vtkCamera> | undefined;
 
   /**
    *
@@ -86,19 +77,24 @@ export interface vtkGLTFImporter extends vtkGLTFImporterBase {
     | LiteHttpDataAccessHelper;
 
   /**
+   * Get the scenes.
+   */
+  getScenes(): any[] | undefined;
+
+  /**
    * Get the url of the object to load.
    */
-  getUrl(): string;
+  getUrl(): string | undefined;
 
   /**
    * Get the variant array.
    */
-  getVariants(): string[];
+  getVariants(): string[] | undefined;
 
   /**
    * Get the variant mappings.
    */
-  getVariantMappings(): Map<string, IGLTFMaterialVariant[]>;
+  getVariantMappings(): Map<string, IGLTFMaterialVariant[]> | undefined;
 
   /**
    * Import the actors.
@@ -135,7 +131,7 @@ export interface vtkGLTFImporter extends vtkGLTFImporterBase {
    *
    * @param callback
    */
-  onReady(callback: () => void): void;
+  onReady(callback: () => void, priority?: number): vtkSubscription;
 
   /**
    * Parse data.
@@ -147,7 +143,7 @@ export interface vtkGLTFImporter extends vtkGLTFImporterBase {
    * Parse data as ArrayBuffer.
    * @param {ArrayBuffer} content The content to parse.
    */
-  parseAsArrayBuffer(content: ArrayBuffer): void;
+  parseAsBinary(content: ArrayBuffer): Promise<void>;
 
   /**
    * Parse data as text.
@@ -191,7 +187,7 @@ export interface vtkGLTFImporter extends vtkGLTFImporterBase {
    * Set the Draco decoder.
    * @param dracoDecoder
    */
-  setDracoDecoder(dracoDecoder: any): void;
+  setDracoDecoder(dracoDecoder: any): Promise<void>;
 
   /**
    * Set the vtk Renderer.
@@ -203,7 +199,7 @@ export interface vtkGLTFImporter extends vtkGLTFImporterBase {
    * Switch to a variant.
    * @param variantIndex The index of the variant to switch to.
    */
-  switchToVariant(variantIndex: number): void;
+  switchToVariant(variantIndex: number): Promise<void>;
 
   /**
    * Clear the importer to initial state, clearing all internal data structures.
@@ -231,16 +227,6 @@ export function extend(
 export function newInstance(
   initialValues?: IGLTFImporterInitialValues
 ): vtkGLTFImporter;
-
-/**
- * Load the WASM decoder from url and set the decoderModule
- * @param url
- * @param binaryName
- */
-export function setWasmBinary(
-  url: string,
-  binaryName: string
-): Promise<boolean>;
 
 /**
  * vtkGLTFImporter can import glTF 2.0 files.

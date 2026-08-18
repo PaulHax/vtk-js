@@ -3,7 +3,7 @@ import vtkCoordinate from '../Coordinate';
 import vtkMapper from '../Mapper';
 import vtkProperty2D, { IProperty2DInitialValues } from '../Property2D';
 import vtkMapper2D from '../Mapper2D';
-import { Bounds } from '../../../types';
+import { Bounds, Nullable } from '../../../types';
 
 /**
  *
@@ -52,7 +52,7 @@ export interface vtkActor2D extends vtkProp {
   /**
    * Gets the 2D mapper.
    */
-  getMapper(): vtkMapper2D;
+  getMapper(): Nullable<vtkMapper2D>;
 
   /**
    * Set the layer number for this 2D actor.
@@ -114,7 +114,7 @@ export interface vtkActor2D extends vtkProp {
    * Get the bounds as [xmin, xmax, ymin, ymax, zmin, zmax].
    * @return {Bounds} The bounds for the mapper.
    */
-  getBounds(): Bounds;
+  getBounds(): Bounds | [];
 
   /**
    * Return the actual vtkCoordinate reference that the mapper should use

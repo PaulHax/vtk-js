@@ -1,4 +1,5 @@
 import { vtkObject, vtkSubscription } from '../../../interfaces';
+import { Nullable } from '../../../types';
 import vtkRenderer from '../Renderer';
 import vtkRenderWindowInteractor from '../RenderWindowInteractor';
 // import vtkOpenGLRenderWindow from "../../../OpenGL/RenderWindow";
@@ -42,7 +43,7 @@ export interface vtkRenderWindow extends vtkObject {
    * Add a child render window
    * @param {vtkRenderWindow} renderWindow The vtkRenderWindow instance.
    */
-  addRenderWindow(renderWindow: vtkRenderWindow): void;
+  addRenderWindow(renderWindow: vtkRenderWindow): boolean;
 
   /**
    * Add renderer
@@ -67,7 +68,7 @@ export interface vtkRenderWindow extends vtkObject {
   /**
    *
    */
-  getInteractor(): vtkRenderWindowInteractor;
+  getInteractor(): Nullable<vtkRenderWindowInteractor>;
 
   /**
    *
@@ -125,6 +126,11 @@ export interface vtkRenderWindow extends vtkObject {
   hasView(view: any): boolean;
 
   //hasView(view: vtkOpenGLRenderWindow): boolean;
+
+  /**
+   * Invoke a Completion event.
+   */
+  invokeCompletion(...args: unknown[]): void;
 
   /**
    *

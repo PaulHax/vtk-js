@@ -221,6 +221,11 @@ export interface vtkMapper
   getScalarVisibility(): boolean;
 
   /**
+   *
+   */
+  getSelectionWebGLIdsToVTKIds(): any;
+
+  /**
    * Check whether the mapper’s data is static.
    * @default false
    */
@@ -405,7 +410,7 @@ export interface vtkMapper
    * @param scalarRange
    * @default [0, 1]
    */
-  setScalarRangeFrom(scalarRange: number[]): boolean;
+  setScalarRangeFrom(scalarRange: number[]): void;
 
   /**
    * Turn on/off flag to control whether scalar data is used to color objects.
@@ -413,6 +418,12 @@ export interface vtkMapper
    * @default true
    */
   setScalarVisibility(scalarVisibility: boolean): boolean;
+
+  /**
+   * This attribute is only used when processing a selection made with the
+   * hardware selector; it does not update the mapper's mtime.
+   */
+  setSelectionWebGLIdsToVTKIds(selectionWebGLIdsToVTKIds: any): void;
 
   /**
    * Turn on/off flag to control whether the mapper’s data is static. Static data

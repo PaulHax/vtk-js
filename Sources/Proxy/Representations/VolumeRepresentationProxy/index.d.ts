@@ -1,5 +1,9 @@
 import { vtkAbstractRepresentationProxy } from '../../Core/AbstractRepresentationProxy';
 import { vtkImageCropFilter } from '../../../Filters/General/ImageCropFilter';
+import vtkDataArray from '../../../Common/Core/DataArray';
+import vtkImageData from '../../../Common/DataModel/ImageData';
+import vtkVolumeMapper from '../../../Rendering/Core/VolumeMapper';
+import vtkVolumeProperty from '../../../Rendering/Core/VolumeProperty';
 
 export interface vtkVolumeRepresentationProxy extends vtkAbstractRepresentationProxy {
   setIs2DVolume(is2D: boolean): void;
@@ -40,5 +44,24 @@ export interface vtkVolumeRepresentationProxy extends vtkAbstractRepresentationP
   setCroppingPlanes(planes: number[]): boolean;
 }
 
-declare const _default: vtkVolumeRepresentationProxy;
-export default _default;
+export function extend(
+  publicAPI: object,
+  model: object,
+  initialValues?: object
+): void;
+
+export function newInstance(
+  initialValues?: object
+): vtkVolumeRepresentationProxy;
+
+export declare const vtkVolumeRepresentationProxy: {
+  newInstance: typeof newInstance;
+  extend: typeof extend;
+  updateConfiguration: (
+    dataset: vtkImageData,
+    dataArray: vtkDataArray,
+    config: { mapper: vtkVolumeMapper; property: vtkVolumeProperty }
+  ) => void;
+};
+
+export default vtkVolumeRepresentationProxy;

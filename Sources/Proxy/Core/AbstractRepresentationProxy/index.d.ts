@@ -21,5 +21,7 @@ export interface vtkAbstractRepresentationProxy extends VtkProxy {
   getVolumes(): vtkVolume[];
 }
 
-declare const vtkAbstractRepresentationProxy: vtkAbstractRepresentationProxy;
+declare const vtkAbstractRepresentationProxy: {
+  extend: (publicAPI: object, model: object, initialValues?: object) => void;
+};
 export default vtkAbstractRepresentationProxy;

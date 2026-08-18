@@ -1,16 +1,27 @@
 import { mat4 } from 'gl-matrix';
 import vtkPolyData from '../../../Common/DataModel/PolyData';
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
+import { Nullable } from '../../../types';
 
-export enum FormatTypes {
+declare enum FormatTypes {
   ASCII,
   BINARY,
 }
 
-export enum TextureCoordinatesName {
+/**
+ * The type is public; the value is reached through the module default export.
+ */
+export type { FormatTypes };
+
+declare enum TextureCoordinatesName {
   UV,
   TEXTURE_UV,
 }
+
+/**
+ * The type is public; the value is reached through the module default export.
+ */
+export type { TextureCoordinatesName };
 
 /**
  *
@@ -54,12 +65,12 @@ export interface vtkPLYWriter extends vtkPLYWriterBase {
   /**
    * Get texture filename.
    */
-  getTextureFileName(): string;
+  getTextureFileName(): Nullable<string>;
 
   /**
    * Get transformation matrix.
    */
-  getTransform(): mat4;
+  getTransform(): Nullable<mat4>;
 
   /**
    * Get whether colors values are included.
@@ -186,7 +197,7 @@ export function newInstance(
  * @param {Boolean} [withColors] Include colors.
  * @param {Boolean} [withIndice] Include indice.
  */
-export function writePLY(
+declare function writePLY(
   polyData: vtkPolyData,
   format?: FormatTypes,
   dataByteOrder?: number,
@@ -198,7 +209,7 @@ export function writePLY(
   withUVs?: boolean,
   withColors?: boolean,
   withIndice?: boolean
-): vtkPolyData;
+): DataView | string;
 
 /**
  * vtkPLYWriter writes polygonal data in Stanford University PLY format (see

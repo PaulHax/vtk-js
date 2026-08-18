@@ -11,8 +11,14 @@ export declare enum ScalarMappingTarget {
   RGBA = 4,
 }
 
+export declare enum Scale {
+  LINEAR = 0,
+  LOG10 = 1,
+}
+
 declare const _default: {
   VectorMode: typeof VectorMode;
   ScalarMappingTarget: typeof ScalarMappingTarget;
+  Scale: typeof Scale;
 };
 export default _default;

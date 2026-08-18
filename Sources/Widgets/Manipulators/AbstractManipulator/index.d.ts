@@ -105,7 +105,7 @@ export interface vtkAbstractManipulator extends vtkObject {
    * Set the user normal (see setUserNormal).
    * @param {Vector3} normal The normal coordinate.
    */
-  setUserNormalFrom(normal: Vector3): boolean;
+  setUserNormalFrom(normal: Vector3): void;
 
   /**
    * Set the user origin.
@@ -127,7 +127,7 @@ export interface vtkAbstractManipulator extends vtkObject {
    * Set the user origin (see setUserOrigin).
    * @param {Vector3} origin The coordinate of the origin point.
    */
-  setUserOriginFrom(origin: Vector3): boolean;
+  setUserOriginFrom(origin: Vector3): void;
 
   /* ------------------------------------------------------------------- */
 
@@ -152,7 +152,7 @@ export interface vtkAbstractManipulator extends vtkObject {
    * Set the handle normal (see setHandleNormal).
    * @param {Vector3} normal The normal coordinate.
    */
-  setHandleNormalFrom(normal: Vector3): boolean;
+  setHandleNormalFrom(normal: Vector3): void;
 
   /**
    * Set the handle origin.
@@ -175,7 +175,7 @@ export interface vtkAbstractManipulator extends vtkObject {
    * Set the handle origin (see setHandleOrigin).
    * @param {Vector3} origin The coordinate of the origin point.
    */
-  setHandleOriginFrom(origin: Vector3): boolean;
+  setHandleOriginFrom(origin: Vector3): void;
 
   /* ------------------------------------------------------------------- */
 
@@ -199,7 +199,7 @@ export interface vtkAbstractManipulator extends vtkObject {
    * Set the widget normal (see setWidgetNormal).
    * @param {Vector3} normal The normal coordinate.
    */
-  setWidgetNormalFrom(normal: Vector3): boolean;
+  setWidgetNormalFrom(normal: Vector3): void;
 
   /**
    * Set the widget origin.
@@ -221,7 +221,7 @@ export interface vtkAbstractManipulator extends vtkObject {
    * Set the widget origin (see setWidgetOrigin).
    * @param {Vector3} origin The coordinate of the origin point.
    */
-  setWidgetOriginFrom(origin: Vector3): boolean;
+  setWidgetOriginFrom(origin: Vector3): void;
 }
 
 /**

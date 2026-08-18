@@ -1,4 +1,4 @@
-import { Bounds, Nullable } from '../../../types';
+import { Bounds, Nullable, RGBAColor } from '../../../types';
 
 import vtkCamera from '../Camera';
 import vtkLight from '../Light';
@@ -10,7 +10,7 @@ import vtkTexture from '../Texture';
 import { EventHandler, vtkSubscription } from '../../../interfaces';
 
 export interface IRendererInitialValues extends IViewportInitialValues {
-  allBounds?: Bounds[];
+  allBounds?: Bounds;
   ambient?: number[];
   allocatedRenderTime?: number;
   timeFactor?: number;
@@ -49,7 +49,10 @@ export type VtkRendererEvent =
   | { type: 'ResetCameraClippingRangeEvent'; renderer: vtkRenderer }
   | { type: 'ResetCameraEvent'; renderer: vtkRenderer };
 
-export interface vtkRenderer extends vtkViewport {
+export interface vtkRenderer extends Omit<
+  vtkViewport,
+  'getBackground' | 'getBackgroundByReference' | 'setBackgroundFrom'
+> {
   /**
    *
    */
@@ -59,7 +62,7 @@ export interface vtkRenderer extends vtkViewport {
    * Add different types of props to the renderer.
    * @param {vtkProp} actor The vtkProp instance.
    */
-  addActor(actor: vtkProp): boolean;
+  addActor(actor: vtkProp): void;
 
   /**
    * Check if the renderer already has the specified light.
@@ -82,7 +85,7 @@ export interface vtkRenderer extends vtkViewport {
    * Add a volume to the renderer..
    * @param volume The vtkVolume instance.
    */
-  addVolume(volume: vtkVolume): boolean;
+  addVolume(volume: vtkVolume): void;
 
   /**
    * Create and add a light to renderer.
@@ -131,7 +134,7 @@ export interface vtkRenderer extends vtkViewport {
    *
    * @default null
    */
-  getEnvironmentTexture(): vtkTexture;
+  getEnvironmentTexture(): Nullable<vtkTexture>;
 
   /**
    * Returns the diffuse strength of the set environment texture.
@@ -644,12 +647,22 @@ export interface vtkRenderer extends vtkViewport {
    * space (for instance, Headlights or CameraLights that are attached to the
    * camera).
    */
-  updateLightGeometry(): boolean;
+  updateLightGeometry(): boolean | undefined;
 
   /**
    * Not Implemented yet
    */
   visibleVolumeCount(): any;
+
+  /**
+   * Get the viewport background.
+   */
+  getBackground(): RGBAColor;
+
+  /**
+   * Get the viewport background.
+   */
+  getBackgroundByReference(): RGBAColor;
 
   /**
    * Set the viewport background.
@@ -676,6 +689,13 @@ export interface vtkRenderer extends vtkViewport {
    * @param {Number[]} background The RGB color array.
    */
   setBackground(background: number[]): boolean;
+
+  /**
+   * Set the viewport background.
+   *
+   * @param {RGBAColor} background The RGBA color array.
+   */
+  setBackgroundFrom(background: RGBAColor): void;
 
   /**
    * Adds an event listener.

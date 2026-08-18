@@ -57,24 +57,6 @@ export function extend(
   initialValues?: IWidgetRepresentationInitialValues
 ): void;
 
-/**
- * Method use to create a new instance of vtkWidgetRepresentation
- * @param {IWidgetRepresentationInitialValues} [initialValues] for pre-setting some of its content
- */
-export function newInstance(
-  initialValues?: IWidgetRepresentationInitialValues
-): vtkWidgetRepresentation;
-
-/**
- * Static function to get the pixel size of a 3D point.
- * @param {Number[]} worldCoord 3D point in world coordinates
- * @param {IDisplayScaleParams} displayScaleParams Display and camera information
- */
-export function getPixelWorldHeightAtCoord(
-  worldCoord: number[],
-  displayScaleParams: IDisplayScaleParams
-): number[];
-
 export interface IWidgetPipeline {
   source?: object;
   filter?: object;
@@ -82,6 +64,35 @@ export interface IWidgetPipeline {
   mapper: object;
   actor: object;
 }
+
+export interface IWidgetStyles {
+  active: any;
+  inactive: any;
+  static: any;
+}
+
+/**
+ * Merge the given styles together for the given element names.
+ * @param {string[]} elementNames The names of the elements to merge styles for.
+ * @param {...any} stylesToMerge The styles to merge.
+ */
+export function mergeStyles(
+  elementNames: string[],
+  ...stylesToMerge: any[]
+): IWidgetStyles;
+
+/**
+ * Apply the given styles to the given pipelines.
+ * @param {Record<string, IWidgetPipeline>} pipelines The pipelines to apply styles to.
+ * @param {IWidgetStyles} styles The styles to apply.
+ * @param {any} [activeActor] The currently active actor.
+ */
+export function applyStyles(
+  pipelines: Record<string, IWidgetPipeline>,
+  styles: IWidgetStyles,
+  activeActor?: any
+): void;
+
 /**
  * If provided, connects `source` (dataset or filter) to `filter`.
  * If provided, connects `filter` (otherwise `source`) to mapper
@@ -112,7 +123,6 @@ export function allocateArray(
 ): vtkDataArray | null;
 
 export declare const vtkWidgetRepresentation: {
-  newInstance: typeof newInstance;
   extend: typeof extend;
 };
 export default vtkWidgetRepresentation;

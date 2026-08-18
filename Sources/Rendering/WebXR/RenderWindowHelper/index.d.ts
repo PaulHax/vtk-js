@@ -1,4 +1,4 @@
-import { vtkObject } from '../../../interfaces';
+import { EventHandler, vtkObject, vtkSubscription } from '../../../interfaces';
 import { Nullable } from '../../../types';
 import vtkOpenGLRenderWindow from '../../OpenGL/RenderWindow';
 
@@ -60,6 +60,16 @@ export interface vtkWebXRRenderWindowHelper extends vtkObject {
    * Get the active WebXR session.
    */
   getXrSession(): Nullable<XRSession>;
+
+  /**
+   * Subscribe to the generic event fired by this helper.
+   */
+  onEvent(cb: EventHandler, priority?: number): vtkSubscription;
+
+  /**
+   * Invoke the generic event fired by this helper.
+   */
+  invokeEvent(...args: unknown[]): void;
 }
 
 /**

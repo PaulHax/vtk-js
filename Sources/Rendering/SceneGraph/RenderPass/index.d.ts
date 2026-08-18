@@ -1,20 +1,21 @@
 import { vtkObject } from '../../../interfaces';
+import { Nullable } from '../../../types';
 import vtkViewNode from '../ViewNode';
 
 /**
  *
  */
 export interface IRenderPassInitialValues {
-  delegates: Array<any>;
-  preDelegateOperations: Array<any>;
-  postDelegateOperations: Array<any>;
+  delegates?: Array<any>;
+  preDelegateOperations?: Array<any>;
+  postDelegateOperations?: Array<any>;
 }
 
 export interface vtkRenderPass extends vtkObject {
   /**
    *
    */
-  getCurrentOperation(): string;
+  getCurrentOperation(): Nullable<string>;
 
   /**
    *
@@ -29,7 +30,7 @@ export interface vtkRenderPass extends vtkObject {
   /**
    *
    */
-  getOperation(): void;
+  getOperation(): Nullable<string>;
 
   /**
    *

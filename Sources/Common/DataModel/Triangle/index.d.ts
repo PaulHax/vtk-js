@@ -16,7 +16,13 @@ export interface IIntersectWithTriangle {
   coplanar: boolean;
   pt1: Vector3;
   pt2: Vector3;
-  surfaceId: number;
+  surfaceId: number[];
+}
+
+export interface IEvaluatePositionResult {
+  subId: number;
+  dist2: number;
+  evaluation: number;
 }
 
 export interface vtkTriangle extends vtkCell {
@@ -97,7 +103,7 @@ export interface vtkTriangle extends vtkCell {
     closestPoint: Vector3,
     pcoords: Vector3,
     weights: number[]
-  ): IIntersectWithLine;
+  ): IEvaluatePositionResult;
 
   /**
    * Determine global coordinates (x) from the given subId and parametric
@@ -144,7 +150,7 @@ export function newInstance(
  * @param {Vector3} v3 The third point coordinate.
  * @param {Vector3} n The normal coordinate.
  */
-export function computeNormalDirection(
+declare function computeNormalDirection(
   v1: Vector3,
   v2: Vector3,
   v3: Vector3,
@@ -159,7 +165,7 @@ export function computeNormalDirection(
  * @param {Vector3} v3 The third point coordinate.
  * @param {Vector3} n The normal coordinate.
  */
-export function computeNormal(
+declare function computeNormal(
   v1: Vector3,
   v2: Vector3,
   v3: Vector3,
@@ -170,7 +176,7 @@ export function computeNormal(
  * Compute the interpolation functions/derivatives
  * @param {Number[]} derivs - The derivatives.
  */
-export function interpolationDerivs(derivs: number[]): void;
+declare function interpolationDerivs(derivs: number[]): void;
 
 /**
  * Compute the intersection between two triangles.
@@ -181,7 +187,7 @@ export function interpolationDerivs(derivs: number[]): void;
  * @param {Vector3} q2 The second point coordinate of the second triangle.
  * @param {Vector3} r2 The third point coordinate of the second triangle.
  */
-export function intersectWithTriangle(
+declare function intersectWithTriangle(
   p1: Vector3,
   q1: Vector3,
   r1: Vector3,

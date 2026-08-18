@@ -20,12 +20,12 @@ export interface vtkRemoteView extends vtkObject {
   /**
    * Get container HTML element
    */
-  getContainer(): HTMLElement;
+  getContainer(): HTMLElement | undefined;
 
   /**
    * Get vtkViewStream object
    */
-  getViewStream(): vtkViewStream;
+  getViewStream(): vtkViewStream | undefined;
 
   /**
    * Get the canvas HTML element
@@ -132,7 +132,7 @@ export interface vtkRemoteView extends vtkObject {
    *
    * @param {HTMLElement} container The container HTML element.
    */
-  setContainer(container: HTMLElement): boolean;
+  setContainer(container: HTMLElement): void;
 
   /**
    * Handle window resize
@@ -195,7 +195,7 @@ export function newInstance(
   initialValues?: IRemoteViewInitialValues
 ): vtkRemoteView;
 
-export function connectImageStream(session: any): void;
+export function connectImageStream(session: any, protocol?: any): void;
 
 export function disconnectImageStream(): void;
 

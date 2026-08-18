@@ -102,12 +102,6 @@ export interface vtkImageArrayMapper
   getSubSlice(slice?: number): number;
 
   /**
-   * Set the slicing mode.
-   * @param {Number} mode The slicing mode.
-   */
-  setSlicingMode(mode: number): boolean;
-
-  /**
    *
    * @param {Number[]} p1 The coordinates of the first point.
    * @param {Number[]} p2 The coordinates of the second point.

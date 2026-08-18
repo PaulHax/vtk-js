@@ -54,7 +54,7 @@ export interface vtkFullScreenRenderWindow extends vtkObject {
   /**
    * Get control container element
    */
-  getControlContainer(): HTMLElement;
+  getControlContainer(): HTMLElement | undefined;
 
   /**
    * Get interactor object

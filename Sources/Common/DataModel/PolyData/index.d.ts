@@ -1,5 +1,6 @@
 import { CellType } from '../../../types';
 import vtkCellArray from '../../Core/CellArray';
+import vtkCell from '../Cell';
 import vtkPointSet, { IPointSetInitialValues } from '../PointSet';
 
 /**
@@ -31,7 +32,7 @@ export interface vtkPolyData extends vtkPointSet {
    * @param {Number} cellId
    * @param cellHint
    */
-  getCell(cellId: number, cellHint: any): void;
+  getCell(cellId: number, cellHint?: any): vtkCell;
 
   /**
    * Get the neighbors at an edge.
@@ -63,7 +64,7 @@ export interface vtkPolyData extends vtkPointSet {
   /**
    * Get the cell array defining cells.
    */
-  getCells(): vtkCellArray;
+  getCells(): any; // vtkCellTypes
 
   /**
    * Get the cell array defining lines.
@@ -115,7 +116,7 @@ export interface vtkPolyData extends vtkPointSet {
    * Topological inquiry to get cells using point.
    * @param ptId
    */
-  getPointCells(ptId: number): void;
+  getPointCells(ptId: number): number[];
 
   /**
    * Get the cell array defining polys.
@@ -158,6 +159,11 @@ export interface vtkPolyData extends vtkPointSet {
    */
   setVerts(verts: vtkCellArray): boolean;
 }
+
+/**
+ * Maps CellType enum values to the vtkCell subclass used to represent that cell type.
+ */
+export const CELL_FACTORY: Record<number, unknown>;
 
 /**
  * Method used to decorate a given object (publicAPI+model) with vtkPolyData characteristics.

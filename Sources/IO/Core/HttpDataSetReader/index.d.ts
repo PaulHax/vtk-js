@@ -3,6 +3,7 @@ import { HtmlDataAccessHelper } from '../DataAccessHelper/HtmlDataAccessHelper';
 import { HttpDataAccessHelper } from '../DataAccessHelper/HttpDataAccessHelper';
 import { JSZipDataAccessHelper } from '../DataAccessHelper/JSZipDataAccessHelper';
 import { LiteHttpDataAccessHelper } from '../DataAccessHelper/LiteHttpDataAccessHelper';
+import { Nullable } from '../../../types';
 
 /**
  *
@@ -138,7 +139,7 @@ export interface vtkHttpDataSetReader extends vtkHttpDataSetReaderBase {
    * }
    * ```
    */
-  getBaseURL(): string;
+  getBaseURL(): Nullable<string>;
 
   /**
    *
@@ -162,7 +163,7 @@ export interface vtkHttpDataSetReader extends vtkHttpDataSetReaderBase {
   /**
    * Get the url of the object to load.
    */
-  getUrl(): string;
+  getUrl(): Nullable<string>;
 
   /**
    * Gets an array of all cached array ids.
@@ -218,7 +219,7 @@ export interface vtkHttpDataSetReader extends vtkHttpDataSetReaderBase {
   /**
    *
    */
-  loadData(): string;
+  loadData(): Promise<any>;
 
   /**
    * Attach listener to monitor when the reader is downloading data or not.

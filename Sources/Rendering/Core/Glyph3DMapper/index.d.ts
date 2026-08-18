@@ -64,7 +64,7 @@ export interface vtkGlyph3DMapper extends vtkMapper {
   /**
    * Gets the name of the array used as scale values.
    */
-  getScaleArray(): string;
+  getScaleArray(): Nullable<string>;
 
   /**
    * Get scale mode as array
@@ -105,7 +105,7 @@ export interface vtkGlyph3DMapper extends vtkMapper {
   /**
    * Gets the name of the array used as orientation values.
    */
-  getOrientationArray(): string;
+  getOrientationArray(): Nullable<string>;
 
   /**
    * Orientation mode indicates if the OrientationArray provides the direction

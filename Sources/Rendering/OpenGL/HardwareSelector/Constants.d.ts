@@ -6,3 +6,8 @@ export declare enum PassTypes {
   ID_HIGH24 = 3,
   MAX_KNOWN_PASS = 3,
 }
+
+declare const _default: {
+  PassTypes: typeof PassTypes;
+};
+export default _default;

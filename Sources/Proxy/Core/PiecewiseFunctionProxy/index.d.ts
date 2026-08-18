@@ -18,11 +18,16 @@ export interface PiecewiseNode {
   sharpness: number;
 }
 
-export enum IPiecewiseFunctionProxyMode {
+declare enum IPiecewiseFunctionProxyMode {
   Gaussians = 0,
   Points = 1,
   Nodes = 2,
 }
+
+/**
+ * The type is public; the value is reached through the module default export.
+ */
+export type { IPiecewiseFunctionProxyMode };
 
 export interface IPiecewiseFunctionProxyDefaults {
   Gaussians: PiecewiseGaussian[];

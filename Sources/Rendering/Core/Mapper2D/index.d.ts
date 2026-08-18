@@ -1,27 +1,8 @@
 import { Nullable } from '../../../types';
+import { ColorMode, GetArray, ScalarMode } from '../Mapper/Constants';
 import vtkAbstractMapper, {
   IAbstractMapperInitialValues,
 } from '../AbstractMapper';
-
-export enum ColorMode {
-  DEFAULT,
-  MAP_SCALARS,
-  DIRECT_SCALARS,
-}
-
-export enum ScalarMode {
-  DEFAULT,
-  USE_POINT_DATA,
-  USE_CELL_DATA,
-  USE_POINT_FIELD_DATA,
-  USE_CELL_FIELD_DATA,
-  USE_FIELD_DATA,
-}
-
-export enum GetArray {
-  BY_ID,
-  BY_NAME,
-}
 
 interface IPrimitiveCount {
   points: number;
@@ -303,7 +284,7 @@ export interface vtkMapper2D extends vtkAbstractMapper {
    * @param scalarRange
    * @default [0, 1]
    */
-  setScalarRangeFrom(scalarRange: number[]): boolean;
+  setScalarRangeFrom(scalarRange: number[]): void;
 
   /**
    * Turn on/off flag to control whether scalar data is used to color objects.

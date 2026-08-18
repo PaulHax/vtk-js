@@ -1,5 +1,5 @@
 import { vtkObject } from '../../../interfaces';
-import { Vector3 } from '../../../types';
+import { Nullable, Vector3 } from '../../../types';
 import vtkProp3D from '../Prop3D';
 import vtkRenderer from '../Renderer';
 
@@ -56,7 +56,7 @@ export interface vtkAbstractPicker extends vtkObject {
   /**
    *
    */
-  getRenderer(): vtkRenderer;
+  getRenderer(): Nullable<vtkRenderer>;
 
   /**
    *
@@ -109,6 +109,14 @@ export function extend(
 ): void;
 
 /**
+ * Method used to create a new instance of vtkAbstractPicker.
+ * @param {IAbstractPickerInitialValues} [initialValues] for pre-setting some of its content
+ */
+export function newInstance(
+  initialValues?: IAbstractPickerInitialValues
+): vtkAbstractPicker;
+
+/**
  * vtkAbstractPicker is an abstract superclass that defines a minimal API for its concrete subclasses.
  * The minimum functionality of a picker is to return the x-y-z global coordinate position of a pick (the pick itself is defined in display coordinates).
  *
@@ -117,6 +125,7 @@ export function extend(
  * @see [vtkPointPicker](./Rendering_Core_PointPicker.html)
  */
 export declare const vtkAbstractPicker: {
+  newInstance: typeof newInstance;
   extend: typeof extend;
 };
 export default vtkAbstractPicker;

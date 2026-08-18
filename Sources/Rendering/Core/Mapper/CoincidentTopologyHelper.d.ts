@@ -8,6 +8,8 @@ export enum Resolve {
   PolygonOffset,
 }
 
+export const CATEGORIES: string[];
+
 export interface StaticCoincidentTopologyMethods {
   /**
    *
