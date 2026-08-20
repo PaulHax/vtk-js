@@ -1,5 +1,5 @@
 import { Nullable, TypedArray } from '../../../types';
-import vtkFramebuffer from '../Framebuffer';
+import type { vtkFramebuffer } from '../Framebuffer';
 import {
   IRenderPassInitialValues,
   vtkRenderPass,
@@ -117,7 +117,7 @@ export function newInstance(
  * or blurring. The delegates render into an offscreen framebuffer, which is
  * then convolved onto a screen-aligned quad.
  */
-export declare const vtkConvolution2DPass: {
+declare const vtkConvolution2DPass: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

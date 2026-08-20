@@ -2,7 +2,7 @@ import { vtkObject } from '../../../interfaces';
 import { ColorMode } from '../../../Rendering/Core/Mapper/Constants';
 import { Range } from '../../../types';
 import vtkDataArray from '../DataArray';
-import { ScalarMappingTarget, VectorMode } from './Constants';
+import { ScalarMappingTarget, Scale, VectorMode } from './Constants';
 
 /**
  *
@@ -404,7 +404,8 @@ export function newInstance(
 export declare const vtkScalarsToColors: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  Scale: typeof Scale;
   VectorMode: typeof VectorMode;
-  ScalarMappingTarget: typeof VectorMode;
+  ScalarMappingTarget: typeof ScalarMappingTarget;
 };
 export default vtkScalarsToColors;

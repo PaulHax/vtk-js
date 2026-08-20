@@ -33,7 +33,7 @@ export function newInstance(
   initialValues?: object
 ): vtkSliceRepresentationProxy;
 
-export declare const vtkSliceRepresentationProxy: {
+declare const vtkSliceRepresentationProxy: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

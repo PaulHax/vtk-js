@@ -188,7 +188,7 @@ export function newInstance(
  * vtkImageCroppingWidget provides a box with corner, edge and face handles that
  * lets the user interactively define cropping planes over a vtkImageData.
  */
-export declare const vtkImageCroppingWidget: {
+declare const vtkImageCroppingWidget: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

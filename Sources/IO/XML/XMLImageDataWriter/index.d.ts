@@ -31,7 +31,7 @@ export function newInstance(
 /**
  * vtkXMLImageDataWriter writes a vtkImageData out as a VTK XML `.vti` document.
  */
-export declare const vtkXMLImageDataWriter: {
+declare const vtkXMLImageDataWriter: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

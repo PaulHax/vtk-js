@@ -1,7 +1,7 @@
 import vtkPiecewiseFunction from '../../../Common/DataModel/PiecewiseFunction';
 import vtkColorTransferFunction from '../../../Rendering/Core/ColorTransferFunction';
 import { vtkObject, vtkSubscription } from '../../../interfaces';
-import { Vector2 } from '../../../types';
+import { TypedArray, Vector2 } from '../../../types';
 
 /**
  * A single gaussian of the transfer function.
@@ -150,7 +150,7 @@ export interface vtkPiecewiseGaussianWidget extends vtkObject {
    * @param array The values to build the histogram from
    * @param {ISetDataArrayOptions} [options] How to interpret the array
    */
-  setDataArray(array: ArrayLike<number>, options?: ISetDataArrayOptions): void;
+  setDataArray(array: TypedArray, options?: ISetDataArrayOptions): void;
 
   /**
    * Get the number of bins of the histogram.
@@ -370,7 +370,7 @@ export function newInstance(
  * a piecewise opacity function as a sum of gaussians, drawn on top of the
  * histogram of the data being rendered.
  */
-export declare const vtkPiecewiseGaussianWidget: typeof STATIC & {
+declare const vtkPiecewiseGaussianWidget: typeof STATIC & {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

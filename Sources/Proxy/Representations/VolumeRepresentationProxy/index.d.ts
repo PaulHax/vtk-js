@@ -54,7 +54,7 @@ export function newInstance(
   initialValues?: object
 ): vtkVolumeRepresentationProxy;
 
-export declare const vtkVolumeRepresentationProxy: {
+declare const vtkVolumeRepresentationProxy: {
   newInstance: typeof newInstance;
   extend: typeof extend;
   updateConfiguration: (

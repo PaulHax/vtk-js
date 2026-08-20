@@ -12,7 +12,7 @@ export function extend(
 
 export function newInstance(initialValues?: object): vtkView2DProxy;
 
-export declare const vtkView2DProxy: {
+declare const vtkView2DProxy: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

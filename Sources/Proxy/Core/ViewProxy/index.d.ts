@@ -87,7 +87,7 @@ export interface vtkViewProxy extends VtkProxy {
 
 export function newInstance(initialValues?: object): vtkViewProxy;
 
-export declare const vtkViewProxy: {
+declare const vtkViewProxy: {
   newInstance: typeof newInstance;
   extend: (publicAPI: object, model: object, initialValues?: object) => void;
 };

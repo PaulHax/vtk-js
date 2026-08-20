@@ -7,6 +7,10 @@ interface ISerializedVtkObject {
 }
 
 interface Ivtk {
+  (obj: null): null;
+  (obj: undefined): undefined;
+  <T extends vtkObject>(obj: T): T;
+
   /**
    * Deserializes a serialized VTK.js object.
    *
@@ -24,7 +28,7 @@ interface Ivtk {
    */
   register(
     vtkClassName: string,
-    constructor: (initialValues?: any) => vtkObject
+    constructor: (initialValues?: any) => Nullable<vtkObject>
   ): void;
 }
 

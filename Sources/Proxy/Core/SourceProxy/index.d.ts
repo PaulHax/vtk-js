@@ -62,7 +62,7 @@ export function newInstance<T = unknown>(
   initialValues?: object
 ): vtkSourceProxy<T>;
 
-export declare const vtkSourceProxy: {
+declare const vtkSourceProxy: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

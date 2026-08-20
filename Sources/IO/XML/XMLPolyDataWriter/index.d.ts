@@ -31,7 +31,7 @@ export function newInstance(
 /**
  * vtkXMLPolyDataWriter writes a vtkPolyData out as a VTK XML `.vtp` document.
  */
-export declare const vtkXMLPolyDataWriter: {
+declare const vtkXMLPolyDataWriter: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

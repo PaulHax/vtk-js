@@ -5,10 +5,13 @@ export declare const TOLERANCE: number;
 /**
  * Different states which pointInPolygon could return.
  */
-export declare enum PolygonWithPointIntersectionState {
-  FAILURE = -1,
-  OUTSIDE = 0,
-  INSIDE = 1,
-  INTERSECTION = 2,
-  ON_LINE = 3,
-}
+export declare const PolygonWithPointIntersectionState: {
+  readonly FAILURE: -1;
+  readonly OUTSIDE: 0;
+  readonly INSIDE: 1;
+  readonly INTERSECTION: 2;
+  readonly ON_LINE: 3;
+};
+
+export type PolygonWithPointIntersectionState =
+  (typeof PolygonWithPointIntersectionState)[keyof typeof PolygonWithPointIntersectionState];

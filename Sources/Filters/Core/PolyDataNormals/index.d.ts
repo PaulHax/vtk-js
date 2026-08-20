@@ -102,7 +102,7 @@ export function newInstance(
  * vtkPolyData. The input points, cells and data arrays are passed through
  * unchanged; only the `Normals` arrays are added to the output.
  */
-export declare const vtkPolyDataNormals: {
+declare const vtkPolyDataNormals: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

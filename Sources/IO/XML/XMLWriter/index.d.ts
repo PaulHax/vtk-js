@@ -113,7 +113,7 @@ export function extend(
  * vtkXMLWriter is the base class of the VTK XML writers. It is not meant to be
  * instantiated directly: use vtkXMLImageDataWriter or vtkXMLPolyDataWriter.
  */
-export declare const vtkXMLWriter: {
+declare const vtkXMLWriter: {
   extend: typeof extend;
   /**
    * Deflate a block of bytes with zlib.

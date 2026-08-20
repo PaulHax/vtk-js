@@ -1,5 +1,5 @@
 import { Nullable } from '../../../types';
-import vtkFramebuffer from '../Framebuffer';
+import type { vtkFramebuffer } from '../Framebuffer';
 import vtkOpenGLTexture from '../Texture';
 import {
   IRenderPassInitialValues,
@@ -41,10 +41,10 @@ export interface vtkForwardPass extends vtkRenderPass {
   getVolumeCount(): number;
 
   /**
-   * Get the color texture holding the captured z-buffer, or `null` when no
-   * depth capture has been needed yet.
+   * Get the color texture holding the captured z-buffer, or `null`/`undefined`
+   * when no depth capture has been needed yet.
    */
-  getZBufferTexture(): Nullable<vtkOpenGLTexture>;
+  getZBufferTexture(): Nullable<vtkOpenGLTexture> | undefined;
 
   /**
    * Ask for a z-buffer capture on the next traversal, whether or not the
@@ -104,7 +104,7 @@ export function newInstance(
  * mixed, then renders the opaque, translucent, volume and overlay actors of
  * every renderer, layer by layer.
  */
-export declare const vtkForwardPass: {
+declare const vtkForwardPass: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };

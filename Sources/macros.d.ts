@@ -83,14 +83,36 @@ export const TYPED_ARRAYS: {
  * @param type name of the typed array constructor (e.g. 'Float32Array')
  * @param args arguments forwarded to the typed array constructor
  */
-export function newTypedArray(type: string, ...args: any[]): TypedArray;
+export function newTypedArray(
+  type: 'BigInt64Array',
+  ...args: any[]
+): BigInt64Array;
+export function newTypedArray(
+  type: 'BigUint64Array',
+  ...args: any[]
+): BigUint64Array;
+export function newTypedArray(
+  type: string,
+  ...args: any[]
+): TypedArray | BigInt64Array | BigUint64Array;
 
 /**
  * Create a new typed array from an array-like or iterable object
  * @param type name of the typed array constructor (e.g. 'Float32Array')
  * @param args arguments forwarded to the typed array's `from()` method
  */
-export function newTypedArrayFrom(type: string, ...args: any[]): TypedArray;
+export function newTypedArrayFrom(
+  type: 'BigInt64Array',
+  ...args: any[]
+): BigInt64Array;
+export function newTypedArrayFrom(
+  type: 'BigUint64Array',
+  ...args: any[]
+): BigUint64Array;
+export function newTypedArrayFrom(
+  type: string,
+  ...args: any[]
+): TypedArray | BigInt64Array | BigUint64Array;
 
 /**
  * Capitalize provided string.

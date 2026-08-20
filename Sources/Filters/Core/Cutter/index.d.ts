@@ -1,6 +1,10 @@
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
 import { Nullable } from '../../../types';
-import vtkImplicitFunction from '../../../Common/DataModel/ImplicitFunction';
+
+export interface ICutterFunction {
+  getMTime(): number;
+  evaluateFunction(x: number, y: number, z: number): number;
+}
 
 /**
  *
@@ -8,9 +12,9 @@ import vtkImplicitFunction from '../../../Common/DataModel/ImplicitFunction';
 export interface ICutterInitialValues {
   /**
    * The implicit function used to cut the input data, e.g. a vtkPlane. Any
-   * object exposing `evaluateFunction(x, y, z)` will do.
+   * object exposing `evaluateFunction(x, y, z)` and `getMTime()` will do.
    */
-  cutFunction?: vtkImplicitFunction;
+  cutFunction?: Nullable<ICutterFunction>;
 
   /**
    * The iso-value of the cut function at which the input is cut.
@@ -25,14 +29,14 @@ export interface vtkCutter extends vtkCutterBase {
   /**
    * Get the implicit function used to cut the input data.
    */
-  getCutFunction(): Nullable<vtkImplicitFunction>;
+  getCutFunction(): Nullable<ICutterFunction>;
 
   /**
    * Set the implicit function used to cut the input data.
    *
-   * @param {vtkImplicitFunction} cutFunction The cut function
+   * @param {ICutterFunction} cutFunction The cut function
    */
-  setCutFunction(cutFunction: vtkImplicitFunction): boolean;
+  setCutFunction(cutFunction: Nullable<ICutterFunction>): boolean;
 
   /**
    * Get the iso-value at which the input is cut.
@@ -88,7 +92,7 @@ export function newInstance(initialValues?: ICutterInitialValues): vtkCutter;
  * all lie on the same side of the iso-value are intersected, and the
  * intersection points are linearly interpolated along the crossed edges.
  */
-export declare const vtkCutter: {
+declare const vtkCutter: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };
