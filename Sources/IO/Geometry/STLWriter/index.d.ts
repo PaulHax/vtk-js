@@ -96,4 +96,7 @@ export declare const vtkSTLWriter: {
   extend: typeof extend;
   writeSTL: typeof writeSTL;
 };
+export declare const STATIC: Readonly<{
+  writeSTL: typeof writeSTL;
+}>;
 export default vtkSTLWriter;

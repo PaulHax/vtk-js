@@ -104,6 +104,10 @@ export function newInstance(
  * resolution: the pixel resolution of a face, i.e. pixel side length (default 200)
  * If a key is not specified, then the default value is used.
  */
+export declare const DEFAULT_VALUES: Readonly<{
+  defaultStyle: Readonly<Required<IStyle>>;
+}>;
+
 export declare const vtkAnnotatedCubeActor: {
   newInstance: typeof newInstance;
   extend: typeof extend;

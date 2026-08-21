@@ -3,6 +3,8 @@ import vtkCompositeKeyboardManipulator from '../../Manipulators/CompositeKeyboar
 import vtkCompositeMouseManipulator from '../../Manipulators/CompositeMouseManipulator';
 import vtkCompositeVRManipulator from '../../Manipulators/CompositeVRManipulator';
 import vtkInteractorStyle from '../../../Rendering/Core/InteractorStyle';
+import vtkRenderer from '../../../Rendering/Core/Renderer';
+import vtkRenderWindowInteractor from '../../../Rendering/Core/RenderWindowInteractor';
 import {
   Device,
   Input,
@@ -343,6 +345,28 @@ export interface IInteractorStyleManipulatorInitialValues {
   rotationFactor?: number;
 }
 
+declare function translateCamera(
+  renderer: vtkRenderer,
+  rwi: vtkRenderWindowInteractor,
+  toX: number,
+  toY: number,
+  fromX: number,
+  fromY: number
+): void;
+
+declare function dollyToPosition(
+  fact: number,
+  position: { x: number; y: number },
+  renderer: vtkRenderer,
+  rwi: vtkRenderWindowInteractor
+): void;
+
+declare function dollyByFactor(
+  interactor: vtkRenderWindowInteractor,
+  renderer: vtkRenderer,
+  factor: number
+): void;
+
 export function newInstance(
   initialValues?: IInteractorStyleManipulatorInitialValues
 ): vtkInteractorStyleManipulator;
@@ -353,9 +377,18 @@ export function extend(
   initialValues?: IInteractorStyleManipulatorInitialValues
 ): void;
 
+export declare const STATIC: Readonly<{
+  dollyToPosition: typeof dollyToPosition;
+  translateCamera: typeof translateCamera;
+  dollyByFactor: typeof dollyByFactor;
+}>;
+
 export const vtkInteractorStyleManipulator: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  dollyToPosition: typeof dollyToPosition;
+  translateCamera: typeof translateCamera;
+  dollyByFactor: typeof dollyByFactor;
 };
 
 export default vtkInteractorStyleManipulator;

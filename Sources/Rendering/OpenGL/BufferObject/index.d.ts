@@ -80,4 +80,5 @@ export declare const vtkOpenGLBufferObject: {
   newInstance: typeof newInstance;
   extend: typeof extend;
 };
+export declare const STATIC: Readonly<Record<never, never>>;
 export default vtkOpenGLBufferObject;

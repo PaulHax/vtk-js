@@ -433,6 +433,14 @@ declare function getDataType(typedArray: TypedArray): string;
  */
 declare function getMaxNorm(dataArray: vtkDataArray): number;
 
+export declare const STATIC: Readonly<{
+  computeRange: typeof computeRange;
+  createRangeHelper: typeof createRangeHelper;
+  fastComputeRange: typeof fastComputeRange;
+  getDataType: typeof getDataType;
+  getMaxNorm: typeof getMaxNorm;
+}>;
+
 /**
  * Method use to decorate a given object (publicAPI+model) with vtkDataArray characteristics.
  *

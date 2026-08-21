@@ -177,4 +177,7 @@ export declare const vtkTriangleStrip: {
   extend: typeof extend;
   decomposeStrip: typeof decomposeStrip;
 };
+export declare const STATIC: Readonly<{
+  decomposeStrip: typeof decomposeStrip;
+}>;
 export default vtkTriangleStrip;

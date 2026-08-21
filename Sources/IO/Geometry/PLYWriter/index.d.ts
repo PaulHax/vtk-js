@@ -226,4 +226,7 @@ export declare const vtkPLYWriter: {
   extend: typeof extend;
   writePLY: typeof writePLY;
 };
+export declare const STATIC: Readonly<{
+  writePLY: typeof writePLY;
+}>;
 export default vtkPLYWriter;

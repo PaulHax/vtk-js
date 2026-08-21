@@ -204,5 +204,9 @@ export function newInstance(
 export declare const vtkOBJReader: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  getPointDuplicateIds: typeof getPointDuplicateIds;
 };
+export declare const STATIC: Readonly<{
+  getPointDuplicateIds: typeof getPointDuplicateIds;
+}>;
 export default vtkOBJReader;

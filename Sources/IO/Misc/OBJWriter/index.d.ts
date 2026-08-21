@@ -106,4 +106,7 @@ export declare const vtkOBJWriter: {
   extend: typeof extend;
   writeOBJ: typeof writeOBJ;
 };
+export declare const STATIC: Readonly<{
+  writeOBJ: typeof writeOBJ;
+}>;
 export default vtkOBJWriter;

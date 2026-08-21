@@ -314,6 +314,10 @@ export function newInstance(
 export declare const vtkVolumeMapper: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  createRadonTransferFunction: typeof createRadonTransferFunction;
   BlendMode: typeof BlendMode;
 };
+export declare const STATIC: Readonly<{
+  createRadonTransferFunction: typeof createRadonTransferFunction;
+}>;
 export default vtkVolumeMapper;

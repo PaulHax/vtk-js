@@ -177,4 +177,8 @@ export declare const vtkLine: {
   distanceToLine: typeof distanceToLine;
   intersection: typeof intersection;
 };
+export declare const STATIC: Readonly<{
+  distanceToLine: typeof distanceToLine;
+  intersection: typeof intersection;
+}>;
 export default vtkLine;

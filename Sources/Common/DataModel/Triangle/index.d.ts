@@ -211,4 +211,10 @@ export declare const vtkTriangle: {
   interpolationDerivs: typeof interpolationDerivs;
   intersectWithTriangle: typeof intersectWithTriangle;
 };
+export declare const STATIC: Readonly<{
+  computeNormalDirection: typeof computeNormalDirection;
+  computeNormal: typeof computeNormal;
+  interpolationDerivs: typeof interpolationDerivs;
+  intersectWithTriangle: typeof intersectWithTriangle;
+}>;
 export default vtkTriangle;

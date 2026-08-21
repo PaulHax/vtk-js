@@ -90,6 +90,11 @@ declare function extractCellSizes(cellArray: any): number[];
  */
 declare function getNumberOfCells(cellArray: any): any;
 
+export declare const STATIC: Readonly<{
+  extractCellSizes: typeof extractCellSizes;
+  getNumberOfCells: typeof getNumberOfCells;
+}>;
+
 /**
  * vtkCellArray stores dataset topologies as an explicit connectivity table
  * listing the point ids that make up each cell.

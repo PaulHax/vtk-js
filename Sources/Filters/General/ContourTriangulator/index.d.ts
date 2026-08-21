@@ -129,4 +129,9 @@ export declare const vtkContourTriangulator: {
   triangulatePolygon: typeof triangulatePolygon;
 };
 
+export declare const STATIC: Readonly<{
+  triangulateContours: typeof triangulateContours;
+  triangulatePolygon: typeof triangulatePolygon;
+}>;
+
 export default vtkContourTriangulator;

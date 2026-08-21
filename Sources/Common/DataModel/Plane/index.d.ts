@@ -390,4 +390,15 @@ export declare const vtkPlane: {
   COINCIDE: typeof COINCIDE;
   DISJOINT: typeof DISJOINT;
 };
+export declare const STATIC: Readonly<{
+  evaluate: typeof evaluate;
+  distanceToPlane: typeof distanceToPlane;
+  projectPoint: typeof projectPoint;
+  projectVector: typeof projectVector;
+  generalizedProjectPoint: typeof generalizedProjectPoint;
+  intersectWithLine: typeof intersectWithLine;
+  intersectWithPlane: typeof intersectWithPlane;
+  DISJOINT: typeof DISJOINT;
+  COINCIDE: typeof COINCIDE;
+}>;
 export default vtkPlane;

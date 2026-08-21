@@ -178,6 +178,15 @@ export function newInstance(
 /**
  * vtkOrientationMarkerWidget is a 2D widget for manipulating a marker prop
  */
+export declare const DEFAULT_VALUES: Readonly<{
+  viewportCorner: Corners;
+  viewportSize: number;
+  minPixelSize: number;
+  maxPixelSize: number;
+  parentRenderer: null;
+  interactiveRenderer: boolean;
+}>;
+
 export declare const vtkOrientationMarkerWidget: {
   newInstance: typeof newInstance;
   extend: typeof extend;

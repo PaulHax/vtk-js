@@ -182,6 +182,12 @@ declare function createSceneMtimeHandler(): object;
 /**
  *
  */
+export declare const DEFAULT_VALUES: Readonly<{
+  synchronizerContextName: string;
+  synchronizerContext: Nullable<ISynchronizerContext>;
+  synchronizedViewId: Nullable<string>;
+}>;
+
 export declare const vtkSynchronizableRenderWindow: {
   newInstance: typeof newInstance;
   getSynchronizerContext: typeof getSynchronizerContext;

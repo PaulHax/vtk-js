@@ -202,4 +202,8 @@ declare const _default: {
   computeWorldToDisplay: typeof computeWorldToDisplay;
   computeDisplayToWorld: typeof computeDisplayToWorld;
 };
+export declare const STATIC: Readonly<{
+  computeWorldToDisplay: typeof computeWorldToDisplay;
+  computeDisplayToWorld: typeof computeDisplayToWorld;
+}>;
 export default _default;

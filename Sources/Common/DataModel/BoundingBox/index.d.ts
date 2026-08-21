@@ -3,6 +3,8 @@ import { Bounds, TypedArray, Vector2, Vector3 } from '../../../types';
 import vtkPoints from '../../Core/Points';
 import { Nullable } from '../../../types';
 
+declare const INIT_BOUNDS: Bounds;
+
 /**
  * Tests whether two bounds equal.
  * @param {Bounds} a
@@ -713,5 +715,47 @@ declare const vtkBoundingBox: {
   distance2ToBounds: typeof distance2ToBounds;
   INIT_BOUNDS: Bounds;
 };
+
+export declare const STATIC: Readonly<{
+  equals: typeof equals;
+  isValid: typeof isValid;
+  setBounds: typeof setBounds;
+  reset: typeof reset;
+  addPoint: typeof addPoint;
+  addPoints: typeof addPoints;
+  addBounds: typeof addBounds;
+  setMinPoint: typeof setMinPoint;
+  setMaxPoint: typeof setMaxPoint;
+  inflate: typeof inflate;
+  scale: typeof scale;
+  scaleAboutCenter: typeof scaleAboutCenter;
+  getCenter: typeof getCenter;
+  getLength: typeof getLength;
+  getLengths: typeof getLengths;
+  getMaxLength: typeof getMaxLength;
+  getDiagonalLength: typeof getDiagonalLength;
+  getDiagonalLength2: typeof getDiagonalLength2;
+  getMinPoint: typeof getMinPoint;
+  getMaxPoint: typeof getMaxPoint;
+  getXRange: typeof getXRange;
+  getYRange: typeof getYRange;
+  getZRange: typeof getZRange;
+  getCorners: typeof getCorners;
+  computeCornerPoints: typeof computeCornerPoints;
+  computeLocalBounds: typeof computeLocalBounds;
+  transformBounds: typeof transformBounds;
+  computeScale3: typeof computeScale3;
+  cutWithPlane: typeof cutWithPlane;
+  intersectBox: typeof intersectBox;
+  intersectPlane: typeof intersectPlane;
+  intersect: typeof intersect;
+  intersects: typeof intersects;
+  containsPoint: typeof containsPoint;
+  contains: typeof contains;
+  computeDivisions: typeof computeDivisions;
+  clampDivisions: typeof clampDivisions;
+  distance2ToBounds: typeof distance2ToBounds;
+  INIT_BOUNDS: typeof INIT_BOUNDS;
+}>;
 
 export default vtkBoundingBox;

@@ -177,5 +177,9 @@ declare function generateMipmaps(
 export declare const vtkTexture: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  generateMipmaps: typeof generateMipmaps;
 };
+export declare const STATIC: Readonly<{
+  generateMipmaps: typeof generateMipmaps;
+}>;
 export default vtkTexture;

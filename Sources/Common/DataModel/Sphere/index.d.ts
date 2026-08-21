@@ -134,4 +134,9 @@ export declare const vtkSphere: {
   computeBoundingSphere: typeof computeBoundingSphere;
   computeBoundingSphereFromSpheres: typeof computeBoundingSphereFromSpheres;
 };
+export declare const STATIC: Readonly<{
+  evaluate: typeof evaluate;
+  computeBoundingSphere: typeof computeBoundingSphere;
+  computeBoundingSphereFromSpheres: typeof computeBoundingSphereFromSpheres;
+}>;
 export default vtkSphere;

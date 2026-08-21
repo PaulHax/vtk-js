@@ -143,4 +143,7 @@ export declare const vtkCylinder: {
   extend: typeof extend;
   evaluate: typeof evaluate;
 };
+export declare const STATIC: Readonly<{
+  evaluate: typeof evaluate;
+}>;
 export default vtkCylinder;

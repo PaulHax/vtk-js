@@ -780,6 +780,33 @@ export function newInstance(initialValues?: ICameraInitialValues): vtkCamera;
  * complex methods allow the manipulation of the computer graphics model
  * including view up vector, clipping planes, and camera perspective.
  */
+export declare const DEFAULT_VALUES: Readonly<{
+  position: number[];
+  focalPoint: number[];
+  viewUp: number[];
+  directionOfProjection: number[];
+  parallelProjection: boolean;
+  useHorizontalViewAngle: boolean;
+  viewAngle: number;
+  parallelScale: number;
+  clippingRange: number[];
+  windowCenter: number[];
+  viewPlaneNormal: number[];
+  useOffAxisProjection: boolean;
+  screenBottomLeft: number[];
+  screenBottomRight: number[];
+  screenTopRight: number[];
+  freezeFocalPoint: boolean;
+  projectionMatrix: null;
+  viewMatrix: null;
+  modelTransformMatrix: null;
+  cameraLightTransform: mat4;
+  physicalTranslation: number[];
+  physicalScale: number;
+  physicalViewUp: number[];
+  physicalViewNorth: number[];
+}>;
+
 export declare const vtkCamera: {
   newInstance: typeof newInstance;
   extend: typeof extend;
