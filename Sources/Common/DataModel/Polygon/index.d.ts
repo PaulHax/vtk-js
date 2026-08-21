@@ -35,7 +35,7 @@ export interface vtkPolygon extends vtkObject {
    * The output data contains points by group of three: each three-group
    * defines one triangle.
    */
-  triangulate(): void;
+  triangulate(): boolean | null;
 }
 
 /**

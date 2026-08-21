@@ -319,7 +319,7 @@ export interface vtkMapper
    * @param {Number} forceCompileOnly
    * @default 0
    */
-  setForceCompileOnly(forceCompileOnly: number): boolean;
+  setForceCompileOnly(forceCompileOnly: number): void;
 
   /**
    * Set a lookup table for the mapper to use.

@@ -13,7 +13,7 @@ export interface vtkPiecewiseFunction extends vtkObject {
    * @param {Number} x The x coordinate.
    * @param {Number} y The y coordinate.
    */
-  addPoint(x: number, y: number): void;
+  addPoint(x: number, y: number): number;
 
   /**
    * Add points to the function.

@@ -65,7 +65,7 @@ export interface vtkPointLocator extends vtkIncrementalPointLocator {
    * @param {vtkPolyData} polydata The polydata to generate representation for
    * @returns
    */
-  generateRepresentation(polydata: vtkPolyData): boolean;
+  generateRepresentation(polydata: vtkPolyData): void;
 
   /**
    * Get the number of points per bucket.

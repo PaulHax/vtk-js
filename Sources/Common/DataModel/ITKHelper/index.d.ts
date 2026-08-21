@@ -16,7 +16,7 @@ export interface IOptions {
 export function convertItkToVtkImage(
   itkImage: any,
   options?: IOptions
-): vtkImageData;
+): vtkImageData | null;
 
 /**
  * Converts a vtk.js vtkImageData to an itk-wasm Image.
@@ -38,7 +38,7 @@ export function convertVtkToItkImage(
 export function convertItkToVtkPolyData(
   itkPolyData: any,
   options?: IOptions
-): vtkPolyData;
+): vtkPolyData | null;
 
 /**
  * Converts a vtk.js vtkPolyData to an itk-wasm PolyData.

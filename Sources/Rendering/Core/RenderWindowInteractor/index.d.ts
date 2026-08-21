@@ -1202,7 +1202,7 @@ export interface vtkRenderWindowInteractor extends vtkObject {
   /**
    *
    */
-  getCurrentRenderer(): void;
+  getCurrentRenderer(): Nullable<vtkRenderer>;
 
   /**
    * Manually sets the current renderer.
@@ -1395,7 +1395,7 @@ export interface vtkRenderWindowInteractor extends vtkObject {
    * @param {Number} x
    * @param {Number} y
    */
-  findPokedRenderer(x: number, y: number): Nullable<vtkRenderer>;
+  findPokedRenderer(x?: number, y?: number): Nullable<vtkRenderer>;
 
   /**
    * only render if we are not animating. If we are animating

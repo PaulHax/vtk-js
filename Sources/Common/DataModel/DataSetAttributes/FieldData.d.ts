@@ -221,7 +221,7 @@ export interface vtkFieldData extends vtkObject {
   /**
    *
    */
-  getState(): object;
+  getState(): object | null;
 }
 
 /**

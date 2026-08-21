@@ -304,7 +304,7 @@ export interface vtkOpenGLTexture extends vtkViewNode {
     height: number;
     dataArray: any;
     preferSizeOverAccuracy?: boolean;
-  }): boolean;
+  }): void;
 
   /**
    * Creates a 3D texture from raw data.

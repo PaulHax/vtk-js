@@ -1,4 +1,5 @@
 import { Bounds, Nullable, vtkPipelineConnection } from '../../../types';
+import vtkDataArray from '../../../Common/Core/DataArray';
 import vtkMapper, { IMapperInitialValues } from '../Mapper';
 import { OrientationModes, ScaleModes } from './Constants';
 
@@ -69,7 +70,7 @@ export interface vtkGlyph3DMapper extends vtkMapper {
   /**
    * Get scale mode as array
    */
-  getScaleArrayData(): number[];
+  getScaleArrayData(): vtkDataArray | null;
 
   /**
    * An orientation array is a vtkDataArray with 3 components. The first
@@ -94,7 +95,7 @@ export interface vtkGlyph3DMapper extends vtkMapper {
   /**
    * Get orientation as array
    */
-  getOrientationArrayData(): number[];
+  getOrientationArrayData(): vtkDataArray | null;
 
   /**
    * Sets the name of the array to use as orientation.

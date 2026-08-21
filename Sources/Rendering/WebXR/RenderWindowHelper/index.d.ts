@@ -6,12 +6,12 @@ import vtkOpenGLRenderWindow from '../../OpenGL/RenderWindow';
  *
  */
 export interface IWebXRRenderWindowHelperInitialValues {
-  initialized: boolean;
+  initialized?: boolean;
   initCanvasSize?: [number, number];
   initBackground?: [number, number, number, number];
   renderWindow?: Nullable<vtkOpenGLRenderWindow>;
   xrSession?: Nullable<XRSession>;
-  xrSessionType: number;
+  xrSessionType?: number;
   xrReferenceSpace?: any;
 }
 
@@ -39,7 +39,7 @@ export interface vtkWebXRRenderWindowHelper extends vtkObject {
    * @param {Number} inputRescaleFactor
    * @param {Number} inputTranslateZ
    */
-  resetXRScene(inputRescaleFactor: number, inputTranslateZ: number): void;
+  resetXRScene(inputRescaleFactor?: number, inputTranslateZ?: number): void;
 
   /**
    * Request to stop the current XR session

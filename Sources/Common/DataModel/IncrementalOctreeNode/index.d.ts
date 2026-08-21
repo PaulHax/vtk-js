@@ -154,7 +154,7 @@ export interface vtkIncrementalOctreeNode extends vtkObject {
     pntIdx: number,
     maxPts: number,
     ptMode: number
-  ): void;
+  ): number;
 
   /**
    * Divide this LEAF node into eight child nodes as the number of points

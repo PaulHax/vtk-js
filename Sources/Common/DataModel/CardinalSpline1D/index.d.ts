@@ -36,7 +36,7 @@ export interface vtkCardinalSpline1D extends vtkSpline1D {
     work: Float32Array,
     x: Vector3,
     y: Vector3,
-    options: {
+    options?: {
       leftConstraint: BoundaryCondition;
       leftValue: number;
       rightConstraint: BoundaryCondition;

@@ -1,4 +1,6 @@
 import { Range, RGBAColor } from '../../../types';
+import vtkDataArray from '../DataArray';
+import { ScalarMappingTarget } from '../ScalarsToColors/Constants';
 import vtkScalarsToColors from '../ScalarsToColors';
 
 /**
@@ -7,6 +9,22 @@ import vtkScalarsToColors from '../ScalarsToColors';
 export interface ILookupTableInitialValues {}
 
 export interface vtkLookupTable extends vtkScalarsToColors {
+  /** Return whether all colors in the table are opaque. */
+  isOpaque(): boolean;
+
+  /** Lookup tables do not use logarithmic scaling. */
+  usingLogScale(): boolean;
+
+  /** Build the table if it is stale or empty. */
+  build(): void;
+
+  /** Map scalar values through the lookup table into the supplied output. */
+  mapScalarsThroughTable(
+    input: vtkDataArray,
+    output: vtkDataArray,
+    outFormat: ScalarMappingTarget,
+    inputOffset: number
+  ): void;
   /**
    *
    */

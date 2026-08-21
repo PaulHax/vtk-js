@@ -18,6 +18,9 @@ export interface IPropInitialValues {
 }
 
 export interface vtkProp extends vtkObject {
+  /** Process selector pixel buffers for this prop during hardware picking. */
+  processSelectorPixelBuffers(selector: any, pixelOffsets: number[]): void;
+
   /**
    *
    * @param estimatedRenderTime
@@ -186,7 +189,7 @@ export interface vtkProp extends vtkObject {
    * Not all mappers support all coordinate systems.
    * @param {CoordinateSystem} coordinateSystem
    */
-  setCoordinateSystem(coordinateSystem: CoordinateSystem): void;
+  setCoordinateSystem(coordinateSystem: CoordinateSystem): boolean;
 
   /**
    * Indicate that this prop's data should be in world coordinates.
@@ -194,7 +197,7 @@ export interface vtkProp extends vtkObject {
    * userMatrix the resulting values will be treated as in world coordinates.
    * Not all mappers support all coordinate systems.
    */
-  setCoordinateSystemToWorld(): void;
+  setCoordinateSystemToWorld(): boolean;
 
   /**
    * Indicate that this prop's data should be in display coordinates.
@@ -204,7 +207,7 @@ export interface vtkProp extends vtkObject {
    * and a z range of -1 at the near plane and 1 at the far.
    * Not all mappers support all coordinate systems.
    */
-  setCoordinateSystemToDisplay(): void;
+  setCoordinateSystemToDisplay(): boolean;
 
   /**
    * Set whether prop is dragable.

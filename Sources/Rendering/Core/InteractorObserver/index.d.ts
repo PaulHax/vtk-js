@@ -1,7 +1,7 @@
 import { vtkRenderer } from '../Renderer';
 import { vtkRenderWindowInteractor } from '../RenderWindowInteractor';
 import { vtkObject, EventHandler, vtkSubscription } from '../../../interfaces';
-import { Vector3 } from '../../../types';
+import { Nullable, Vector3 } from '../../../types';
 
 export interface IInteractorObserverInitialValues {
   enabled?: boolean;
@@ -126,7 +126,7 @@ export interface vtkInteractorObserver extends vtkObject {
     x: number,
     y: number,
     z: number
-  ): Vector3;
+  ): Nullable<Vector3>;
 
   /**
    * Transform from display to world coordinates.
@@ -141,7 +141,7 @@ export interface vtkInteractorObserver extends vtkObject {
     x: number,
     y: number,
     z: number
-  ): Vector3;
+  ): Nullable<Vector3>;
 }
 
 /**

@@ -136,7 +136,10 @@ export interface vtkKeyboardCameraManipulator
    * @param key the movedkey
    * @param camera the camera
    */
-  getDirectionFromKey(key: KeyboardEvent['key'], camera: vtkCamera): Vector3;
+  getDirectionFromKey(
+    key: KeyboardEvent['key'],
+    camera: vtkCamera
+  ): Vector3 | undefined;
 
   /**
    * Moves the given camera, in the given direction, at the given speed.

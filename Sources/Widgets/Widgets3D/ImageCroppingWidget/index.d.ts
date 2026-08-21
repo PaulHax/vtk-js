@@ -106,7 +106,7 @@ export interface vtkImageCroppingWidget extends vtkAbstractWidgetFactory<vtkImag
   /**
    * Get the manipulator driving the corner handles.
    */
-  getCornerManipulator(): vtkPlaneManipulator;
+  getCornerManipulator(): vtkPlaneManipulator | undefined;
 
   /**
    * Set the manipulator driving the corner handles.
@@ -116,7 +116,7 @@ export interface vtkImageCroppingWidget extends vtkAbstractWidgetFactory<vtkImag
   /**
    * Get the manipulator driving the edge handles.
    */
-  getEdgeManipulator(): vtkPlaneManipulator;
+  getEdgeManipulator(): vtkPlaneManipulator | undefined;
 
   /**
    * Set the manipulator driving the edge handles.
@@ -126,7 +126,7 @@ export interface vtkImageCroppingWidget extends vtkAbstractWidgetFactory<vtkImag
   /**
    * Get the manipulator driving the face handles.
    */
-  getFaceManipulator(): vtkLineManipulator;
+  getFaceManipulator(): vtkLineManipulator | undefined;
 
   /**
    * Set the manipulator driving the face handles.

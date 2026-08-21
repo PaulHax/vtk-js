@@ -66,7 +66,7 @@ export interface vtkScalarsToColors extends vtkObject {
    *
    * @param {Number} idx
    */
-  getAnnotation(idx: number): string;
+  getAnnotation(idx: number): string | null;
 
   /**
    *
@@ -351,7 +351,7 @@ export interface vtkScalarsToColors extends vtkObject {
   /**
    * Update the map from annotated values to indices in the array of annotations.
    */
-  updateAnnotatedValueMap(): boolean;
+  updateAnnotatedValueMap(): void;
 
   /**
    *

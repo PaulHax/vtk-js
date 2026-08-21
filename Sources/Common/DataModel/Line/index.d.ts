@@ -14,7 +14,7 @@ declare enum IntersectionState {
 export type { IntersectionState };
 
 export interface ILineInitialValues {
-  orientations: Nullable<quat[]>;
+  orientations?: Nullable<quat[]>;
 }
 
 export interface IIntersectWithLine {

@@ -120,7 +120,7 @@ export interface vtkRemoteView extends vtkObject {
    *
    * @param viewStream
    */
-  setViewStream(viewStream: vtkViewStream): boolean;
+  setViewStream(viewStream: vtkViewStream): void;
 
   /**
    *

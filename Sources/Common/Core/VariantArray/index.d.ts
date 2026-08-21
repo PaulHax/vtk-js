@@ -6,7 +6,7 @@ import { vtkObject } from '../../../interfaces';
 export interface IVariantArrayInitialValues {
   name?: string;
   numberOfComponents?: number;
-  size: number;
+  size?: number;
   dataType?: string;
 }
 

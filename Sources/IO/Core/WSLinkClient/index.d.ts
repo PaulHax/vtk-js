@@ -47,7 +47,7 @@ export interface vtkWSLinkClient extends vtkObject {
    * @param {Function} [configDecorator] (default: null)
    */
   connect(
-    config: object,
+    config?: object,
     configDecorator?: (config: object) => object
   ): Promise<vtkWSLinkClient>;
 
@@ -55,7 +55,7 @@ export interface vtkWSLinkClient extends vtkObject {
    * Disconnect from server
    * @param {Number} timeout amount of second to wait before the server exit as well. If we want to avoid the server from quitting, `-1` should be provided. (default=60)
    */
-  disconnect(timeout: number): void;
+  disconnect(timeout?: number): void;
 
   /**
    * Register dynamically a protocol after being connected

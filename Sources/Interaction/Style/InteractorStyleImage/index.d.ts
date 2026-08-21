@@ -64,7 +64,7 @@ export interface vtkInteractorStyleImage extends vtkInteractorStyleTrackballCame
    * -2 will return the second-to-last image, etc.
    * @param i image number
    */
-  setCurrentImageNumber(i: number): boolean;
+  setCurrentImageNumber(i: number): void;
 
   /**
    * Gets the current image property.
@@ -75,7 +75,7 @@ export interface vtkInteractorStyleImage extends vtkInteractorStyleTrackballCame
    * Sets the current image property.
    * @param imageProperty image property
    */
-  setCurrentImageProperty(imageProperty: vtkImageProperty): boolean;
+  setCurrentImageProperty(imageProperty: vtkImageProperty): void;
 
   /**
    * Gets the interaction mode.
@@ -90,19 +90,19 @@ export interface vtkInteractorStyleImage extends vtkInteractorStyleTrackballCame
 }
 
 export interface IInteractorStyleImageInitialValues {
-  windowLevelStartPosition: Vector2;
-  windowLevelCurrentPosition: Vector2;
-  lastSlicePosition: number;
-  windowLevelInitial: Vector2;
+  windowLevelStartPosition?: Vector2;
+  windowLevelCurrentPosition?: Vector2;
+  lastSlicePosition?: number;
+  windowLevelInitial?: Vector2;
   // currentImageProperty: null;
-  currentImageNumber: number;
-  interactionMode: 'IMAGE2D' | 'IMAGE3D' | 'IMAGE_SLICING';
-  xViewRightVector: Vector3;
-  xViewUpVector: Vector3;
-  yViewRightVector: Vector3;
-  yViewUpVector: Vector3;
-  zViewRightVector: Vector3;
-  zViewUpVector: Vector3;
+  currentImageNumber?: number;
+  interactionMode?: 'IMAGE2D' | 'IMAGE3D' | 'IMAGE_SLICING';
+  xViewRightVector?: Vector3;
+  xViewUpVector?: Vector3;
+  yViewRightVector?: Vector3;
+  yViewUpVector?: Vector3;
+  zViewRightVector?: Vector3;
+  zViewUpVector?: Vector3;
 }
 
 export function newInstance(

@@ -260,7 +260,7 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    * @param {WebGLContextAttributes} options
    */
   get3DContext(
-    options: WebGLContextAttributes
+    options?: WebGLContextAttributes
   ): Nullable<WebGL2RenderingContext>;
 
   /**
@@ -268,7 +268,7 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    * @param {CanvasRenderingContext2DSettings} options
    */
   get2DContext(
-    options: CanvasRenderingContext2DSettings
+    options?: CanvasRenderingContext2DSettings
   ): Nullable<CanvasRenderingContext2D>;
 
   /**
@@ -368,7 +368,7 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    * @param {ICaptureOptions} options
    */
   captureNextImage(
-    format: string,
+    format?: string,
     options?: ICaptureOptions
   ): Nullable<Promise<string>>;
 

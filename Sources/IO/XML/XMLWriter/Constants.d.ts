@@ -1,8 +1,10 @@
-export declare enum FormatTypes {
-  ASCII = 'ascii',
-  BINARY = 'binary',
-  APPENDED = 'appended',
-}
+export declare const FormatTypes: {
+  readonly ASCII: 'ascii';
+  readonly BINARY: 'binary';
+  readonly APPENDED: 'appended';
+};
+
+export type FormatTypes = (typeof FormatTypes)[keyof typeof FormatTypes];
 
 /**
  * Mapping from a JavaScript typed array constructor name to the corresponding

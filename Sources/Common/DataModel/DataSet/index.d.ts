@@ -14,7 +14,7 @@ export interface vtkDataSet extends vtkObject {
    * @see vtkDataSetAttributes::initialize()
    * @see vtkFieldData::initialize()
    */
-  initialize(): void;
+  initialize(): vtkDataSet;
 
   /**
    * Compute the (X, Y, Z) bounds of the data.

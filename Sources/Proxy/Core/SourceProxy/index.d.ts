@@ -11,7 +11,7 @@ export interface vtkSourceProxy<T> extends VtkProxy {
   setInputAlgorithm(
     algo: vtkAlgorithm,
     type: string,
-    autoUpdate: boolean
+    autoUpdate?: boolean
   ): void;
   update(): void;
 

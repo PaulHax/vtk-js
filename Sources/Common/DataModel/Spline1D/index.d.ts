@@ -35,7 +35,7 @@ export interface vtkSpline1D extends vtkObject {
     work: Float32Array,
     x: number[],
     y: number[],
-    options: {
+    options?: {
       leftConstraint: BoundaryCondition;
       leftValue: number;
       rightConstraint: BoundaryCondition;

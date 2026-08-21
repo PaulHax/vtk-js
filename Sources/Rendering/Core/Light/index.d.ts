@@ -191,7 +191,7 @@ export interface vtkLight extends vtkObject {
    * @param {Number} elevation
    * @param {Number} azimuth
    */
-  setDirectionAngle(elevation: number, azimuth: number): boolean;
+  setDirectionAngle(elevation: number, azimuth: number): void;
 
   /**
    * Set the direction vector of the light from X, Y, and Z values
@@ -199,13 +199,13 @@ export interface vtkLight extends vtkObject {
    * @param {Number} y The y coordinate.
    * @param {Number} z The z coordinate.
    */
-  setDirection(x: number, y: number, z: number): boolean;
+  setDirection(x: number, y: number, z: number): void;
 
   /**
    * Set the direction vector of the light from X, Y, and Z values
    * @param {Vector3} direction
    */
-  setDirection(direction: Vector3): boolean;
+  setDirection(direction: Vector3): void;
 
   /**
    * Set the exponent of the cosine used in positional lighting.
@@ -242,17 +242,17 @@ export interface vtkLight extends vtkObject {
   /**
    * Set the type of the light is CameraLight.
    */
-  setLightTypeToCameraLight(): boolean;
+  setLightTypeToCameraLight(): void;
 
   /**
    * Set the the type of the light is HeadLight.
    */
-  setLightTypeToHeadLight(): boolean;
+  setLightTypeToHeadLight(): void;
 
   /**
    * Set the the type of the light is SceneLight.
    */
-  setLightTypeToSceneLight(): boolean;
+  setLightTypeToSceneLight(): void;
 
   /**
    * Check if the type of the light is CameraLight.

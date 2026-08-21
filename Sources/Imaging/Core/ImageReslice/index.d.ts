@@ -17,30 +17,30 @@ import { mat3, mat4, vec3, vec4 } from 'gl-matrix';
  *
  */
 export interface IImageResliceInitialValues {
-  transformInputSampling: boolean;
-  autoCropOutput: boolean;
-  outputDimensionality: number;
-  outputSpacing: Nullable<vec3>; // automatically computed if null
-  outputOrigin: Nullable<vec3>; // automatically computed if null
-  outputDirection: Nullable<mat3>; // identity if null
-  outputExtent: Nullable<Extent>; // automatically computed if null
-  outputScalarType: Nullable<string>;
-  wrap: boolean; // don't wrap
-  mirror: boolean; // don't mirror
-  border: boolean; // apply a border
-  interpolationMode: InterpolationMode; // only NEAREST supported so far
-  slabMode: SlabMode;
-  slabTrapezoidIntegration: boolean;
-  slabNumberOfSlices: number;
-  slabSliceSpacingFraction: number;
-  optimization: boolean; // not supported yet
-  scalarShift: number; // for rescaling the data
-  scalarScale: number;
-  backgroundColor: RGBAColor;
-  resliceAxes: Nullable<mat4>;
+  transformInputSampling?: boolean;
+  autoCropOutput?: boolean;
+  outputDimensionality?: number;
+  outputSpacing?: Nullable<vec3>; // automatically computed if null
+  outputOrigin?: Nullable<vec3>; // automatically computed if null
+  outputDirection?: Nullable<mat3>; // identity if null
+  outputExtent?: Nullable<Extent>; // automatically computed if null
+  outputScalarType?: Nullable<string>;
+  wrap?: boolean; // don't wrap
+  mirror?: boolean; // don't mirror
+  border?: boolean; // apply a border
+  interpolationMode?: InterpolationMode; // only NEAREST supported so far
+  slabMode?: SlabMode;
+  slabTrapezoidIntegration?: boolean;
+  slabNumberOfSlices?: number;
+  slabSliceSpacingFraction?: number;
+  optimization?: boolean; // not supported yet
+  scalarShift?: number; // for rescaling the data
+  scalarScale?: number;
+  backgroundColor?: RGBAColor;
+  resliceAxes?: Nullable<mat4>;
   resliceTransform?: vtkTransform;
-  interpolator: any; // A vtkImageInterpolator (missing typescript header)
-  usePermuteExecute: boolean; // no supported yet
+  interpolator?: any; // A vtkImageInterpolator (missing typescript header)
+  usePermuteExecute?: boolean; // no supported yet
 }
 
 type vtkImageResliceBase = Omit<vtkObject, 'set'> & vtkAlgorithm;

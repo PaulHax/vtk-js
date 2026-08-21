@@ -78,7 +78,7 @@ export interface vtkCanvasView extends vtkObject {
    *
    * @param {HTMLImageElement} backgroundImage The background image HTML element.
    */
-  setBackgroundImage(backgroundImage: HTMLImageElement): boolean;
+  setBackgroundImage(backgroundImage: HTMLImageElement): void;
 
   /**
    *

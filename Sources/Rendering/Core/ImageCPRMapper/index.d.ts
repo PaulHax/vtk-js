@@ -18,14 +18,14 @@ import {
 type TOrientation = mat4 | mat3 | quat | vec3;
 
 export interface IImageCPRMapperInitialValues extends IAbstractMapper3DInitialValues {
-  width: number;
-  uniformOrientation: TOrientation; // Don't use vec3 if possible
-  useUniformOrientation: boolean;
-  preferSizeOverAccuracy: boolean; // Whether to use halfFloat representation of float, when it is inaccurate
-  orientationArrayName: Nullable<string>;
-  tangentDirection: vec3;
-  bitangentDirection: vec3;
-  normalDirection: vec3;
+  width?: number;
+  uniformOrientation?: TOrientation; // Don't use vec3 if possible
+  useUniformOrientation?: boolean;
+  preferSizeOverAccuracy?: boolean; // Whether to use halfFloat representation of float, when it is inaccurate
+  orientationArrayName?: Nullable<string>;
+  tangentDirection?: vec3;
+  bitangentDirection?: vec3;
+  normalDirection?: vec3;
 }
 
 export interface vtkImageCPRMapper

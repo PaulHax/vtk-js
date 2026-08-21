@@ -2,7 +2,12 @@ import vtkPiecewiseFunction from '../../../Common/DataModel/PiecewiseFunction';
 import { vtkObject } from '../../../interfaces';
 import { Extent, Nullable } from '../../../types';
 import vtkColorTransferFunction from '../ColorTransferFunction';
-import { ColorMixPreset, InterpolationType, OpacityMode } from './Constants';
+import {
+  ColorMixPreset,
+  FilterMode,
+  InterpolationType,
+  OpacityMode,
+} from './Constants';
 
 export interface IVolumePropertyInitialValues {
   independentComponents?: boolean;
@@ -13,7 +18,11 @@ export interface IVolumePropertyInitialValues {
   specularPower?: number;
   useLabelOutline?: boolean;
   labelOutlineThickness?: number | number[];
+  labelOutlineOpacity?: number;
   colorMixPreset?: ColorMixPreset;
+  filterMode?: FilterMode;
+  preferSizeOverAccuracy?: boolean;
+  computeNormalFromOpacity?: boolean;
 }
 
 export interface vtkVolumeProperty extends vtkObject {
@@ -158,6 +167,21 @@ export interface vtkVolumeProperty extends vtkObject {
    *
    */
   getUseLabelOutline(): boolean;
+
+  /** Get the opacity applied to label outlines. */
+  getLabelOutlineOpacity(): number;
+
+  /** Get the volume filtering mode. */
+  getFilterMode(): FilterMode;
+
+  /** Get the volume filtering mode as a string. */
+  getFilterModeAsString(): string;
+
+  /** Get whether half-float storage is preferred over accuracy. */
+  getPreferSizeOverAccuracy(): boolean;
+
+  /** Get whether normals are computed from opacity. */
+  getComputeNormalFromOpacity(): boolean;
 
   /**
    * Set the ambient lighting coefficient.
@@ -317,6 +341,24 @@ export interface vtkVolumeProperty extends vtkObject {
    * @param {Boolean} useLabelOutline
    */
   setUseLabelOutline(useLabelOutline: boolean): boolean;
+
+  /** Set the opacity applied to label outlines. */
+  setLabelOutlineOpacity(labelOutlineOpacity: number): boolean;
+
+  /** Set the volume filtering mode. */
+  setFilterMode(filterMode: FilterMode): boolean;
+
+  /** Set filtering off. */
+  setFilterModeToOff(): void;
+
+  /** Set normalized filtering. */
+  setFilterModeToNormalized(): void;
+
+  /** Set raw filtering. */
+  setFilterModeToRaw(): void;
+
+  /** Set whether half-float storage is preferred over accuracy. */
+  setPreferSizeOverAccuracy(preferSizeOverAccuracy: boolean): boolean;
 
   /**
    * Set the color of a volume to an RGB transfer function

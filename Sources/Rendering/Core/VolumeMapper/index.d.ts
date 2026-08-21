@@ -87,7 +87,7 @@ export interface vtkVolumeMapper extends vtkAbstractMapper3D {
    * Set blend mode to COMPOSITE_BLEND
    * @param {BlendMode} blendMode
    */
-  setBlendMode(blendMode: BlendMode): void;
+  setBlendMode(blendMode: BlendMode): boolean;
 
   /**
    * Set blend mode to COMPOSITE_BLEND
@@ -108,6 +108,9 @@ export interface vtkVolumeMapper extends vtkAbstractMapper3D {
    * Set blend mode to AVERAGE_INTENSITY_BLEND
    */
   setBlendModeToAverageIntensity(): void;
+
+  /** Set blend mode to ADDITIVE_INTENSITY_BLEND. */
+  setBlendModeToAdditiveIntensity(): void;
 
   /**
    * Set blend mode to RADON_TRANSFORM_BLEND

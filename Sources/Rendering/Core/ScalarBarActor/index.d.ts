@@ -3,6 +3,8 @@ import { Size, Vector2, Vector3 } from '../../../types';
 import vtkActor, { IActorInitialValues } from '../Actor';
 
 export interface ITextSizes {
+  titleWidth: number;
+  titleHeight: number;
   tickWidth: number;
   tickHeight: number;
 }
@@ -249,7 +251,7 @@ export interface vtkScalarBarActor extends Omit<
    *
    * @param {IStyle} axisTextStyle
    */
-  setAxisTextStyle(axisTextStyle: IStyle): boolean;
+  setAxisTextStyle(axisTextStyle: IStyle): void;
 
   /**
    * Get the current bar orientation setting
@@ -390,7 +392,7 @@ export interface vtkScalarBarActor extends Omit<
    * all the text strings. Only needs to be called when the text strings
    * have changed (labels and ticks)
    */
-  updateTextureAtlas(): void;
+  updateTextureAtlas(): ITextSizes;
 }
 
 /**

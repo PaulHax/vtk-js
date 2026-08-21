@@ -28,43 +28,43 @@ export interface vtkAnnotatedCubeActor extends vtkActor {
    * Set the default style.
    * @param {IStyle} style
    */
-  setDefaultStyle(style: IStyle): boolean;
+  setDefaultStyle(style: IStyle): void;
 
   /**
    * The +X face property.
    * @param {IFaceProperty} prop +X face property
    */
-  setXPlusFaceProperty(prop: IFaceProperty): boolean;
+  setXPlusFaceProperty(prop: IFaceProperty): void;
 
   /**
    * The -X face property.
    * @param {IFaceProperty} prop The -X face property.
    */
-  setXMinusFaceProperty(prop: IFaceProperty): boolean;
+  setXMinusFaceProperty(prop: IFaceProperty): void;
 
   /**
    * The +Y face property.
    * @param {IFaceProperty} prop The +Y face property.
    */
-  setYPlusFaceProperty(prop: IFaceProperty): boolean;
+  setYPlusFaceProperty(prop: IFaceProperty): void;
 
   /**
    * The -Y face property.
    * @param {IFaceProperty} prop The -Y ace property.
    */
-  setYMinusFaceProperty(prop: IFaceProperty): boolean;
+  setYMinusFaceProperty(prop: IFaceProperty): void;
 
   /**
    * The +Z face property.
    * @param {IFaceProperty} prop The +Z face property.
    */
-  setZPlusFaceProperty(prop: IFaceProperty): boolean;
+  setZPlusFaceProperty(prop: IFaceProperty): void;
 
   /**
    * The -Z face property.
    * @param {IFaceProperty} prop The -Z face property.
    */
-  setZMinusFaceProperty(prop: IFaceProperty): boolean;
+  setZMinusFaceProperty(prop: IFaceProperty): void;
 }
 
 /**

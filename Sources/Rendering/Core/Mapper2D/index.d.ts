@@ -1,5 +1,6 @@
 import { Nullable } from '../../../types';
 import { ColorMode, GetArray, ScalarMode } from '../Mapper/Constants';
+import { vtkDataArray } from '../../../Common/Core/DataArray';
 import vtkAbstractMapper, {
   IAbstractMapperInitialValues,
 } from '../AbstractMapper';
@@ -27,6 +28,14 @@ export interface IMapper2DInitialValues extends IAbstractMapperInitialValues {
 }
 
 export interface vtkMapper2D extends vtkAbstractMapper {
+  /** Return whether texture mapping can be used for scalar coloring. */
+  canUseTextureMapForColoring(
+    scalars: vtkDataArray,
+    cellFlag: boolean
+  ): boolean;
+
+  /** Return primitive counts for the current input. */
+  getPrimitiveCount(): IPrimitiveCount;
   /**
    * Create default lookup table. Generally used to create one when
    * none is available with the scalar data.

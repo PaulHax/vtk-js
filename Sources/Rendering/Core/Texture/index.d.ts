@@ -15,6 +15,9 @@ export interface ITextureInitialValues {
 }
 
 export interface vtkTexture extends vtkAlgorithm {
+  /** Return the number of non-singleton dimensions in the texture input. */
+  getDimensionality(): number;
+
   /**
    * Returns the canvas used by the texture.
    */

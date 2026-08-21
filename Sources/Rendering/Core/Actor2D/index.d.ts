@@ -63,7 +63,7 @@ export interface vtkActor2D extends vtkProp {
    * they were added to the renderer via `addActor` or `addActor2D`.
    * By default, each actor2D has a layer number of 0.
    */
-  setLayerNumber(layer: number): void;
+  setLayerNumber(layer: number): boolean;
 
   /**
    * Get the layer number for this 2D actor.

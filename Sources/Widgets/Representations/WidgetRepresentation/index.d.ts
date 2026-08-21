@@ -2,7 +2,10 @@ import vtkDataArray from '../../../Common/Core/DataArray';
 import vtkPolyData from '../../../Common/DataModel/PolyData';
 import { vtkObject } from '../../../interfaces';
 import vtkProp from '../../../Rendering/Core/Prop';
+import vtkActor from '../../../Rendering/Core/Actor';
 import { IDisplayScaleParams } from '../../../Widgets/Core/WidgetManager';
+import { RenderingTypes } from '../../../Widgets/Core/WidgetManager/Constants';
+import vtkWidgetState from '../../../Widgets/Core/WidgetState';
 
 export interface IWidgetRepresentationInitialValues {
   labels?: Array<any>;
@@ -12,8 +15,21 @@ export interface IWidgetRepresentationInitialValues {
 }
 
 export interface vtkWidgetRepresentation extends vtkProp {
+  /** Add an actor and apply the representation's mapper settings. */
+  addActor(actor: vtkActor): void;
+
+  /** Update actor visibility for the current rendering pass. */
+  updateActorVisibility(
+    renderingType?: RenderingTypes,
+    ctxVisible?: boolean,
+    handleVisible?: boolean
+  ): void;
+
   getLabels(): Array<any>;
   setLabels(labels: Array<any>): void;
+
+  getRepresentationStates(input?: vtkWidgetState): vtkWidgetState[];
+  getSelectedState(prop: vtkProp, compositeID: number): vtkWidgetState | null;
 
   /**
    * Gets the coincident topology parameters applied on the actor mappers

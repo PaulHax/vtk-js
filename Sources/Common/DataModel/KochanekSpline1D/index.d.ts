@@ -39,7 +39,7 @@ export interface vtkKochanekSpline1D extends vtkSpline1D {
     work: Float32Array,
     x: number[],
     y: number[],
-    options: {
+    options?: {
       leftConstraint: BoundaryCondition;
       leftValue: number;
       rightConstraint: BoundaryCondition;

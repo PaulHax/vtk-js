@@ -159,8 +159,8 @@ export interface vtkInteractorStyleTrackballCamera extends vtkInteractorStyle {
 }
 
 export interface IInteractorStyleTrackballCameraInitialValues {
-  motionFactor: number;
-  zoomFactor: number;
+  motionFactor?: number;
+  zoomFactor?: number;
 }
 
 export function newInstance(

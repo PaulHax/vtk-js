@@ -310,7 +310,7 @@ export interface vtkProperty extends vtkObject {
    * @param {Number} g Defines the green component (between 0 and 1)
    * @param {Number} b Defines the blue component (between 0 and 1)
    */
-  setColor(r: number, g: number, b: number): boolean;
+  setColor(r: number, g: number, b: number): void;
 
   /**
    * Set the color of the object. Has the side effect of setting the
@@ -318,7 +318,7 @@ export interface vtkProperty extends vtkObject {
    * a quick overall color setting method.
    * @param {RGBColor} color An Array of the RGB color.
    */
-  setColor(color: RGBColor): boolean;
+  setColor(color: RGBColor): void;
 
   /**
    * Set the diffuse lighting coefficient.

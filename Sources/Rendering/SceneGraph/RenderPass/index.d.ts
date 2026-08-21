@@ -85,7 +85,7 @@ export interface vtkRenderPass extends vtkObject {
    * @param viewNode
    * @param parent
    */
-  traverse(viewNode: vtkViewNode, parent: any): void;
+  traverse(viewNode: vtkViewNode, parent?: any): void;
 }
 
 /**

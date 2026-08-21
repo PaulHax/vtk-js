@@ -426,7 +426,7 @@ export interface vtkCamera extends vtkObject {
     beta: number,
     gamma: number,
     screen: number
-  ): boolean;
+  ): void;
 
   /**
    * Set the direction of projection.
@@ -434,7 +434,7 @@ export interface vtkCamera extends vtkObject {
    * @param {Number} y The y coordinate.
    * @param {Number} z The z coordinate.
    */
-  setDirectionOfProjection(x: number, y: number, z: number): boolean;
+  setDirectionOfProjection(x: number, y: number, z: number): void;
 
   /**
    * Move the focal point so that it is the specified distance from the camera
@@ -443,7 +443,7 @@ export interface vtkCamera extends vtkObject {
    * This distance must be positive.
    * @param {Number} distance The value of the distance.
    */
-  setDistance(distance: number): boolean;
+  setDistance(distance: number): void;
 
   /**
    * Set the focal of the camera in world coordinates.
@@ -473,7 +473,7 @@ export interface vtkCamera extends vtkObject {
    * @param {Number} alpha The aplha angle value.
    * @param {Number} beta The beta angle value.
    */
-  setObliqueAngles(alpha: number, beta: number): boolean;
+  setObliqueAngles(alpha: number, beta: number): void;
 
   /**
    * Set the value of the OrientationWXYZ.
@@ -482,7 +482,7 @@ export interface vtkCamera extends vtkObject {
    * @param {Number} y The y coordinate.
    * @param {Number} z The z coordinate.
    */
-  setOrientationWXYZ(degrees: number, x: number, y: number, z: number): boolean;
+  setOrientationWXYZ(degrees: number, x: number, y: number, z: number): void;
 
   /**
    * Set the value of the ParallelProjection.
@@ -563,14 +563,14 @@ export interface vtkCamera extends vtkObject {
    *
    * @param {mat4} mat
    */
-  setProjectionMatrix(mat: mat4): boolean;
+  setProjectionMatrix(mat: mat4): void;
 
   /**
    * Set the roll angle of the camera about the direction of projection.
    * @todo Not implemented yet
    * @param {Number} angle The value of the roll angle.
    */
-  setRoll(angle: number): boolean;
+  setRoll(angle: number): void;
 
   /**
    * Set top left corner point of the screen.
@@ -647,13 +647,13 @@ export interface vtkCamera extends vtkObject {
    * 'thickness' beyond the near clipping plane.
    * @param {Number} thickness
    */
-  setThickness(thickness: number): boolean;
+  setThickness(thickness: number): void;
 
   /**
    *
    * @param {Number} thickness The value of the thickness.
    */
-  setThicknessFromFocalPoint(thickness: number): boolean;
+  setThicknessFromFocalPoint(thickness: number): void;
 
   /**
    * Set the value of the useHorizontalViewAngle.

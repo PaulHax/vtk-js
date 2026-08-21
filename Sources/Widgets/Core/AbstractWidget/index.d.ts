@@ -75,7 +75,7 @@ export interface vtkAbstractWidget extends vtkProp, vtkInteractorObserver {
    *
    * @param {Number} factor The place factor.
    */
-  setPlaceFactor(factor: number): void;
+  setPlaceFactor(factor: number): boolean;
 
   /**
    * Get the `vtkWidgetRepresentation` instance associated with the given `vtkActor` instance.
@@ -89,7 +89,7 @@ export interface vtkAbstractWidget extends vtkProp, vtkInteractorObserver {
    *
    * @param {RenderingTypes} renderingType Default value if `RenderingTypes.FRONT_BUFFER`
    */
-  updateRepresentationForRender(renderingType: RenderingTypes): void;
+  updateRepresentationForRender(renderingType?: RenderingTypes): void;
 
   /**
    * Get all the underlyings view widgets.
@@ -101,7 +101,7 @@ export interface vtkAbstractWidget extends vtkProp, vtkInteractorObserver {
    *
    * @param {Boolean} visible
    */
-  setContextVisibility(visible: boolean): void;
+  setContextVisibility(visible: boolean): boolean;
 
   /**
    * Get the context visibility.
@@ -113,7 +113,7 @@ export interface vtkAbstractWidget extends vtkProp, vtkInteractorObserver {
    *
    * @param {Boolean} visible
    */
-  setHandleVisibility(visible: boolean): void;
+  setHandleVisibility(visible: boolean): boolean;
 
   /**
    * Returns true if the handles are visible, false otherwise.

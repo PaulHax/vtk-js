@@ -56,6 +56,12 @@ export interface vtkDataArray extends vtkObject {
    */
   setComponent(tupleIdx: number, componentIndex: number, value: number): void;
 
+  /** Get a value by its flat component index. */
+  getValue(valueIdx: number): number;
+
+  /** Set a value by its flat component index. */
+  setValue(valueIdx: number, value: number): void;
+
   /**
    *
    */
@@ -280,7 +286,7 @@ export interface vtkDataArray extends vtkObject {
    * without converting and copying to a plain Array.
    * @returns {object}
    */
-  getState(options?: GetStateOptions): object;
+  getState(options?: GetStateOptions): object | null;
 
   /**
    * Deep copy of another vtkDataArray into this one.
@@ -346,7 +352,7 @@ export interface vtkDataArray extends vtkObject {
    * @see insertNextTuple
    * @see insertNextTuples
    */
-  initialize(): void;
+  initialize(): vtkDataArray;
 
   // --- via macro --
 

@@ -68,7 +68,7 @@ export interface vtkVectorText extends vtkVectorTextBase {
   /**
    * Returns the current text string.
    */
-  getText(): string;
+  getText(): string | null;
 
   /**
    * Gets or sets the per-letter face color function.

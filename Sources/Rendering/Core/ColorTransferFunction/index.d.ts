@@ -189,6 +189,9 @@ export interface vtkColorTransferFunction extends vtkScalarsToColors {
    */
   getBlueValue(x: number): number;
 
+  /** Return whether logarithmic scaling is selected. */
+  logScaleEnabled(): boolean;
+
   /**
    * Get a table of RGB colors at regular intervals along the function
    * @param {Number} xStart The index of the first point.
@@ -208,7 +211,7 @@ export interface vtkColorTransferFunction extends vtkScalarsToColors {
     xStart: number,
     xEnd: number,
     size: number,
-    withAlpha: boolean
+    withAlpha?: boolean
   ): Float32Array;
 
   /**
@@ -334,7 +337,7 @@ export interface vtkColorTransferFunction extends vtkScalarsToColors {
    * Set the color space of the color transfer function.
    * @param {ColorSpace} colorSpace
    */
-  setColorSpace(colorSpace: ColorSpace): void;
+  setColorSpace(colorSpace: ColorSpace): boolean;
 
   /**
    * Get the scale of the color transfer function.
@@ -346,7 +349,7 @@ export interface vtkColorTransferFunction extends vtkScalarsToColors {
    * Set the scale of the color transfer function.
    * @param {Scale} scale
    */
-  setScale(scale: Scale): void;
+  setScale(scale: Scale): boolean;
 }
 
 /**

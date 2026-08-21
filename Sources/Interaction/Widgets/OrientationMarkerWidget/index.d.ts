@@ -23,7 +23,7 @@ export interface vtkOrientationMarkerWidget extends vtkObject {
    * Get the computed viewport size.
    * The format is `[left, bottom, right, top]`.
    */
-  computeViewport(): [number, number, number, number];
+  computeViewport(): Nullable<[number, number, number, number]>;
 
   /**
    * Dereference any internal object and remove any subscription.
@@ -125,7 +125,7 @@ export interface vtkOrientationMarkerWidget extends vtkObject {
    * @param {Corners} viewportCorner
    * @default BOTTOM_LEFT
    */
-  setViewportCorner(viewportCorner: Corners): boolean;
+  setViewportCorner(viewportCorner: Corners): void;
 
   /**
    * Set the viewport size.

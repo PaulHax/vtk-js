@@ -13,9 +13,9 @@ export interface vtkVolumeRepresentationProxy extends vtkAbstractRepresentationP
   getVisibility(): boolean;
   setSliceVisibility(isVisible: boolean): void;
   getSliceVisibility(): boolean;
-  setSampleDistance(samp: number): void;
+  setSampleDistance(samp?: number): void;
   getSampleDistance(): number;
-  setEdgeGradient(grad: number): void;
+  setEdgeGradient(grad?: number): void;
   getEdgeGradient(): number;
   getCropFilter(): vtkImageCropFilter;
 

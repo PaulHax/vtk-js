@@ -18,12 +18,12 @@ interface ISliceToSubSlice {
 }
 
 export interface IImageArrayMapperInitialValues extends IAbstractImageMapperInitialValues {
-  slicingMode: SlicingMode.K;
-  sliceToSubSliceMap: ISliceToSubSlice[];
+  slicingMode?: SlicingMode;
+  sliceToSubSliceMap?: ISliceToSubSlice[];
 }
 
 export interface vtkImageArrayMapper
-  extends vtkAbstractImageMapper, CoincidentTopologyHelper {
+  extends Omit<vtkAbstractImageMapper, 'setSlice'>, CoincidentTopologyHelper {
   /**
    *
    * @param inputData set input as a vtkCollection of vtkImageData objects.
@@ -77,7 +77,7 @@ export interface vtkImageArrayMapper
    *
    * @param {Number} slice The slice index.
    */
-  setSlice(slice: number): boolean;
+  setSlice(slice: number): void;
 
   /**
    * Calculate the global slice number that corresponds to the provided image and subSlice number.

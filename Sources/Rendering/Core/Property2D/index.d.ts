@@ -1,5 +1,6 @@
 import { vtkObject } from '../../../interfaces';
 import { RGBColor } from '../../../types';
+import { Representation } from '../Property/Constants';
 import { DisplayLocation } from './Constants';
 
 export interface IProperty2DInitialValues {
@@ -10,6 +11,7 @@ export interface IProperty2DInitialValues {
   displayLocation?: DisplayLocation;
   backfaceCulling?: boolean;
   frontfaceCulling?: boolean;
+  representation?: Representation;
 }
 
 export interface vtkProperty2D extends vtkObject {
@@ -55,6 +57,12 @@ export interface vtkProperty2D extends vtkObject {
    * The size is expressed in screen units.
    */
   getPointSize(): number;
+
+  /** Get the geometric representation mode. */
+  getRepresentation(): Representation;
+
+  /** Get the geometric representation mode as a string. */
+  getRepresentationAsString(): string;
 
   /**
    * Set the color of the object. Has the side effect of setting the
@@ -136,6 +144,24 @@ export interface vtkProperty2D extends vtkObject {
    * @default 1.0
    */
   setPointSize(pointSize: number): boolean;
+
+  /** Set the geometric representation mode. */
+  setRepresentation(representation: Representation): boolean;
+
+  /** Set representation to points. */
+  setRepresentationToPoints(): boolean;
+
+  /** Set representation to surface. */
+  setRepresentationToSurface(): boolean;
+
+  /** Set representation to wireframe. */
+  setRepresentationToWireframe(): boolean;
+
+  /** Set display location to the background. */
+  setDisplayLocationToBackground(): boolean;
+
+  /** Set display location to the foreground. */
+  setDisplayLocationToForeground(): boolean;
 }
 
 /**

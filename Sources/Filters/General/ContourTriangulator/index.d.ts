@@ -19,7 +19,7 @@ export interface vtkContourTriangulator extends vtkContourTriangulatorBase {
    * @param {any} inData
    * @param {any} outData
    */
-  requestData(inData: any, outData: any): void;
+  requestData(inData: any, outData: any): boolean;
 
   /**
    * Sets the behavior of the filter regarding polys.

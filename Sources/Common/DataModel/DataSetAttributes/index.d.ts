@@ -151,7 +151,7 @@ export interface vtkDataSetAttributes extends vtkFieldData {
    * Override to allow proper handling of active attributes
    * @param {Number} arrayIdx The index of the array.
    */
-  removeArrayByIndex(arrayIdx: number): void;
+  removeArrayByIndex(arrayIdx: number): boolean;
 
   /**
    * Called when initialize() is called.

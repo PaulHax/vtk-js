@@ -26,7 +26,7 @@ export interface vtkImageData extends vtkDataSet {
    * and the data set.
    * @see vtkDataSet::initialize()
    */
-  initialize(): void;
+  initialize(): vtkImageData;
 
   /**
    * Returns an object with `{ minimum, maximum, average, variance, sigma, count }`
@@ -174,7 +174,7 @@ export interface vtkImageData extends vtkDataSet {
    * 1D data array.
    * @param {Number} index
    */
-  getPoint(index: number): Vector3;
+  getPoint(index: number): Vector3 | null;
 
   /**
    * Get the origin of the dataset. The origin is the position in world

@@ -133,6 +133,9 @@ export interface vtkProp3D extends vtkProp {
    */
   getZRange(): Range;
 
+  /** Recompute the transformed bounds from the mapper. */
+  computeBounds(): void;
+
   /**
    * Get the transformation matrix set for your own use.
    */

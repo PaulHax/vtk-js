@@ -26,7 +26,7 @@ export interface vtkProxyManager extends vtkObject {
   setProxyConfiguration(config: ProxyConfiguration): boolean;
   getProxyConfiguration(): ProxyConfiguration;
 
-  setActiveSource<T>(sourceProxy: vtkSourceProxy<T>): boolean;
+  setActiveSource<T>(sourceProxy: vtkSourceProxy<T> | undefined): void;
   getActiveSource<T>(): vtkSourceProxy<T> | undefined;
   onActiveSourceChange(
     callback: (source: vtkSourceProxy<any>) => void,
@@ -34,7 +34,7 @@ export interface vtkProxyManager extends vtkObject {
   ): vtkSubscription;
   invokeActiveSourceChange(source: vtkSourceProxy<any>): void;
 
-  setActiveView(viewProxy: vtkViewProxy): boolean;
+  setActiveView(viewProxy: vtkViewProxy | undefined): void;
   getActiveView(): vtkViewProxy | undefined;
   onActiveViewChange(
     callback: (view: vtkViewProxy) => void,
@@ -60,7 +60,7 @@ export interface vtkProxyManager extends vtkObject {
     group: string,
     name: string,
     options?: object
-  ): T;
+  ): T | null;
 
   getRepresentation<T extends vtkAbstractRepresentationProxy>(
     source: vtkSourceProxy<any>,

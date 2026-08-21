@@ -57,7 +57,7 @@ export interface vtkViewNode extends vtkObject {
    *
    * @param dataObj
    */
-  createViewNode(dataObj: any): void;
+  createViewNode(dataObj: any): vtkViewNode | null;
 
   /**
    *

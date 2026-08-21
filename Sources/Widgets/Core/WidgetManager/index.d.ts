@@ -108,7 +108,7 @@ export interface vtkWidgetManager extends vtkObject {
   /**
    * Get the view id.
    */
-  getViewId(): string;
+  getViewId(): string | null;
 
   /**
    * Returns true if picking is enabled, false otherwise.
