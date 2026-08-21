@@ -10,6 +10,7 @@ import vtkOpenGLPolyDataMapper from 'vtk.js/Sources/Rendering/OpenGL/PolyDataMap
 import vtkDataSet from 'vtk.js/Sources/Common/DataModel/DataSet';
 import { registerOverride } from 'vtk.js/Sources/Rendering/OpenGL/ViewNodeFactory';
 import { computeCoordShiftAndScale } from 'vtk.js/Sources/Rendering/OpenGL/CellArrayBufferObject/helpers';
+import { PassTypes } from 'vtk.js/Sources/Rendering/OpenGL/HardwareSelector/Constants';
 
 const { FieldAssociations } = vtkDataSet;
 
@@ -150,23 +151,47 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   };
 
   publicAPI.renderPieceDraw = (ren, actor) => {
-    const cabo = model.primitives[model.primTypes.Points].getCABO();
+    const primitive = model.primitives[model.primTypes.Points];
+    const cabo = primitive.getCABO();
     const available = cabo.getElementCount();
     const drawCount = Math.min(available, effectivePointCount());
-    if (drawCount === available) {
-      superClass.renderPieceDraw(ren, actor);
+
+    const selector = model._openGLRenderer.getSelector();
+    primitive.setPointPicking(
+      selector &&
+        selector.getFieldAssociation() ===
+          FieldAssociations.FIELD_ASSOCIATION_POINTS &&
+        (model.lastSelectionState === PassTypes.ID_LOW24 ||
+          model.lastSelectionState === PassTypes.ID_HIGH24)
+    );
+
+    if (!drawCount) {
       return;
     }
 
-    // The CABO owns the complete uploaded allocation. Its element count is
-    // also the count the inherited draw path submits, so scope a temporary
-    // cap to that call and restore the allocation's full logical size after.
-    // No point/color data or VBO-build timestamp changes here.
-    cabo.setElementCount(drawCount);
+    if (drawCount !== available) {
+      // The CABO owns the complete uploaded allocation. Its element count is
+      // also the count the inherited draw path submits, so scope a temporary
+      // cap to the draw and restore the allocation's full logical size after.
+      // No point/color data or VBO-build timestamp changes here.
+      cabo.setElementCount(drawCount);
+    }
     try {
-      superClass.renderPieceDraw(ren, actor);
+      model.drawingEdges = false;
+      model.lastBoundBO = primitive;
+      model.primitiveIDOffset += primitive.drawArrays(
+        ren,
+        actor,
+        actor.getProperty().getRepresentation(),
+        publicAPI
+      );
+      if (!cabo.getIndexed()) {
+        model.vertexIDOffset += cabo.getElementCount();
+      }
     } finally {
-      cabo.setElementCount(available);
+      if (drawCount !== available) {
+        cabo.setElementCount(available);
+      }
     }
   };
 
