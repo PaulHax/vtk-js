@@ -1,0 +1,29 @@
+{
+  "undeclaredRuntimeExports": {
+    "Common/Core/CellArray": ["STATIC"],
+    "Common/Core/DataArray": ["STATIC"],
+    "Common/DataModel/BoundingBox": ["STATIC"],
+    "Common/DataModel/Box": ["STATIC"],
+    "Common/DataModel/Cylinder": ["STATIC"],
+    "Common/DataModel/Line": ["STATIC"],
+    "Common/DataModel/Plane": ["STATIC"],
+    "Common/DataModel/Sphere": ["STATIC"],
+    "Common/DataModel/Triangle": ["STATIC"],
+    "Common/DataModel/TriangleStrip": ["STATIC"],
+    "Filters/General/ContourTriangulator": ["STATIC"],
+    "IO/Geometry/PLYWriter": ["STATIC"],
+    "IO/Geometry/STLWriter": ["STATIC"],
+    "IO/Misc/OBJReader": ["STATIC"],
+    "IO/Misc/OBJWriter": ["STATIC"],
+    "Interaction/Style/InteractorStyleManipulator": ["STATIC"],
+    "Interaction/Widgets/OrientationMarkerWidget": ["DEFAULT_VALUES"],
+    "Rendering/Core/AnnotatedCubeActor": ["DEFAULT_VALUES"],
+    "Rendering/Core/Camera": ["DEFAULT_VALUES"],
+    "Rendering/Core/CellPicker": ["STATIC"],
+    "Rendering/Core/InteractorObserver": ["STATIC"],
+    "Rendering/Core/Texture": ["STATIC"],
+    "Rendering/Core/VolumeMapper": ["STATIC"],
+    "Rendering/Misc/SynchronizableRenderWindow": ["DEFAULT_VALUES"],
+    "Rendering/OpenGL/BufferObject": ["STATIC"]
+  }
+}
