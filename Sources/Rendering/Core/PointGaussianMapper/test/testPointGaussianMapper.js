@@ -102,6 +102,16 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     openGLRenderWindow.setSize(50, 50);
     renderWindow.render();
 
+    const uploadedPoints = Float32Array.from(coords);
+    const bufferData = vi.spyOn(openGLRenderWindow.getContext(), 'bufferData');
+    polyData.getPoints().setData(uploadedPoints, 3);
+    renderWindow.render();
+    expect(
+      bufferData.mock.calls.some(([, data]) => data === uploadedPoints),
+      'tightly packed Float32 positions upload without a staging copy'
+    ).toBe(true);
+    bufferData.mockRestore();
+
     const cabos = getActivePrimitiveCABOs(openGLRenderWindow, mapper);
     expect(cabos.length, 'exactly one active (Points) VBO').toBe(1);
     expect(
@@ -109,7 +119,6 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       'N input points upload N vertices, not 3N'
     ).toBe(numPoints);
 
-    const openGLMapper = openGLRenderWindow.getViewNodeFor(mapper);
     const pointCABO = cabos[0];
     const positionHandle = pointCABO.getHandle();
     const colorBO = pointCABO.getColorBO();

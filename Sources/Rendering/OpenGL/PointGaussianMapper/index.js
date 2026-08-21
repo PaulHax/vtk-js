@@ -341,7 +341,12 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       vbo.setColorOffset(0);
       vbo.setColorBOStride(4);
       colorData = c.getData();
-      packedUCVBO = new Uint8Array(numPoints * 4);
+      packedUCVBO =
+        colorComponents === 4 &&
+        (colorData instanceof Uint8Array ||
+          colorData instanceof Uint8ClampedArray)
+          ? colorData
+          : new Uint8Array(numPoints * 4);
       if (!vbo.getColorBO()) {
         vbo.setColorBO(vtkBufferObject.newInstance());
       }
@@ -351,7 +356,6 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     }
     vbo.setColorComponents(colorComponents);
 
-    const packedVBO = new Float32Array(blockSize * numPoints);
     vbo.setStride(blockSize * 4);
 
     const { useShiftAndScale, coordShift, coordScale } =
@@ -361,17 +365,31 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       useShiftAndScale ? coordScale : null
     );
 
+    // WebGL copies ArrayBufferView contents during bufferData(). When the
+    // input is already tightly packed Float32 XYZ data, upload it directly
+    // instead of allocating and filling an identical staging array.
+    const packedVBO =
+      !useShiftAndScale &&
+      pointArray instanceof Float32Array &&
+      points.getNumberOfComponents() === 3
+        ? pointArray
+        : new Float32Array(blockSize * numPoints);
+    const copyPoints = packedVBO !== pointArray;
+    const copyColors = colorData && packedUCVBO !== colorData;
+
     let vboIdx = 0;
     let ucIdx = 0;
-    for (let i = 0; i < numPoints; ++i) {
+    for (let i = 0; (copyPoints || copyColors) && i < numPoints; ++i) {
       const pointIdx = i * 3;
-      packedVBO[vboIdx++] =
-        (pointArray[pointIdx] - coordShift[0]) * coordScale[0];
-      packedVBO[vboIdx++] =
-        (pointArray[pointIdx + 1] - coordShift[1]) * coordScale[1];
-      packedVBO[vboIdx++] =
-        (pointArray[pointIdx + 2] - coordShift[2]) * coordScale[2];
-      if (colorData) {
+      if (copyPoints) {
+        packedVBO[vboIdx++] =
+          (pointArray[pointIdx] - coordShift[0]) * coordScale[0];
+        packedVBO[vboIdx++] =
+          (pointArray[pointIdx + 1] - coordShift[1]) * coordScale[1];
+        packedVBO[vboIdx++] =
+          (pointArray[pointIdx + 2] - coordShift[2]) * coordScale[2];
+      }
+      if (copyColors) {
         const colorIdx = i * colorComponents;
         packedUCVBO[ucIdx++] = colorData[colorIdx];
         packedUCVBO[ucIdx++] = colorData[colorIdx + 1];
