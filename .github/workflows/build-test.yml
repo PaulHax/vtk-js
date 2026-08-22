@@ -48,6 +48,7 @@ jobs:
           npx tsc -p tsconfig.umd-check.json
           npm run test:types:contracts
           npm run test:types:exports
+          npm run test:types:surface
       - name: Validate packed ESM package
         if: matrix.browser == 'chromium'
         run: npm run test:types:packed

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { walk, modulePair, stable } from './module-pairs.mjs';
 
 const root = process.cwd();
 const sourcesDir = path.join(root, 'Sources');
@@ -17,16 +18,6 @@ const anyDeclaration =
   /^export\s+(?:declare\s+)?(?:const|let|var|function|enum|class|type|interface)\s+([A-Za-z_$][\w$]*)/gm;
 const localExportBlock = /^export\s*\{([^}]*)\}\s*;?\s*$/gm;
 const defaultTarget = /^export\s+default\s+([A-Za-z_$][\w$]*)\s*;/gm;
-
-function walk(directory, suffix) {
-  const files = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const entryPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...walk(entryPath, suffix));
-    else if (entry.name.endsWith(suffix)) files.push(entryPath);
-  }
-  return files;
-}
 
 function matches(content, expression) {
   expression.lastIndex = 0;
@@ -80,44 +71,8 @@ function runtimeExports(content) {
   );
 }
 
-function modulePair(declarationPath) {
-  const directory = path.dirname(declarationPath);
-  const filename = path.basename(declarationPath);
-  const relativeDirectory = path.relative(sourcesDir, directory);
-  let moduleName;
-  let runtimePath;
-
-  if (filename === 'index.d.ts') {
-    moduleName = relativeDirectory.replaceAll(path.sep, '/');
-    runtimePath = path.join(distDir, `${relativeDirectory}.js`);
-    if (!fs.existsSync(runtimePath)) {
-      runtimePath = path.join(distDir, relativeDirectory, 'index.js');
-    }
-  } else {
-    const basename = filename.slice(0, -'.d.ts'.length);
-    moduleName = path
-      .join(relativeDirectory, basename)
-      .replaceAll(path.sep, '/');
-    runtimePath = path.join(distDir, relativeDirectory, `${basename}.js`);
-  }
-
-  return fs.existsSync(runtimePath) ? { moduleName, runtimePath } : null;
-}
-
 function addMismatch(collection, moduleName, names) {
   if (names.size) collection[moduleName] = [...names].sort();
-}
-
-function stable(value) {
-  if (Array.isArray(value)) return value.map(stable);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, child]) => [key, stable(child)])
-    );
-  }
-  return value;
 }
 
 if (!fs.existsSync(distDir)) {
@@ -126,7 +81,7 @@ if (!fs.existsSync(distDir)) {
 
 const actual = { ghostDeclarations: {}, undeclaredRuntimeExports: {} };
 for (const declarationPath of walk(sourcesDir, '.d.ts')) {
-  const pair = modulePair(declarationPath);
+  const pair = modulePair(declarationPath, sourcesDir, distDir);
   if (!pair) continue;
 
   const declaration = fs.readFileSync(declarationPath, 'utf8');
