@@ -20,6 +20,15 @@
       "handleLeftButtonRelease(1>0)",
       "handleStartMouseWheel(1>0)"
     ],
+    "Interaction/Style/InteractorStyleMPRSlice#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleMiddleButtonRelease(1>0)",
+      "handleRightButtonRelease(1>0)"
+    ],
     "Interaction/Style/InteractorStyleManipulator#instance": [
       "handleEndMouseWheel(1>0)",
       "handleEndPan(1>0)",
@@ -29,6 +38,9 @@
       "handleMiddleButtonRelease(1>0)",
       "handleRightButtonRelease(1>0)"
     ],
+    "Interaction/Style/InteractorStyleRemoteMouse#instance": [
+      "handleKeyPress(1>0)"
+    ],
     "Interaction/Style/InteractorStyleTrackballCamera#instance": [
       "handleEndMouseWheel(1>0)",
       "handleEndPan(1>0)",
@@ -37,28 +49,33 @@
       "handleLeftButtonRelease(1>0)",
       "handleStartMouseWheel(1>0)"
     ],
-    "Widgets/Manipulators/PickerManipulator#instance": [
-      "handleEvent(2>1)"
-    ]
+    "Interaction/Style/InteractorStyleUnicam#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleMiddleButtonRelease(1>0)",
+      "handleRightButtonRelease(1>0)"
+    ],
+    "Widgets/Manipulators/PickerManipulator#instance": ["handleEvent(2>1)"]
   },
   "defaultMismatches": {},
   "ghostDeclarations": {},
   "ghostMembers": {
-    "Widgets/Manipulators/AbstractManipulator#instance": [
-      "handleEvent"
-    ]
+    "Widgets/Manipulators/AbstractManipulator#instance": ["handleEvent"]
   },
   "importFailures": [
+    "Filters/General/MoleculeToRepresentation",
     "IO/Misc/PDBReader",
+    "Proxy/Representations/MoleculeRepresentationProxy",
     "Rendering/Misc/FullScreenRenderWindow",
     "Rendering/Misc/GenericRenderWindow",
     "Rendering/Misc/RemoteView",
     "Rendering/Misc/RenderWindowWithControlBar"
   ],
   "undeclaredMembers": {
-    "Common/Core/LookupTable#instance": [
-      "getBuildTime"
-    ],
+    "Common/Core/LookupTable#instance": ["getBuildTime"],
     "Common/DataModel/IncrementalOctreePointLocator#instance": [
       "findClosestPointInLeafNode",
       "findClosestPointInSphere",
@@ -107,12 +124,7 @@
       "setTolerance",
       "setUseExistingSearchStructure"
     ],
-    "Common/DataModel/IncrementalPointLocator#instance": [
-      "getNumberOfBuckets"
-    ],
-    "Common/DataModel/Line#default": [
-      "IntersectionState"
-    ],
+    "Common/DataModel/IncrementalPointLocator#instance": ["getNumberOfBuckets"],
     "Common/DataModel/MergePoints#instance": [
       "buildLocator",
       "computePerformanceFactors",
@@ -121,9 +133,7 @@
       "getNumberOfBuckets",
       "initialize"
     ],
-    "Common/DataModel/Planes#instance": [
-      "getPlanes"
-    ],
+    "Common/DataModel/Planes#instance": ["getPlanes"],
     "Common/DataModel/PointLocator#instance": [
       "buildLocator",
       "computePerformanceFactors",
@@ -138,38 +148,20 @@
       "setClose",
       "setIntervals"
     ],
-    "Common/DataModel/Triangle#instance": [
-      "clip"
-    ],
-    "Common/DataModel/TriangleStrip#instance": [
-      "clip",
-      "contour"
-    ],
-    "Common/Transform/LandmarkTransform#default": [
-      "Mode"
-    ],
+    "Common/DataModel/Triangle#instance": ["clip"],
+    "Common/DataModel/TriangleStrip#instance": ["clip", "contour"],
     "Interaction/Style/InteractorStyleImage#instance": [
       "superHandleLeftButtonPress",
       "superHandleLeftButtonRelease",
       "superHandleMouseMove"
     ],
-    "macros#default": [
-      "objectSetterMap"
-    ],
-    "Rendering/Core/Actor2D#instance": [
-      "ensureProperty",
-      "setProperty"
-    ],
-    "Rendering/Core/AnnotatedCubeActor#default": [
-      "Presets"
-    ],
+    "Rendering/Core/Actor2D#instance": ["ensureProperty", "setProperty"],
+    "Rendering/Core/AnnotatedCubeActor#default": ["Presets"],
     "Rendering/Core/CellPicker#instance": [
       "getPickNormal",
       "getPickNormalByReference"
     ],
-    "Rendering/Core/Coordinate#instance": [
-      "getValueByReference"
-    ],
+    "Rendering/Core/Coordinate#instance": ["getValueByReference"],
     "Rendering/Core/Glyph3DMapper#instance": [
       "getBuildTime",
       "getColorArray",
@@ -180,9 +172,7 @@
       "setOrient",
       "setScaling"
     ],
-    "Rendering/Core/ImageArrayMapper#instance": [
-      "getSlicingMode"
-    ],
+    "Rendering/Core/ImageArrayMapper#instance": ["getSlicingMode"],
     "Rendering/Core/ImageCPRMapper#instance": [
       "getBackgroundColor",
       "getBackgroundColorByReference",
@@ -206,9 +196,7 @@
       "setSlice",
       "setUseCustomExtents"
     ],
-    "Rendering/Core/ImageProperty#instance": [
-      "getUseLookupTableScalarRange"
-    ],
+    "Rendering/Core/ImageProperty#instance": ["getUseLookupTableScalarRange"],
     "Rendering/Core/ImageSlice#instance": [
       "getForceOpaque",
       "getForceTranslucent"
@@ -230,13 +218,8 @@
       "setMetallic",
       "setRoughness"
     ],
-    "Rendering/Core/RenderWindow#instance": [
-      "preRender"
-    ],
-    "Rendering/Core/ScalarBarActor#default": [
-      "Orientation",
-      "newScalarBarActorHelper"
-    ],
+    "Rendering/Core/RenderWindow#instance": ["preRender"],
+    "Rendering/Core/ScalarBarActor#default": ["newScalarBarActorHelper"],
     "Rendering/Core/StickMapper#instance": [
       "getOrientationArray",
       "setLength",
@@ -272,7 +255,6 @@
       "setVolumetricScatteringBlending"
     ],
     "Rendering/OpenGL/Texture#instance": [
-      "addMissingChildren",
       "createDepthFromRaw",
       "getAllocatedGPUMemoryInBytes",
       "getComponents",
@@ -302,23 +284,26 @@
       "updateVolumeInfoForGL",
       "useHalfFloat"
     ],
-    "Rendering/SceneGraph/ViewNode#instance": [
-      "addMissingChildren"
-    ],
     "Rendering/WebXR/RenderWindowHelper#instance": [
       "getDrawControllersRay",
       "getXrSupported",
       "setDrawControllersRay"
-    ]
+    ],
+    "macros#default": ["objectSetterMap"]
   },
   "undeclaredRuntimeExports": {},
   "uninstantiable": [
     "IO/Core/ImageStream/ViewStream",
+    "Interaction/UI/CornerAnnotation",
+    "Interaction/UI/FPSMonitor",
+    "Interaction/UI/Slider",
+    "Interaction/UI/VolumeController",
     "Interaction/Widgets/OrientationMarkerWidget",
     "Interaction/Widgets/PiecewiseGaussianWidget",
     "Proxy/Core/View2DProxy",
     "Proxy/Core/ViewProxy",
     "Rendering/Core/AnnotatedCubeActor",
+    "Rendering/Core/CubeAxesActor",
     "Rendering/Core/RenderWindowInteractor",
     "Rendering/Core/TextActor",
     "Rendering/Misc/CanvasView",

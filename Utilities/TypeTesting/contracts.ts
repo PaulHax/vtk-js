@@ -22,6 +22,13 @@ import vtkViewNode from '../../Sources/Rendering/SceneGraph/ViewNode';
 import { SlabTypes } from '../../Sources/Rendering/Core/ImageResliceMapper/Constants';
 import type vtkImageData from '../../Sources/Common/DataModel/ImageData';
 import type { vtkSubscription } from '../../Sources/interfaces';
+import vtkLine from '../../Sources/Common/DataModel/Line';
+import vtkCellTypes from '../../Sources/Common/DataModel/CellTypes';
+import { CellType } from '../../Sources/Common/DataModel/CellTypes/Constants';
+import ClassHierarchy from '../../Sources/Common/Core/ClassHierarchy';
+import vtkAngleWidget from '../../Sources/Widgets/Widgets3D/AngleWidget';
+import vtkSphereHandleRepresentation from '../../Sources/Widgets/Representations/SphereHandleRepresentation';
+import vtkConcentricCylinderSource from '../../Sources/Filters/Sources/ConcentricCylinderSource';
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
@@ -135,3 +142,38 @@ lookupTableProxy.getRGBPoints();
 lookupTableProxy.getProperties();
 // @ts-expect-error macro.proxy keeps listProxyProperties private
 lookupTableProxy.listProxyProperties();
+
+// Constants that index.js spreads onto the module default are reachable there.
+const intersectionState: number = vtkLine.IntersectionState.ON_LINE;
+void intersectionState;
+const vertexCellType: number = CellType.VTK_VERTEX;
+void vertexCellType;
+// @ts-expect-error CellTypes does not spread its constants onto the default
+vtkCellTypes.CellType;
+
+// Widget representations are macro.algo nodes, so they carry the pipeline API.
+const sphereHandle = vtkSphereHandleRepresentation.newInstance();
+const sphereHandlePort = sphereHandle.getOutputPort();
+void sphereHandlePort;
+declare const sphereHandleInput: vtkImageData;
+sphereHandle.setInputData(sphereHandleInput);
+
+// A widget factory reports its own state type, not the base one.
+const angleWidget = vtkAngleWidget.newInstance();
+const angleHandles = angleWidget.getWidgetState().getHandleList();
+void angleHandles;
+
+// Sources with hand-written collection methods keep them alongside the macros.
+const concentricCylinder = vtkConcentricCylinderSource.newInstance();
+concentricCylinder.addRadius(1, 0);
+type _ConcentricCylinderRadiusCount = Expect<
+  Equal<ReturnType<typeof concentricCylinder.getNumberOfRadius>, number>
+>;
+
+// ClassHierarchy subclasses Array without redeclaring its statics.
+const classHierarchy = new ClassHierarchy();
+type _ClassHierarchyPushReturnsLength = Expect<
+  Equal<ReturnType<typeof classHierarchy.push>, number>
+>;
+// @ts-expect-error the declaration carries no static members
+ClassHierarchy.from([]);

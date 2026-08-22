@@ -45,15 +45,22 @@ The baseline's sections:
   implementations reading `arguments` are skipped, so an entry means the
   implementation genuinely ignores a trailing argument its contract is handed.
   Most are interactor style and manipulator hooks that override a base method
-  and drop the event payload.
+  and drop the event payload: a style that ends a gesture takes no event data,
+  while the base declares the parameter for the styles that do read it.
 - `uninstantiable` lists factories whose `newInstance` needs browser globals,
-  so only their static surface is checked headlessly.
-- `importFailures` lists modules the Node ESM loader cannot import at all
-  (browser globals or broken transitive packaging); their member surface is
-  unverifiable in Node, though their exports are still compared because that
-  side reads the built module as text. `IO/Misc/PDBReader` is there because a
-  transitive dependency ships ESM syntax from a CommonJS package, which also
-  breaks it for Node consumers of vtk.js.
+  so only their static surface is checked headlessly. The `Interaction/UI`
+  widgets build their own DOM, and `Rendering/Core/CubeAxesActor` measures text
+  on a canvas.
+- `importFailures` lists modules the Node ESM loader cannot import at all;
+  their member surface is unverifiable in Node, though their exports are still
+  compared because that side reads the built module as text. Most are
+  browser-only by design. The three chemistry modules
+  (`IO/Misc/PDBReader`, `Filters/General/MoleculeToRepresentation`,
+  `Proxy/Representations/MoleculeRepresentationProxy`) are not: the build emits
+  `dist/esm/Utilities/XMLConverter/package.json` with `"type": "commonjs"`,
+  while the `elements.json.js` those modules import from that directory is ESM,
+  so Node rejects it with `SyntaxError: Unexpected token 'export'`. That breaks
+  the three modules for every Node consumer of vtk.js, not just this check.
 
 The census ignores the named value side of vtk.js's merged default-factory
 declaration pattern. Those declarations preserve default imports in type
