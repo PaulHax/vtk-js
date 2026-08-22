@@ -95,10 +95,31 @@ function requiredParameters(symbol) {
   );
 }
 
+/**
+ * The most parameters any overload can accept, or null when the member is not
+ * callable or takes a rest parameter, which makes the count unbounded.
+ */
+function acceptedParameters(symbol) {
+  const signatures = checker.getTypeOfSymbol(symbol).getCallSignatures();
+  if (!signatures.length) return null;
+  let most = 0;
+  for (const signature of signatures) {
+    const parameters = signature.getParameters();
+    if (
+      parameters.some((parameter) => parameter.valueDeclaration?.dotDotDotToken)
+    ) {
+      return null;
+    }
+    most = Math.max(most, parameters.length);
+  }
+  return most;
+}
+
 function members(type) {
   const required = new Set();
   const all = new Set();
   const arity = new Map();
+  const accepted = new Map();
   for (const property of checker.getPropertiesOfType(type)) {
     const name = property.getName();
     if (name.startsWith('__')) continue;
@@ -106,8 +127,10 @@ function members(type) {
     if (!(property.flags & ts.SymbolFlags.Optional)) required.add(name);
     const parameters = requiredParameters(property);
     if (parameters !== null) arity.set(name, parameters);
+    const most = acceptedParameters(property);
+    if (most !== null) accepted.set(name, most);
   }
-  return { required, all, arity };
+  return { required, all, arity, accepted };
 }
 
 function instanceType(defaultType, exportSymbols) {
@@ -324,6 +347,53 @@ function acceptsMoreThanItDeclares(fn) {
   return parameters.includes('...') || parameters.includes('=');
 }
 
+/**
+ * Whether every parameter past `from` is only read behind a guard. Such a
+ * parameter is optional in practice but is not defaulted, so `Function.length`
+ * still counts it. `macro.obj`'s `modified(otherMTime)` is the archetype.
+ */
+function trailingParametersAreGuarded(fn, from) {
+  let source;
+  try {
+    source = Function.prototype.toString.call(fn);
+  } catch {
+    return true;
+  }
+  const parameters = parameterText(source);
+  if (parameters === null) return true;
+  const names = parameters
+    .split(',')
+    .map((parameter) => parameter.trim())
+    .filter(Boolean);
+  const body = source.slice(source.indexOf(')', source.indexOf('(')) + 1);
+  return names.slice(from).every((name) => {
+    if (!/^[A-Za-z_$][\w$]*$/.test(name)) return true;
+    const guard = new RegExp(
+      `(if\\s*\\(\\s*!?${name}\\b|${name}\\s*(&&|\\?\\?|!==|===|!=|==)\\s*(undefined|null|\\w))`
+    );
+    return guard.test(body);
+  });
+}
+
+/**
+ * The reverse of an arity mismatch: the declaration cannot express a call the
+ * implementation requires, so passing the argument it needs is a type error.
+ * `Function.length` stops at the first defaulted or rest parameter, so it only
+ * ever counts parameters the implementation genuinely takes.
+ */
+function underDeclaredArity(declared, holder) {
+  const mismatches = [];
+  for (const [name, accepted] of declared.accepted ?? []) {
+    if (internal(name)) continue;
+    const fn = holder[name];
+    if (typeof fn !== 'function' || fn.length === 0) continue;
+    if (accepted >= fn.length) continue;
+    if (trailingParametersAreGuarded(fn, accepted)) continue;
+    mismatches.push(`${name}(${accepted}<${fn.length})`);
+  }
+  return mismatches;
+}
+
 function arityMismatches(declared, holder) {
   const mismatches = [];
   for (const [name, required] of declared.arity) {
@@ -356,6 +426,7 @@ const census = {
   ghostMembers: {},
   undeclaredMembers: {},
   arityMismatches: {},
+  underDeclaredArity: {},
   importFailures: [],
   uninstantiable: [],
 };
@@ -379,6 +450,11 @@ function compareMembers(key, declared, runtime) {
     census.arityMismatches,
     key,
     arityMismatches(declared, runtime.holder)
+  );
+  record(
+    census.underDeclaredArity,
+    key,
+    underDeclaredArity(declared, runtime.holder)
   );
 }
 
@@ -466,7 +542,10 @@ census.importFailures.sort();
 census.uninstantiable.sort();
 
 if (emitPath) {
-  fs.writeFileSync(emitPath, `${JSON.stringify(stable(unverified), null, 2)}\n`);
+  fs.writeFileSync(
+    emitPath,
+    `${JSON.stringify(stable(unverified), null, 2)}\n`
+  );
 }
 
 const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
@@ -490,6 +569,7 @@ if (JSON.stringify(stable(census)) !== JSON.stringify(stable(baseline))) {
       `${total(census.ghostMembers)} baselined member ghosts, ` +
       `${total(census.undeclaredMembers)} baselined undeclared members, ` +
       `${total(census.arityMismatches)} baselined arity mismatches, ` +
+      `${total(census.underDeclaredArity)} baselined under-declared arities, ` +
       `${census.uninstantiable.length} uninstantiable headless).`
   );
 }

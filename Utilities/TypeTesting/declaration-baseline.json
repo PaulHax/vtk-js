@@ -58,12 +58,21 @@
       "handleMiddleButtonRelease(1>0)",
       "handleRightButtonRelease(1>0)"
     ],
-    "Widgets/Manipulators/PickerManipulator#instance": ["handleEvent(2>1)"]
+    "Widgets/Manipulators/PickerManipulator#instance": [
+      "handleEvent(2>1)"
+    ]
+  },
+  "underDeclaredArity": {
+    "Interaction/Manipulators/MouseBoxSelectorManipulator#instance": [
+      "onButtonUp(1<2)"
+    ]
   },
   "defaultMismatches": {},
   "ghostDeclarations": {},
   "ghostMembers": {
-    "Widgets/Manipulators/AbstractManipulator#instance": ["handleEvent"]
+    "Widgets/Manipulators/AbstractManipulator#instance": [
+      "handleEvent"
+    ]
   },
   "importFailures": [
     "Filters/General/MoleculeToRepresentation",

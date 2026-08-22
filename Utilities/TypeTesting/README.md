@@ -59,6 +59,17 @@ The baseline's sections:
   the methods that moved to the volume property, and those must stay
   undeclared — declaring them would advertise methods whose only behavior is to
   throw. Anything else appearing here is a real gap, not a category.
+- `underDeclaredArity` is the reverse: members whose declaration cannot express
+  a call the implementation requires, written as `name(declared<runtime)`. Here
+  the declared maximum is compared against `Function.length`, which stops at the
+  first defaulted or rest parameter and so only counts parameters the
+  implementation genuinely takes. A parameter that is read only behind a guard
+  is optional in practice despite counting toward `Function.length`, and is not
+  reported — `macro.obj`'s `modified(otherMTime)` is the archetype, and without
+  that rule it would fire on every object in the tree. The single entry is
+  `vtkMouseBoxSelectorManipulator.onButtonUp`, whose second parameter the body
+  never reads and whose dispatcher never passes: the declaration is right and
+  the implementation carries a vestigial argument.
 - `arityMismatches` are members whose declaration demands more parameters than
   the implementation accepts, written as `name(declared>runtime)`. Parameters
   that are optional, defaulted or rest are not counted on either side, and
@@ -113,7 +124,9 @@ Regenerate it with `--write-baseline`, and only after reviewing the diff: a new
 `missingOptions` entry is a gap to close, not a line to record.
 
 A disagreement between a `DEFAULT_VALUES` key and the accessor registered for it
-is worth reading closely rather than declaring around. The three this branch's
-base still carries are misspellings that leave a documented option inert, fixed
-on `runtime-defect-cleanup` and written up in
-`plans/runtime-defects-from-declaration-audit.md` in the fork's parent directory.
+is worth reading closely rather than declaring around. Three such misspellings
+leave a documented option inert: `nuberOfSteps` in
+`Rendering/Core/SurfaceLICInterface` and
+`Rendering/OpenGL/SurfaceLIC/LineIntegralConvolution2D`, and `originalMetada` in
+`Interaction/Animations/TimeStepBasedAnimationHandler`. Each is settable only
+under the misspelling, so the documented option name is silently ignored.

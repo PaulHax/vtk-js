@@ -29,6 +29,7 @@ import ClassHierarchy from '../../Sources/Common/Core/ClassHierarchy';
 import vtkAngleWidget from '../../Sources/Widgets/Widgets3D/AngleWidget';
 import vtkSphereHandleRepresentation from '../../Sources/Widgets/Representations/SphereHandleRepresentation';
 import vtkConcentricCylinderSource from '../../Sources/Filters/Sources/ConcentricCylinderSource';
+import type vtkPolyData from '../../Sources/Common/DataModel/PolyData';
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
@@ -177,3 +178,16 @@ type _ClassHierarchyPushReturnsLength = Expect<
 >;
 // @ts-expect-error the declaration carries no static members
 ClassHierarchy.from([]);
+
+// getOutputData narrows to the caller's type without a cast, and still falls
+// back to any for the untyped call the rest of the API relies on.
+const cylinderForOutput = vtkConcentricCylinderSource.newInstance();
+type _TypedOutputData = Expect<
+  Equal<
+    ReturnType<typeof cylinderForOutput.getOutputData<vtkPolyData>>,
+    vtkPolyData
+  >
+>;
+const untypedOutput = cylinderForOutput.getOutputData();
+const untypedOutputAsDataSet: vtkDataSet = untypedOutput;
+void untypedOutputAsDataSet;
