@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as macro from 'vtk.js/Sources/macros';
 import vtkTexture from 'vtk.js/Sources/Rendering/Core/Texture';
 import vtkOpenGLTexture from 'vtk.js/Sources/Rendering/OpenGL/Texture';
 import {
@@ -127,41 +128,64 @@ describe('compressed texture capabilities', () => {
     ).toEqual(all);
   });
 
-  it('distinguishes core WebGL2 ETC2 from the valid WebGL extension path', () => {
-    const noExtensions = {};
-    expect(
-      getCompressedTextureCapabilities(
-        makeContext({ extensions: noExtensions, webgl2: true })
-      ).compressedFormats
-    ).toEqual(['etc2-rgba8']);
-
-    const webgl1Etc = {
-      WEBGL_compressed_texture_etc: EXTENSIONS.WEBGL_compressed_texture_etc,
-    };
-    expect(
-      getCompressedTextureCapabilities(
-        makeContext({ extensions: webgl1Etc, webgl2: false })
-      ).compressedFormats
-    ).toEqual(['etc2-rgba8']);
-    expect(
-      getCompressedTextureCapabilities(
-        makeContext({ extensions: {}, webgl2: false })
-      )
-    ).toEqual({
+  it('reaches ETC2 only through its extension, enums alone are not enough', () => {
+    // A WebGL2 context never exposes usable ETC2 enums before the extension is
+    // requested, so the extension request is the only valid probe.
+    const enumsWithoutExtension = makeContext({
+      extensions: {},
+      webgl2: true,
+    });
+    expect(getCompressedTextureCapabilities(enumsWithoutExtension)).toEqual({
       capabilityKey: 'compressed-texture-v1:rgba',
       compressedFormats: [],
     });
+    expect(enumsWithoutExtension.getExtension).toHaveBeenCalledWith(
+      'WEBGL_compressed_texture_etc'
+    );
+
+    const etcOnly = {
+      WEBGL_compressed_texture_etc: EXTENSIONS.WEBGL_compressed_texture_etc,
+    };
+    [true, false].forEach((webgl2) => {
+      const context = makeContext({ extensions: etcOnly, webgl2 });
+      expect(
+        getCompressedTextureCapabilities(context).compressedFormats
+      ).toEqual(['etc2-rgba8']);
+      expect(
+        getCompressedTextureInternalFormat(context, 'etc2-rgba8', false)
+      ).toBe(0x9278);
+    });
   });
 
-  it('advertises S3TC only when both linear and sRGB variants are usable', () => {
+  it('registers each S3TC variant from its own independent extension', () => {
     const linearOnly = {
       WEBGL_compressed_texture_s3tc: EXTENSIONS.WEBGL_compressed_texture_s3tc,
     };
+    const linearContext = makeContext({ extensions: linearOnly });
     expect(
-      getCompressedTextureCapabilities(
-        makeContext({ extensions: linearOnly, webgl2: false })
-      ).compressedFormats
-    ).not.toContain('s3tc-dxt5');
+      getCompressedTextureCapabilities(linearContext).compressedFormats
+    ).toContain('s3tc-dxt5');
+    expect(
+      getCompressedTextureInternalFormat(linearContext, 's3tc-dxt5', false)
+    ).toBe(0x83f3);
+    expect(
+      getCompressedTextureInternalFormat(linearContext, 's3tc-dxt5', true)
+    ).toBeUndefined();
+
+    const srgbOnly = {
+      WEBGL_compressed_texture_s3tc_srgb:
+        EXTENSIONS.WEBGL_compressed_texture_s3tc_srgb,
+    };
+    const srgbContext = makeContext({ extensions: srgbOnly });
+    expect(
+      getCompressedTextureCapabilities(srgbContext).compressedFormats
+    ).toContain('s3tc-dxt5');
+    expect(
+      getCompressedTextureInternalFormat(srgbContext, 's3tc-dxt5', true)
+    ).toBe(0x8c4f);
+    expect(
+      getCompressedTextureInternalFormat(srgbContext, 's3tc-dxt5', false)
+    ).toBeUndefined();
   });
 
   it.each([
@@ -455,5 +479,91 @@ describe('vtkOpenGLTexture compressed uploads', () => {
     expect(context.deleteTexture).toHaveBeenCalledWith(firstHandle);
     expect(replacementContext.compressedTexImage2D).toHaveBeenCalledTimes(3);
     expect(openGLTexture.getHandle()).not.toBe(firstHandle);
+  });
+
+  it('attempts an undecodable payload once per context, not once per render', () => {
+    // A format the context cannot decode leaves no handle behind. Without a
+    // latch, the enclosing "no handle yet" rebuild condition is true again on
+    // the next render, so every frame deep copies the whole mip chain out of
+    // the renderable and reports the same failure again.
+    const etcOnly = makeContext({
+      extensions: {
+        WEBGL_compressed_texture_etc: EXTENSIONS.WEBGL_compressed_texture_etc,
+      },
+    });
+    const etcRenderWindow = makeRenderWindow(etcOnly);
+    const texture = vtkOpenGLTexture.newInstance();
+    texture.setOpenGLRenderWindow(etcRenderWindow);
+    const renderable = vtkTexture.newInstance();
+    renderable.setCompressedData(makePayload('bc7', false));
+    // Counting payload reads measures the cost the latch exists to avoid:
+    // each attempt deep copies every mip level out of the renderable. The
+    // methods are frozen on the renderable, so count through a delegating
+    // stand-in rather than a spy.
+    let payloadReads = 0;
+    const countingRenderable = {};
+    Object.getOwnPropertyNames(renderable)
+      .filter((name) => typeof renderable[name] === 'function')
+      .forEach((name) => {
+        countingRenderable[name] = renderable[name];
+      });
+    countingRenderable.getCompressedData = () => {
+      payloadReads += 1;
+      return renderable.getCompressedData();
+    };
+    texture.setRenderable(countingRenderable);
+    // vtkErrorMacro captures its logger at module load, so hook the logger
+    // rather than spying on console.
+    const reported = vi.fn();
+    macro.setLoggerFunction('error', reported);
+
+    texture.render(etcRenderWindow);
+    texture.render(etcRenderWindow);
+    texture.render(etcRenderWindow);
+
+    expect(payloadReads).toBe(1);
+    expect(texture.getHandle()).toBe(0);
+    expect(etcOnly.compressedTexImage2D).not.toHaveBeenCalled();
+    expect(reported).toHaveBeenCalledTimes(1);
+
+    // A payload the context can decode still uploads: the latch is scoped to
+    // the payload that failed, not to the texture.
+    renderable.setCompressedData(makePayload('etc2-rgba8', false));
+    texture.render(etcRenderWindow);
+
+    expect(payloadReads).toBe(2);
+    expect(etcOnly.compressedTexImage2D).toHaveBeenCalledTimes(3);
+    expect(texture.getHandle()).not.toBe(0);
+    macro.setLoggerFunction('error', null);
+  });
+
+  it('re-sends sampler state without re-uploading the compressed payload', () => {
+    const renderable = vtkTexture.newInstance();
+    renderable.setCompressedData(makePayload());
+    openGLTexture.setRenderable(renderable);
+    openGLTexture.render(renderWindow);
+
+    const uploadedHandle = openGLTexture.getHandle();
+    expect(context.compressedTexImage2D).toHaveBeenCalledTimes(3);
+    context.texParameteri.mockClear();
+
+    // Sampler state shares the renderable's mtime with the payload, so a
+    // filter change must not be mistaken for new mip bytes.
+    renderable.setSampler({
+      minFilter: 'nearest',
+      magFilter: 'nearest',
+      wrapS: 'clamp-to-edge',
+      wrapT: 'clamp-to-edge',
+    });
+    openGLTexture.render(renderWindow);
+
+    expect(context.compressedTexImage2D).toHaveBeenCalledTimes(3);
+    expect(context.deleteTexture).not.toHaveBeenCalled();
+    expect(openGLTexture.getHandle()).toBe(uploadedHandle);
+    expect(context.texParameteri).toHaveBeenCalledWith(
+      context.TEXTURE_2D,
+      context.TEXTURE_MIN_FILTER,
+      context.NEAREST
+    );
   });
 });

@@ -375,6 +375,11 @@ function vtkTexture(publicAPI, model) {
 
   publicAPI.getCompressedData = () => cloneCompressedData(model.compressedData);
 
+  // Payload identity, decoupled from the object mtime: sampler and other
+  // property changes must not be mistaken for a new compressed payload by
+  // consumers that would otherwise re-upload it.
+  publicAPI.getCompressedDataMTime = () => model.compressedDataTime.getMTime();
+
   publicAPI.getSampler = () => cloneSampler(model.sampler);
 
   publicAPI.setSampler = (sampler) => {
@@ -402,6 +407,7 @@ function vtkTexture(publicAPI, model) {
       model.imageLoaded = false;
     }
     model.compressedData = next;
+    model.compressedDataTime.modified();
     publicAPI.modified();
     return true;
   };
@@ -658,6 +664,9 @@ export function extend(publicAPI, model, initialValues = {}) {
   // Build VTK API
   macro.obj(publicAPI, model);
   macro.algo(publicAPI, model, 6, 0);
+
+  model.compressedDataTime = {};
+  macro.obj(model.compressedDataTime, { mtime: 0 });
 
   macro.get(publicAPI, model, [
     'canvas',

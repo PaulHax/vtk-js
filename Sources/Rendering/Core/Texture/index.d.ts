@@ -71,6 +71,13 @@ export interface vtkTexture extends vtkAlgorithm {
    */
   setCompressedData(data: Nullable<CompressedTextureData>): boolean;
 
+  /**
+   * Returns the modification time of the compressed payload alone. It only
+   * advances when `setCompressedData` accepts a different payload, so sampler
+   * and other property changes can be told apart from a new payload.
+   */
+  getCompressedDataMTime(): number;
+
   /** Clears the compressed texture payload. */
   clearCompressedData(): boolean;
 
