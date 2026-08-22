@@ -24,11 +24,21 @@ interface IAbstractScalars {
   scalars: Nullable<vtkDataArray>;
 }
 
+/**
+ * Maps the ids the shader writes during selection back to the VTK ids. Both
+ * halves stay null while the mapper renders indexed, where point picking reads
+ * gl_VertexID directly and no map is built.
+ */
+export interface ISelectionWebGLIdsToVTKIds {
+  points: Nullable<Int32Array>;
+  cells: Nullable<Int32Array>;
+}
+
 export interface IMapperInitialValues extends IAbstractMapper3DInitialValues {
   colorByArrayName?: string;
   lookupTable?: Nullable<vtkScalarsToColors>;
   populateSelectionSettings?: boolean;
-  selectionWebGLIdsToVTKIds?: any;
+  selectionWebGLIdsToVTKIds?: Nullable<ISelectionWebGLIdsToVTKIds>;
   static?: boolean;
   scalarVisibility?: boolean;
   scalarRange?: Range;
@@ -252,7 +262,7 @@ export interface vtkMapper
   /**
    *
    */
-  getSelectionWebGLIdsToVTKIds(): any;
+  getSelectionWebGLIdsToVTKIds(): Nullable<ISelectionWebGLIdsToVTKIds>;
 
   /**
    * Check whether the mapper’s data is static.
@@ -467,7 +477,9 @@ export interface vtkMapper
    * This attribute is only used when processing a selection made with the
    * hardware selector; it does not update the mapper's mtime.
    */
-  setSelectionWebGLIdsToVTKIds(selectionWebGLIdsToVTKIds: any): void;
+  setSelectionWebGLIdsToVTKIds(
+    selectionWebGLIdsToVTKIds: Nullable<ISelectionWebGLIdsToVTKIds>
+  ): void;
 
   /**
    * Turn on/off flag to control whether the mapper’s data is static. Static data
