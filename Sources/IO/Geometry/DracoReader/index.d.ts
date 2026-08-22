@@ -65,11 +65,10 @@ export interface vtkDracoReader extends vtkDracoReaderBase {
   parseAsArrayBuffer(content: ArrayBuffer): void;
 
   /**
-   *
-   * @param inData
-   * @param outData
+   * Parse the data set through `setUrl` or `parseAsArrayBuffer` and publish it
+   * on the output port.
    */
-  requestData(inData: any, outData: any): void;
+  requestData(): void;
 
   /**
    *

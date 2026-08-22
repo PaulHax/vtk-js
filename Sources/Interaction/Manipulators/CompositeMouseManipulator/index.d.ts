@@ -66,13 +66,13 @@ export interface vtkCompositeMouseManipulator {
    * @param interactor the interactor
    * @param renderer the renderer
    * @param delta the scroll delta
-   * @param position the display position
+   * @param position the display position, when the interactor style caches one
    */
   onScroll(
     interactor: vtkRenderWindowInteractor,
     renderer: vtkRenderer,
     delta: number,
-    position: Nullable<{ x: number; y: number }>
+    position?: Nullable<{ x: number; y: number }>
   ): void;
 
   /**

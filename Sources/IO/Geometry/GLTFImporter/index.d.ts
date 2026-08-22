@@ -37,7 +37,17 @@ export interface IGLTFMaterialVariant {
 /**
  *
  */
-export interface IGLTFImporterInitialValues {}
+export interface IGLTFImporterInitialValues {
+  /**
+   * The importer reads the model through this helper, and falls back to the
+   * http one. It has no accessor: pass it here or leave it unset.
+   */
+  dataAccessHelper?:
+    | HtmlDataAccessHelper
+    | HttpDataAccessHelper
+    | JSZipDataAccessHelper
+    | LiteHttpDataAccessHelper;
+}
 
 type vtkGLTFImporterBase = vtkObject;
 
@@ -66,15 +76,6 @@ export interface vtkGLTFImporter extends vtkGLTFImporterBase {
    * Get the cameras.
    */
   getCameras(): Map<string, vtkCamera> | undefined;
-
-  /**
-   *
-   */
-  getDataAccessHelper():
-    | HtmlDataAccessHelper
-    | HttpDataAccessHelper
-    | JSZipDataAccessHelper
-    | LiteHttpDataAccessHelper;
 
   /**
    * Get the scenes.
@@ -157,18 +158,6 @@ export interface vtkGLTFImporter extends vtkGLTFImporterBase {
    * @param outData
    */
   requestData(inData: any, outData: any): void;
-
-  /**
-   *
-   * @param dataAccessHelper
-   */
-  setDataAccessHelper(
-    dataAccessHelper:
-      | HtmlDataAccessHelper
-      | HttpDataAccessHelper
-      | JSZipDataAccessHelper
-      | LiteHttpDataAccessHelper
-  ): boolean;
 
   /**
    * Set the url of the object to load.
