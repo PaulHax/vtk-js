@@ -10,6 +10,18 @@ compiling the declarations alone.
   each instance interface (through the declared `newInstance` return type) with
   the TypeScript compiler API and matches them against the real runtime
   surface, instantiating each factory headlessly when possible.
+- `npm run test:types:browser` runs the same census in a real browser for the
+  modules Node cannot construct. `test:types:declarations` writes their declared
+  instance surface to `unverified-surface.json`, and
+  `Sources/Testing/declarationSurfaceCensus.js` builds each one against a live DOM,
+  WebGL or WebGPU context and fails on any declared member the runtime lacks. A
+  module the browser still cannot construct is reported as unverified rather than
+  passing silently, and WebGPU nodes only construct under `WEBGPU=1`
+  (`npm run test:webgpu`). It runs under its own `vitest.declarations.config.js`,
+  as its own CI step: the census glob-imports most of `Sources`, which makes Vite
+  re-optimize its dependency graph mid-run, and that reload breaks whichever
+  sibling test file happens to be importing at the time. Its filename deliberately
+  does not match the suite's `test*.js` pattern for the same reason.
 - `npm run test:types:contracts` compiles focused source-tree API contracts.
 - `npm run test:types:packed` installs the generated ESM tarball into a clean
   temporary consumer, compiles those same contracts through package deep
@@ -48,7 +60,9 @@ The baseline's sections:
   and drop the event payload: a style that ends a gesture takes no event data,
   while the base declares the parameter for the styles that do read it.
 - `uninstantiable` lists factories whose `newInstance` needs browser globals,
-  so only their static surface is checked headlessly. The `Interaction/UI`
+  so only their static surface is checked headlessly. These are handed to the
+  browser census rather than left unchecked; being on this list means Node skipped
+  the instance comparison, not that nothing verifies it. The `Interaction/UI`
   widgets build their own DOM, and `Rendering/Core/CubeAxesActor` measures text
   on a canvas.
 - `importFailures` lists modules the Node ESM loader cannot import at all;

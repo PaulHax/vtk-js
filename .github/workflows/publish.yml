@@ -42,6 +42,8 @@ jobs:
           npm run test:types:contracts
           npm run test:types:declarations
           npm run test:types:packed
+      - name: Census declarations that need a browser
+        run: xvfb-run --auto-servernum npm run test:types:browser
       - name: Chrome and Firefox tests
         run: xvfb-run --auto-servernum npm test
       - name: Archive test results

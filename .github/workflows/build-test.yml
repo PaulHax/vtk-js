@@ -48,6 +48,10 @@ jobs:
           npx tsc -p tsconfig.umd-check.json
           npm run test:types:contracts
           npm run test:types:declarations
+      - name: Census declarations that need a browser
+        env:
+          TEST_BROWSER: ${{ matrix.browser }}
+        run: xvfb-run --auto-servernum npm run test:types:browser
       - name: Validate packed ESM package
         if: matrix.browser == 'chromium'
         run: npm run test:types:packed

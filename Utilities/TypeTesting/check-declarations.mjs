@@ -14,6 +14,19 @@ const baselinePath = path.join(
   'declaration-baseline.json'
 );
 
+// The modules Node cannot construct are handed to the browser census, which
+// enumerates them against a real WebGL or WebGPU context.
+// Ghost detection ignores optional members, so the browser census needs the
+// required set and the full set kept apart.
+const unverifiedEntry = (instance) => ({
+  required: [...instance.required].sort(),
+  all: [...instance.all].sort(),
+});
+
+const emitIndex = process.argv.indexOf('--emit-unverified');
+const emitPath = emitIndex === -1 ? null : process.argv[emitIndex + 1];
+const unverified = {};
+
 if (!fs.existsSync(distDir)) {
   throw new Error('dist/esm is missing; run npm run build:esm first');
 }
@@ -400,6 +413,9 @@ for (const pair of pairs) {
     );
   } catch {
     census.importFailures.push(pair.moduleName);
+    if (declared.instance?.all.size) {
+      unverified[pair.moduleName] = unverifiedEntry(declared.instance);
+    }
     continue;
   }
 
@@ -427,6 +443,9 @@ for (const pair of pairs) {
 
   if (runtime.instantiationFailed) {
     census.uninstantiable.push(pair.moduleName);
+    if (declared.instance?.all.size) {
+      unverified[pair.moduleName] = unverifiedEntry(declared.instance);
+    }
   } else if (declared.instance && runtime.instance) {
     counters.instances += 1;
     compareMembers(
@@ -445,6 +464,10 @@ for (const pair of pairs) {
 
 census.importFailures.sort();
 census.uninstantiable.sort();
+
+if (emitPath) {
+  fs.writeFileSync(emitPath, `${JSON.stringify(stable(unverified), null, 2)}\n`);
+}
 
 const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
 
