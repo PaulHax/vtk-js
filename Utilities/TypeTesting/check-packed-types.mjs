@@ -41,10 +41,15 @@ try {
     { cwd: temporaryDirectory, stdio: 'inherit' }
   );
 
-  fs.copyFileSync(
-    path.join(scriptDirectory, 'packed-contracts.ts'),
-    path.join(temporaryDirectory, 'contracts.ts')
-  );
+  // The packed consumer compiles the very same contracts; only the module
+  // specifiers change, from source-tree paths to package deep imports.
+  const contracts = fs
+    .readFileSync(path.join(scriptDirectory, 'contracts.ts'), 'utf8')
+    .replaceAll("'../../Sources/", "'@kitware/vtk.js/");
+  if (contracts.includes('../../Sources')) {
+    throw new Error('contracts.ts has a source-tree import the rewrite missed');
+  }
+  fs.writeFileSync(path.join(temporaryDirectory, 'contracts.ts'), contracts);
   fs.writeFileSync(
     path.join(temporaryDirectory, 'tsconfig.json'),
     `${JSON.stringify(

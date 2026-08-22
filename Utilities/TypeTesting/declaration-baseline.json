@@ -1,5 +1,48 @@
 {
+  "arityMismatches": {
+    "Interaction/Manipulators/MouseRangeManipulator#instance": [
+      "onStartScroll(3>0)"
+    ],
+    "Interaction/Style/InteractorStyleHMDXR#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleMiddleButtonRelease(1>0)",
+      "handleRightButtonRelease(1>0)"
+    ],
+    "Interaction/Style/InteractorStyleImage#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleStartMouseWheel(1>0)"
+    ],
+    "Interaction/Style/InteractorStyleManipulator#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleMiddleButtonRelease(1>0)",
+      "handleRightButtonRelease(1>0)"
+    ],
+    "Interaction/Style/InteractorStyleTrackballCamera#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleStartMouseWheel(1>0)"
+    ],
+    "Widgets/Manipulators/PickerManipulator#instance": [
+      "handleEvent(2>1)"
+    ]
+  },
   "defaultMismatches": {},
+  "ghostDeclarations": {},
   "ghostMembers": {
     "Widgets/Manipulators/AbstractManipulator#instance": [
       "handleEvent"
@@ -268,9 +311,9 @@
       "setDrawControllersRay"
     ]
   },
+  "undeclaredRuntimeExports": {},
   "uninstantiable": [
     "IO/Core/ImageStream/ViewStream",
-    "IO/Geometry/GLTFImporter",
     "Interaction/Widgets/OrientationMarkerWidget",
     "Interaction/Widgets/PiecewiseGaussianWidget",
     "Proxy/Core/View2DProxy",

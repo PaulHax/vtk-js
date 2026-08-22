@@ -40,8 +40,7 @@ jobs:
           npx tsc -p tsconfig.esm-check.json
           npx tsc -p tsconfig.umd-check.json
           npm run test:types:contracts
-          npm run test:types:exports
-          npm run test:types:surface
+          npm run test:types:declarations
           npm run test:types:packed
       - name: Chrome and Firefox tests
         run: xvfb-run --auto-servernum npm test
