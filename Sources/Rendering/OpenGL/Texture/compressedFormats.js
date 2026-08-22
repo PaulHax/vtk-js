@@ -1,10 +1,5 @@
 const CANONICAL_FORMAT_ORDER = ['astc-4x4', 'bc7', 'etc2-rgba8', 's3tc-dxt5'];
 
-function isWebGL2Context(context) {
-  const version = context.getParameter?.(context.VERSION);
-  return typeof version === 'string' && version.startsWith('WebGL 2');
-}
-
 function probeCompressedTextureFormats(context) {
   if (!context || typeof context.getExtension !== 'function') {
     return new Map();
@@ -33,37 +28,31 @@ function probeCompressedTextureFormats(context) {
     });
   }
 
+  // ETC2 is a core WebGL2 format, but the enums are only ever reachable through
+  // WEBGL_compressed_texture_etc: a WebGL2 context exposes neither the
+  // constants nor a working format until that extension has been requested.
+  const etc = context.getExtension('WEBGL_compressed_texture_etc');
   if (
-    isWebGL2Context(context) &&
-    context.COMPRESSED_RGBA8_ETC2_EAC !== undefined &&
-    context.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC !== undefined
+    etc?.COMPRESSED_RGBA8_ETC2_EAC !== undefined &&
+    etc?.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC !== undefined
   ) {
     formats.set('etc2-rgba8', {
-      linear: context.COMPRESSED_RGBA8_ETC2_EAC,
-      srgb: context.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,
+      linear: etc.COMPRESSED_RGBA8_ETC2_EAC,
+      srgb: etc.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,
     });
-  } else {
-    const etc = context.getExtension('WEBGL_compressed_texture_etc');
-    if (
-      etc?.COMPRESSED_RGBA8_ETC2_EAC !== undefined &&
-      etc?.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC !== undefined
-    ) {
-      formats.set('etc2-rgba8', {
-        linear: etc.COMPRESSED_RGBA8_ETC2_EAC,
-        srgb: etc.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,
-      });
-    }
   }
 
+  // Unlike ASTC and BPTC, the linear and sRGB S3TC variants come from two
+  // independent optional extensions. Register whichever variants the context
+  // actually exposes instead of requiring the pair.
   const s3tc = context.getExtension('WEBGL_compressed_texture_s3tc');
   const s3tcSrgb = context.getExtension('WEBGL_compressed_texture_s3tc_srgb');
-  if (
-    s3tc?.COMPRESSED_RGBA_S3TC_DXT5_EXT !== undefined &&
-    s3tcSrgb?.COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT !== undefined
-  ) {
+  const s3tcLinearFormat = s3tc?.COMPRESSED_RGBA_S3TC_DXT5_EXT;
+  const s3tcSrgbFormat = s3tcSrgb?.COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+  if (s3tcLinearFormat !== undefined || s3tcSrgbFormat !== undefined) {
     formats.set('s3tc-dxt5', {
-      linear: s3tc.COMPRESSED_RGBA_S3TC_DXT5_EXT,
-      srgb: s3tcSrgb.COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT,
+      linear: s3tcLinearFormat,
+      srgb: s3tcSrgbFormat,
     });
   }
 

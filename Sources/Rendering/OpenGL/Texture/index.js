@@ -119,11 +119,32 @@ function vtkOpenGLTexture(publicAPI, model) {
         publicAPI.destroyTexture();
       }
       if (hasCompressedData) {
-        const compressedData = model.renderable.getCompressedData();
-        if (model.handle) {
-          publicAPI.destroyTexture();
-        }
-        if (publicAPI.create2DFromCompressed(compressedData)) {
+        // Reading the payload deep copies every mip out of the renderable and
+        // uploading it re-specifies every level, so both are done once per
+        // (payload, context) pair. A payload the context cannot decode also
+        // fails once per pair instead of retrying - and re-reporting - on
+        // every render, and a sampler-only change keeps the existing handle.
+        const payloadMTime =
+          model.renderable.getCompressedDataMTime?.() ??
+          model.renderable.getMTime();
+        const uploadIsStale =
+          model._compressedUploadContext !== model.context ||
+          payloadMTime > model._compressedUploadTime.getMTime();
+        if (uploadIsStale) {
+          if (model.handle) {
+            publicAPI.destroyTexture();
+          }
+          const uploaded = publicAPI.create2DFromCompressed(
+            model.renderable.getCompressedData()
+          );
+          model._compressedUploadContext = model.context;
+          model._compressedUploadTime.modified();
+          if (uploaded) {
+            publicAPI.activate();
+            publicAPI.sendParameters();
+            model.textureBuildTime.modified();
+          }
+        } else if (model.handle) {
           publicAPI.activate();
           publicAPI.sendParameters();
           model.textureBuildTime.modified();
@@ -270,6 +291,7 @@ function vtkOpenGLTexture(publicAPI, model) {
       model.context.deleteTexture(model.handle);
     }
     model._prevTexParams = null;
+    model._compressedUploadContext = null;
     model.handle = 0;
     model.numberOfDimensions = 0;
     model.target = 0;
@@ -357,6 +379,7 @@ function vtkOpenGLTexture(publicAPI, model) {
       rwin.deactivateTexture(publicAPI);
       model.context.deleteTexture(model.handle);
       model._prevTexParams = null;
+      model._compressedUploadContext = null;
       model.handle = 0;
       model.numberOfDimensions = 0;
       model.target = 0;
@@ -1991,6 +2014,7 @@ const DEFAULT_VALUES = {
   oglNorm16Ext: null,
   allocatedGPUMemoryInBytes: 0,
   compressed: false,
+  _compressedUploadContext: null,
   // by default it is enabled
   enableUseHalfFloat: true,
   // but by default we don't know if we can use half float base on the data range
@@ -2010,6 +2034,9 @@ export function extend(publicAPI, model, initialValues = {}) {
 
   model.textureBuildTime = {};
   macro.obj(model.textureBuildTime, { mtime: 0 });
+
+  model._compressedUploadTime = {};
+  macro.obj(model._compressedUploadTime, { mtime: 0 });
 
   // Build VTK API
   macro.set(publicAPI, model, ['format', 'openGLDataType']);
