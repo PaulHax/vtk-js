@@ -23,6 +23,23 @@ export interface vtkInteractorStyleImage extends vtkInteractorStyleTrackballCame
   handleLeftButtonRelease(callData: unknown): void;
 
   /**
+   * The inherited `handleMouseMove`, captured before it is overridden.
+   * @param callData event data
+   */
+  superHandleMouseMove(callData: unknown): void;
+
+  /**
+   * The inherited `handleLeftButtonPress`, captured before it is overridden.
+   * @param callData event data
+   */
+  superHandleLeftButtonPress(callData: unknown): void;
+
+  /**
+   * The inherited `handleLeftButtonRelease`, captured before it is overridden.
+   */
+  superHandleLeftButtonRelease(): void;
+
+  /**
    * Handles the start of a wheel event.
    * @param callData event data
    */

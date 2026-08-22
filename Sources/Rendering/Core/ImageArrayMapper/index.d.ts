@@ -74,6 +74,12 @@ export interface vtkImageArrayMapper
   getTotalSlices(): number;
 
   /**
+   * Get the slicing mode used to index into each image of the collection.
+   * @default SlicingMode.K
+   */
+  getSlicingMode(): SlicingMode;
+
+  /**
    *
    * @param {Number} slice The slice index.
    */

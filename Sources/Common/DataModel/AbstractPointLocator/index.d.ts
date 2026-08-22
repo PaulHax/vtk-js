@@ -34,6 +34,14 @@ export interface vtkAbstractPointLocator extends vtkLocator {
    * @returns {Bounds}
    */
   getBoundsByReference(): Nullable<Bounds>;
+
+  /**
+   * Get the number of buckets (divisions) currently used by the search
+   * structure.
+   *
+   * @returns {Number} The number of buckets.
+   */
+  getNumberOfBuckets(): number;
 }
 
 // ----------------------------------------------------------------------------

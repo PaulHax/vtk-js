@@ -39,6 +39,17 @@ export interface vtkActor2D extends vtkProp {
   getProperty(): vtkProperty2D;
 
   /**
+   * Create the property object if it does not exist yet and return it.
+   */
+  ensureProperty(): vtkProperty2D;
+
+  /**
+   * Set the property object that controls this actor's surface properties.
+   * @param {vtkProperty2D} property
+   */
+  setProperty(property: vtkProperty2D): boolean;
+
+  /**
    * Create a new property suitable for use with this type of Actor.
    * @param {IProperty2DInitialValues} [initialValues] (default: {})
    */

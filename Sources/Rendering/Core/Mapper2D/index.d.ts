@@ -1,6 +1,7 @@
 import { Nullable } from '../../../types';
 import { ColorMode, GetArray, ScalarMode } from '../Mapper/Constants';
 import { vtkDataArray } from '../../../Common/Core/DataArray';
+import { vtkImageData } from '../../../Common/DataModel/ImageData';
 import vtkAbstractMapper, {
   IAbstractMapperInitialValues,
 } from '../AbstractMapper';
@@ -59,6 +60,13 @@ export interface vtkMapper2D extends vtkAbstractMapper {
   ): IAbstractScalars;
 
   /**
+   * When scalars are mapped from cells,
+   * there is one color coordinate per cell instead of one per point
+   * in the array returned by getColorCoordinates().
+   */
+  getAreScalarsMappedFromCells(): boolean;
+
+  /**
    *
    */
   getArrayAccessMode(): number;
@@ -67,6 +75,11 @@ export interface vtkMapper2D extends vtkAbstractMapper {
    * Get the array name to color by.
    */
   getColorByArrayName(): Nullable<string>;
+
+  /**
+   * Provide read access to the color texture coordinate array.
+   */
+  getColorCoordinates(): Nullable<Float32Array>;
 
   /**
    * Provide read access to the color array.
@@ -84,6 +97,11 @@ export interface vtkMapper2D extends vtkAbstractMapper {
   getColorModeAsString(): string;
 
   /**
+   * Provide read access to the color texture map.
+   */
+  getColorTextureMap(): Nullable<vtkImageData>;
+
+  /**
    *
    * @default []
    */
@@ -98,6 +116,12 @@ export interface vtkMapper2D extends vtkAbstractMapper {
    * Get the transformCoordinate.
    */
   getTransformCoordinate(): any;
+
+  /**
+   *
+   * @default 0
+   */
+  getRenderTime(): number;
 
   /**
    * Return the method for obtaining scalar data.
@@ -208,6 +232,13 @@ export interface vtkMapper2D extends vtkAbstractMapper {
    * Set the transformCoordinate.
    */
   setTransformCoordinate(coordinate: any): boolean;
+
+  /**
+   *
+   * @param {Number} renderTime
+   * @default 0
+   */
+  setRenderTime(renderTime: number): boolean;
 
   /**
    * Control how the filter works with scalar point data and cell attribute

@@ -1,4 +1,5 @@
 import vtkActor, { IActorInitialValues } from '../Actor';
+import Presets from './Presets';
 
 export interface IStyle {
   text?: string;
@@ -111,5 +112,6 @@ export declare const DEFAULT_VALUES: Readonly<{
 export declare const vtkAnnotatedCubeActor: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  Presets: typeof Presets;
 };
 export default vtkAnnotatedCubeActor;

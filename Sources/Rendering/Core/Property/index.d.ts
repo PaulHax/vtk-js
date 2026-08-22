@@ -470,6 +470,24 @@ export interface vtkProperty extends vtkObject {
   setSpecular(specular: number): boolean;
 
   /**
+   * Set the roughness coefficient.
+   * @param {Number} roughness
+   */
+  setRoughness(roughness: number): boolean;
+
+  /**
+   * Set the metallic coefficient.
+   * @param {Number} metallic
+   */
+  setMetallic(metallic: number): boolean;
+
+  /**
+   * Set the index of refraction of the base layer.
+   * @param {Number} baseIOR
+   */
+  setBaseIOR(baseIOR: number): boolean;
+
+  /**
    * Set the normal map strength.
    * @param {Boolean} normal
    */

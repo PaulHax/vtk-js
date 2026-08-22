@@ -42,6 +42,14 @@ export interface ICaptureOptions {
   scale?: number;
 }
 
+/**
+ * The payload of the windowResize event.
+ */
+export interface IWindowResizeEvent {
+  width: number;
+  height: number;
+}
+
 export interface vtkOpenGLRenderWindow extends vtkViewNode {
   /**
    * Builds myself.
@@ -419,16 +427,16 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
 
   /**
    * Call any registered callbacks whenever setSize() changes the size.
-   * @param {{width: number, height: number}} size
+   * @param {IWindowResizeEvent} size
    */
-  invokeWindowResizeEvent(size: { width: number; height: number }): void;
+  invokeWindowResizeEvent(size: IWindowResizeEvent): void;
 
   /**
    * Register a callback to be called whenever setSize() changes the size.
    * @param callback
    */
   onWindowResizeEvent(
-    callback: (size: { width: number; height: number }) => any
+    callback: (size: IWindowResizeEvent) => any
   ): vtkSubscription;
 
   /**

@@ -743,6 +743,27 @@ export interface VtkNormalizedWheelEvent {
 export function normalizeWheel(wheelEvent: object): VtkNormalizedWheelEvent;
 
 // ----------------------------------------------------------------------------
+// vtk.js internal use
+// ----------------------------------------------------------------------------
+
+/**
+ * Setter factories keyed by the `type` of an object field descriptor passed to
+ * `set`/`setGet`. Each factory returns the setter bound to `publicAPI`/`model`.
+ */
+declare const objectSetterMap: {
+  enum(
+    publicAPI: object,
+    model: object,
+    field: { name: string; enum: Record<string, number> }
+  ): (value: string | number) => boolean;
+  object(
+    publicAPI: object,
+    model: object,
+    field: { name: string; params?: string[] }
+  ): (...args: any[]) => boolean;
+};
+
+// ----------------------------------------------------------------------------
 // Default export
 // ----------------------------------------------------------------------------
 
@@ -768,6 +789,7 @@ declare const Macro: {
   newTypedArrayFrom: typeof newTypedArrayFrom;
   normalizeWheel: typeof normalizeWheel;
   obj: typeof obj;
+  objectSetterMap: typeof objectSetterMap;
   proxy: typeof proxy;
   proxyPropertyMapping: typeof proxyPropertyMapping;
   proxyPropertyState: typeof proxyPropertyState;

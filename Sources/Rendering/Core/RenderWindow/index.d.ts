@@ -164,6 +164,13 @@ export interface vtkRenderWindow extends vtkObject {
   removeView(view: any): void;
 
   /**
+   * Handle any pre-render initializations, such as creating a camera for any
+   * renderer that does not have an active one yet.
+   * Called by `render()`.
+   */
+  preRender(): void;
+
+  /**
    *
    */
   render(): void;

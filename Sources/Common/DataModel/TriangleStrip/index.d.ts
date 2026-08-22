@@ -1,7 +1,10 @@
 import { CellType, Vector3 } from '../../../types';
 import vtkCellArray from '../../Core/CellArray';
+import vtkDataArray from '../../Core/DataArray';
 import vtkPoints from '../../Core/Points';
 import vtkCell, { ICellInitialValues } from '../Cell';
+import vtkDataSetAttributes from '../DataSetAttributes';
+import vtkPointLocator from '../PointLocator';
 import vtkLine from '../Line';
 import vtkTriangle from '../Triangle';
 
@@ -18,6 +21,51 @@ export interface vtkTriangleStrip extends vtkCell {
    * @param {Vector3[]} pts The points of the cell.
    */
   cellBoundary(subId: number, pcoords: Vector3, pts: Vector3[]): boolean;
+
+  /**
+   * Clip the strip against the given scalar value by clipping each of its
+   * triangles in turn, appending the results to tris.
+   *
+   * @param {Number} value The clipping value
+   * @param {vtkDataArray} cellScalars The scalar value at each strip point
+   * @param {vtkPointLocator} locator Merges the generated points
+   * @param {vtkCellArray} tris Receives the generated triangles
+   * @param {vtkDataSetAttributes} inPd Input point data
+   * @param {vtkDataSetAttributes} outPd Output point data
+   * @param {vtkDataSetAttributes} inCd Input cell data
+   * @param {Number} cellId The id of this cell in the input
+   * @param {vtkDataSetAttributes} outCd Output cell data
+   * @param {Boolean} insideOut Keep the region below the value instead of above
+   */
+  clip(
+    value: number,
+    cellScalars: vtkDataArray,
+    locator: vtkPointLocator,
+    tris: vtkCellArray,
+    inPd: vtkDataSetAttributes,
+    outPd: vtkDataSetAttributes,
+    inCd: vtkDataSetAttributes,
+    cellId: number,
+    outCd: vtkDataSetAttributes,
+    insideOut: boolean
+  ): void;
+
+  /**
+   * Not implemented: always throws.
+   */
+  contour(
+    value: number,
+    cellScalars: vtkDataArray,
+    locator: vtkPointLocator,
+    verts: vtkCellArray,
+    lines: vtkCellArray,
+    polys: vtkCellArray,
+    inPd: vtkDataSetAttributes,
+    outPd: vtkDataSetAttributes,
+    inCd: vtkDataSetAttributes,
+    cellId: number,
+    outCd: vtkDataSetAttributes
+  ): void;
 
   /**
    * Derivatives of the triangle strip.

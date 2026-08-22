@@ -1,3 +1,4 @@
+import { vtkObject } from '../../../interfaces';
 import { Range, RGBAColor } from '../../../types';
 import vtkDataArray from '../DataArray';
 import { ScalarMappingTarget } from '../ScalarsToColors/Constants';
@@ -54,6 +55,11 @@ export interface vtkLookupTable extends vtkScalarsToColors {
    *
    */
   getAlphaRangeByReference(): Range;
+
+  /**
+   * The timestamp of the last color table build.
+   */
+  getBuildTime(): vtkObject;
 
   /**
    *

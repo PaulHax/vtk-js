@@ -252,6 +252,13 @@ export interface vtkImageProperty extends vtkObject {
   setUseLookupTableScalarRange(useLookupTableScalarRange: boolean): boolean;
 
   /**
+   * Check whether the range set on the lookup table is used instead of the
+   * range derived from the ColorWindow/ColorLevel settings.
+   * @default false
+   */
+  getUseLookupTableScalarRange(): boolean;
+
+  /**
    * Informs the mapper to only update the specified extents at the next render.
    *
    * If there are zero extents, the mapper updates the entire volume texture.

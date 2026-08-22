@@ -56,6 +56,16 @@ export interface vtkCellPicker extends vtkPicker {
   setOpacityThreshold(value: number);
 
   /**
+   * Get the normal of the surface at the PickPosition, in world coordinates.
+   */
+  getPickNormal(): number[];
+
+  /**
+   * Get the normal of the surface at the PickPosition, in world coordinates.
+   */
+  getPickNormalByReference(): number[];
+
+  /**
    * Get the parametric coordinates of the picked cell.
    */
   getPCoords(): number[];

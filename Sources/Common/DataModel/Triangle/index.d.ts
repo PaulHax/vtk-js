@@ -1,5 +1,9 @@
 import { Vector2, Vector3 } from '../../../types';
+import vtkCellArray from '../../Core/CellArray';
+import vtkDataArray from '../../Core/DataArray';
 import vtkCell, { ICellInitialValues } from '../Cell';
+import vtkDataSetAttributes from '../DataSetAttributes';
+import vtkPointLocator from '../PointLocator';
 
 export interface ITriangleInitialValues extends ICellInitialValues {}
 
@@ -26,6 +30,34 @@ export interface IEvaluatePositionResult {
 }
 
 export interface vtkTriangle extends vtkCell {
+  /**
+   * Clip the triangle against the given scalar value, appending the resulting
+   * triangles to tris and their interpolated attributes to outPd/outCd.
+   *
+   * @param {Number} value The clipping value
+   * @param {vtkDataArray} cellScalars The scalar value at each triangle corner
+   * @param {vtkPointLocator} locator Merges the generated points
+   * @param {vtkCellArray} tris Receives the generated triangles
+   * @param {vtkDataSetAttributes} inPd Input point data
+   * @param {vtkDataSetAttributes} outPd Output point data
+   * @param {vtkDataSetAttributes} inCd Input cell data
+   * @param {Number} cellId The id of this cell in the input
+   * @param {vtkDataSetAttributes} outCd Output cell data
+   * @param {Boolean} insideOut Keep the region below the value instead of above
+   */
+  clip(
+    value: number,
+    cellScalars: vtkDataArray,
+    locator: vtkPointLocator,
+    tris: vtkCellArray,
+    inPd: vtkDataSetAttributes,
+    outPd: vtkDataSetAttributes,
+    inCd: vtkDataSetAttributes,
+    cellId: number,
+    outCd: vtkDataSetAttributes,
+    insideOut: boolean
+  ): void;
+
   /**
    * Get the topological dimensional of the cell (0, 1, 2 or 3).
    */

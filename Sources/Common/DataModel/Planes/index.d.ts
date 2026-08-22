@@ -64,6 +64,15 @@ export interface vtkPlanes extends vtkImplicitFunction {
   getPlane(i: number, plane?: vtkPlane): vtkPlane;
 
   /**
+   * Get the raw frustum plane coefficients (4 per plane).
+   *
+   * Defaults to a 24 element Float64Array, but becomes a plain array once
+   * setFrustumPlanes() has been called.
+   * @see setFrustumPlanes
+   */
+  getPlanes(): Float64Array | number[];
+
+  /**
    * Set the bounds of the planes.
    * @param {Bounds} bounds The bounds to set.
    * @returns {Boolean} true if bounds were set, false if they were already set

@@ -114,6 +114,16 @@ export interface vtkImageSlice extends vtkProp3D {
   setMapper(mapper: vtkAbstractImageMapper): boolean;
 
   /**
+   * If true, render during the opaque pass even if the opacity value is below 1.0.
+   */
+  getForceOpaque(): boolean;
+
+  /**
+   * If true, render during the translucent pass even if the opacity value is 1.0.
+   */
+  getForceTranslucent(): boolean;
+
+  /**
    *
    * @param {boolean} forceOpaque If true, render during opaque pass even if opacity value is below 1.0.
    */

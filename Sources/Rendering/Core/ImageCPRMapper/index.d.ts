@@ -2,9 +2,9 @@ import { mat3, mat4, quat, vec3 } from 'gl-matrix';
 import { Nullable } from '../../../types';
 import { vtkOutputPort } from '../../../interfaces';
 import {
-  vtkAbstractMapper3D,
-  IAbstractMapper3DInitialValues,
-} from '../AbstractMapper3D';
+  vtkAbstractImageMapper,
+  IAbstractImageMapperInitialValues,
+} from '../AbstractImageMapper';
 import { vtkDataArray } from '../../../Common/Core/DataArray';
 import { vtkImageData } from '../../../Common/DataModel/ImageData';
 import { vtkPolyData } from '../../../Common/DataModel/PolyData';
@@ -17,7 +17,7 @@ import {
 
 type TOrientation = mat4 | mat3 | quat | vec3;
 
-export interface IImageCPRMapperInitialValues extends IAbstractMapper3DInitialValues {
+export interface IImageCPRMapperInitialValues extends IAbstractImageMapperInitialValues {
   width?: number;
   uniformOrientation?: TOrientation; // Don't use vec3 if possible
   useUniformOrientation?: boolean;
@@ -29,7 +29,7 @@ export interface IImageCPRMapperInitialValues extends IAbstractMapper3DInitialVa
 }
 
 export interface vtkImageCPRMapper
-  extends vtkAbstractMapper3D, CoincidentTopologyHelper {
+  extends vtkAbstractImageMapper, CoincidentTopologyHelper {
   /**
    * @returns the width of the image in model coordinates of the input volume
    */

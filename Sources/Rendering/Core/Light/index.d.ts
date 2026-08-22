@@ -112,6 +112,26 @@ export interface vtkLight extends vtkObject {
   getPositional(): boolean;
 
   /**
+   * Get the shadow intensity of the light.
+   * By default a light will be completely blocked when in shadow. By setting
+   * this value to less than 1.0 you can control how much light is attenuated
+   * when in shadow.
+   */
+  getShadowAttenuation(): number;
+
+  /**
+   * Get whether the light is on or off.
+   */
+  getSwitch(): boolean;
+
+  /**
+   * Get the light's transformation matrix. If a matrix is set for a light,
+   * the light's parameters (position and focal point) are transformed by the
+   * matrix before being rendered.
+   */
+  getTransformMatrix(): mat4 | null;
+
+  /**
    * Get the position of the light, modified by the transformation matrix (if
    * it exists).
    */

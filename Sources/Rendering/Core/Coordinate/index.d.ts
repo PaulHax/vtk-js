@@ -77,6 +77,11 @@ export interface vtkCoordinate extends vtkObject {
   getValue(): number[];
 
   /**
+   * Get the value of this coordinate.
+   */
+  getValueByReference(): number[];
+
+  /**
    *
    */
   getReferenceCoordinate(): Nullable<vtkCoordinate>;
