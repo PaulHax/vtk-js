@@ -8,6 +8,7 @@ import { XrSessionTypes } from './Constants';
  */
 export interface IWebXRRenderWindowHelperInitialValues {
   initialized?: boolean;
+  drawControllersRay?: boolean;
   initCanvasSize?: [number, number];
   initBackground?: [number, number, number, number];
   renderWindow?: Nullable<vtkOpenGLRenderWindow>;
@@ -21,6 +22,11 @@ export interface vtkWebXRRenderWindowHelper extends vtkObject {
    * Initialize the instance.
    */
   initialize(): void;
+
+  /**
+   * Whether the browser exposes the WebXR device API.
+   */
+  getXrSupported(): boolean;
 
   /**
    * Request an XR session on the user device with WebXR,
@@ -61,6 +67,16 @@ export interface vtkWebXRRenderWindowHelper extends vtkObject {
    * Get the active WebXR session.
    */
   getXrSession(): Nullable<XRSession>;
+
+  /**
+   * Whether a ray is drawn from each tracked-pointer controller.
+   */
+  getDrawControllersRay(): boolean;
+
+  /**
+   * Set whether a ray is drawn from each tracked-pointer controller.
+   */
+  setDrawControllersRay(drawControllersRay: boolean): boolean;
 
   /**
    * Subscribe to the generic event fired by this helper.

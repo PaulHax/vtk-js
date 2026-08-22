@@ -40,6 +40,23 @@ export interface ITextureInitialValues {
 }
 
 /**
+ * Scale and offset needed to map texture values back to data values, as
+ * `data = texture * scale + offset`.
+ *
+ * The dimensions and the data-computed scale/offset are only recorded when the
+ * texture is built from a data array.
+ */
+export interface ITextureVolumeInfo {
+  scale: number[];
+  offset: number[];
+  dataComputedScale?: number[];
+  dataComputedOffset?: number[];
+  width?: number;
+  height?: number;
+  depth?: number;
+}
+
+/**
  * Interface for OpenGL Texture.
  */
 export interface vtkOpenGLTexture extends vtkViewNode {
@@ -244,6 +261,26 @@ export interface vtkOpenGLTexture extends vtkViewNode {
   }): boolean;
 
   /**
+   * Creates a 2D depth texture from raw data.
+   * @param width The width of the texture.
+   * @param height The height of the texture.
+   * @param dataType The data type of the texture.
+   * @param data The raw data for the texture.
+   * @returns {boolean} True if the texture was successfully created, false otherwise.
+   */
+  createDepthFromRaw({
+    width,
+    height,
+    dataType,
+    data,
+  }: {
+    width: number;
+    height: number;
+    dataType: VtkDataTypes;
+    data: any;
+  }): boolean;
+
+  /**
    * Creates a 2D texture from an image.
    * @param image The image to use for the texture.
    * @returns {boolean} True if the texture was successfully created, false otherwise.
@@ -427,6 +464,156 @@ export interface vtkOpenGLTexture extends vtkViewNode {
    * @param useHalfFloat - whether to use half float
    */
   enableUseHalfFloat(useHalfFloat: boolean): void;
+
+  /**
+   * Whether half float is both enabled and usable for the current data range.
+   * @returns {boolean} True when half float is in use.
+   */
+  useHalfFloat(): boolean;
+
+  /**
+   * Recomputes the scale and offset stored in the volume info for the given
+   * data type and number of components.
+   * @param dataType The VTK data type of the texture data.
+   * @param numComps The number of components in the texture.
+   * @returns {boolean} True if a scaling was applied for that data type.
+   */
+  updateVolumeInfoForGL(dataType: VtkDataTypes, numComps: number): boolean;
+
+  /**
+   * Gets the scale and offset mapping texture values back to data values.
+   */
+  getVolumeInfo(): ITextureVolumeInfo;
+
+  /**
+   * Gets the width of the texture.
+   */
+  getWidth(): number;
+
+  /**
+   * Gets the height of the texture.
+   */
+  getHeight(): number;
+
+  /**
+   * Gets the number of components of the texture.
+   */
+  getComponents(): number;
+
+  /**
+   * Gets the underlying WebGL texture object, or 0 when no texture is allocated.
+   */
+  getHandle(): WebGLTexture | number;
+
+  /**
+   * Gets the OpenGL texture target.
+   */
+  getTarget(): number;
+
+  /**
+   * Gets the amount of GPU memory allocated for this texture, in bytes.
+   */
+  getAllocatedGPUMemoryInBytes(): number;
+
+  /**
+   * Sets the format for the texture.
+   * @param format The format to set.
+   */
+  setFormat(format: number): boolean;
+
+  /**
+   * Sets the OpenGL data type for the texture.
+   * @param openGLDataType The OpenGL data type to set.
+   */
+  setOpenGLDataType(openGLDataType: number): boolean;
+
+  /**
+   * Gets the time stamp used to track matrix updates.
+   */
+  getKeyMatrixTime(): vtkObject;
+
+  /**
+   * Sets the time stamp used to track matrix updates.
+   * @param keyMatrixTime The time stamp to set.
+   */
+  setKeyMatrixTime(keyMatrixTime: vtkObject): boolean;
+
+  /**
+   * Gets the minification filter.
+   */
+  getMinificationFilter(): Filter;
+
+  /**
+   * Sets the minification filter.
+   * @param minificationFilter The filter to set.
+   */
+  setMinificationFilter(minificationFilter: Filter): boolean;
+
+  /**
+   * Gets the magnification filter.
+   */
+  getMagnificationFilter(): Filter;
+
+  /**
+   * Sets the magnification filter.
+   * @param magnificationFilter The filter to set.
+   */
+  setMagnificationFilter(magnificationFilter: Filter): boolean;
+
+  /**
+   * Gets the wrap mode along S.
+   */
+  getWrapS(): Wrap;
+
+  /**
+   * Sets the wrap mode along S.
+   * @param wrapS The wrap mode to set.
+   */
+  setWrapS(wrapS: Wrap): boolean;
+
+  /**
+   * Gets the wrap mode along T.
+   */
+  getWrapT(): Wrap;
+
+  /**
+   * Sets the wrap mode along T.
+   * @param wrapT The wrap mode to set.
+   */
+  setWrapT(wrapT: Wrap): boolean;
+
+  /**
+   * Gets the wrap mode along R.
+   */
+  getWrapR(): Wrap;
+
+  /**
+   * Sets the wrap mode along R.
+   * @param wrapR The wrap mode to set.
+   */
+  setWrapR(wrapR: Wrap): boolean;
+
+  /**
+   * Gets whether mipmaps are generated for the texture.
+   */
+  getGenerateMipmap(): boolean;
+
+  /**
+   * Sets whether mipmaps are generated for the texture.
+   * @param generateMipmap Whether to generate mipmaps.
+   */
+  setGenerateMipmap(generateMipmap: boolean): boolean;
+
+  /**
+   * Gets the EXT_texture_norm16 extension object, if available.
+   */
+  getOglNorm16Ext(): any;
+
+  /**
+   * Sets the EXT_texture_norm16 extension object.
+   * @param oglNorm16Ext The extension object.
+   */
+  setOglNorm16Ext(oglNorm16Ext: any): boolean;
 }
 
 /**
