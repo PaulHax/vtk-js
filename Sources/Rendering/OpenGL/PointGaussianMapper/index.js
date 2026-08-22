@@ -341,8 +341,11 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       vbo.setColorOffset(0);
       vbo.setColorBOStride(4);
       colorData = c.getData();
+      // Cell scalars produce one tuple per cell, not per point, so the array
+      // being RGBA bytes is not enough to know it covers every drawn point.
       packedUCVBO =
         colorComponents === 4 &&
+        colorData.length === numPoints * 4 &&
         (colorData instanceof Uint8Array ||
           colorData instanceof Uint8ClampedArray)
           ? colorData
@@ -371,7 +374,8 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     const packedVBO =
       !useShiftAndScale &&
       pointArray instanceof Float32Array &&
-      points.getNumberOfComponents() === 3
+      points.getNumberOfComponents() === 3 &&
+      pointArray.length === numPoints * blockSize
         ? pointArray
         : new Float32Array(blockSize * numPoints);
     const copyPoints = packedVBO !== pointArray;
