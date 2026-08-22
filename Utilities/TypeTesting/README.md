@@ -26,11 +26,20 @@ mismatch or update the baseline with the specific intentional exception.
 Removing a known mismatch also requires removing its baseline entry.
 
 In `surface-baseline.json`, `ghostMembers` (declared members absent from the
-runtime) should stay empty; `undeclaredMembers` is accepted declaration debt.
-`uninstantiable` lists factories whose `newInstance` needs browser globals, so
-only their static surface is checked headlessly. `importFailures` lists
-modules the Node ESM loader cannot import at all (browser globals or broken
-transitive packaging); their runtime surface is unverifiable in Node.
+runtime) should stay empty apart from abstract members that only subclasses
+implement; the single entry is `vtkAbstractManipulator.handleEvent`, which
+every concrete manipulator defines and the abstract factory does not.
+`undeclaredMembers` is accepted declaration debt. Three groups make up most of
+it: `vtkVolumeMapper` installs throwing stubs for the methods that moved to the
+volume property, and those must stay undeclared; `vtkIncrementalOctreePointLocator`
+declares no instance members at all; and the OpenGL and WebXR backends expose
+render-pass internals their declarations skip. `uninstantiable` lists factories
+whose `newInstance` needs browser globals, so only their static surface is
+checked headlessly. `importFailures` lists modules the Node ESM loader cannot
+import at all (browser globals or broken transitive packaging); their runtime
+surface is unverifiable in Node. `IO/Misc/PDBReader` is there because a
+transitive dependency ships ESM syntax from a CommonJS package, which also
+breaks it for Node consumers of vtk.js.
 
 The census ignores the named value side of vtk.js's merged default-factory
 declaration pattern. Those declarations preserve default imports in type

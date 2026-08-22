@@ -1,7 +1,285 @@
 {
   "defaultMismatches": {},
-  "ghostMembers": {},
-  "undeclaredMembers": {},
-  "importFailures": [],
-  "uninstantiable": []
+  "ghostMembers": {
+    "Widgets/Manipulators/AbstractManipulator#instance": [
+      "handleEvent"
+    ]
+  },
+  "importFailures": [
+    "IO/Misc/PDBReader",
+    "Rendering/Misc/FullScreenRenderWindow",
+    "Rendering/Misc/GenericRenderWindow",
+    "Rendering/Misc/RemoteView",
+    "Rendering/Misc/RenderWindowWithControlBar"
+  ],
+  "undeclaredMembers": {
+    "Common/Core/LookupTable#instance": [
+      "getBuildTime"
+    ],
+    "Common/DataModel/IncrementalOctreePointLocator#instance": [
+      "findClosestPointInLeafNode",
+      "findClosestPointInSphere",
+      "findClosestPointInSphereWithTolerance",
+      "findDuplicateDoubleTypePointInVisitedLeafNode",
+      "findDuplicateFloatTypePointInVisitedLeafNode",
+      "findDuplicatePointInLeafNode",
+      "freeSearchStructure",
+      "getAutomatic",
+      "getBounds",
+      "getBoundsByReference",
+      "getBuildCubicOctree",
+      "getDataSet",
+      "getFudgeFactor",
+      "getInsertTolerance2",
+      "getLevel",
+      "getLocatorPoints",
+      "getMaxLevel",
+      "getMaxPointsPerLeaf",
+      "getNumberOfBuckets",
+      "getNumberOfNodes",
+      "getOctreeMaxDimSize",
+      "getOctreeRootNode",
+      "getTolerance",
+      "getUseExistingSearchStructure",
+      "initPointInsertion",
+      "insertNextPoint",
+      "insertPoint",
+      "insertUniquePoint",
+      "isInsertedPoint",
+      "isInsertedPointForNonZeroTolerance",
+      "isInsertedPointForZeroTolerance",
+      "setAutomatic",
+      "setBounds",
+      "setBoundsFrom",
+      "setBuildCubicOctree",
+      "setDataSet",
+      "setFudgeFactor",
+      "setInsertTolerance2",
+      "setLocatorPoints",
+      "setMaxLevel",
+      "setMaxPointsPerLeaf",
+      "setNumberOfNodes",
+      "setOctreeMaxDimSize",
+      "setOctreeRootNode",
+      "setTolerance",
+      "setUseExistingSearchStructure"
+    ],
+    "Common/DataModel/IncrementalPointLocator#instance": [
+      "getNumberOfBuckets"
+    ],
+    "Common/DataModel/Line#default": [
+      "IntersectionState"
+    ],
+    "Common/DataModel/MergePoints#instance": [
+      "buildLocator",
+      "computePerformanceFactors",
+      "getBucketIndex",
+      "getBucketIndices",
+      "getNumberOfBuckets",
+      "initialize"
+    ],
+    "Common/DataModel/Planes#instance": [
+      "getPlanes"
+    ],
+    "Common/DataModel/PointLocator#instance": [
+      "buildLocator",
+      "computePerformanceFactors",
+      "getBucketIndex",
+      "getBucketIndices",
+      "getNumberOfBuckets",
+      "initialize"
+    ],
+    "Common/DataModel/Spline3D#instance": [
+      "getClose",
+      "getIntervals",
+      "setClose",
+      "setIntervals"
+    ],
+    "Common/DataModel/Triangle#instance": [
+      "clip"
+    ],
+    "Common/DataModel/TriangleStrip#instance": [
+      "clip",
+      "contour"
+    ],
+    "Common/Transform/LandmarkTransform#default": [
+      "Mode"
+    ],
+    "Interaction/Style/InteractorStyleImage#instance": [
+      "superHandleLeftButtonPress",
+      "superHandleLeftButtonRelease",
+      "superHandleMouseMove"
+    ],
+    "macros#default": [
+      "objectSetterMap"
+    ],
+    "Rendering/Core/Actor2D#instance": [
+      "ensureProperty",
+      "setProperty"
+    ],
+    "Rendering/Core/AnnotatedCubeActor#default": [
+      "Presets"
+    ],
+    "Rendering/Core/CellPicker#instance": [
+      "getPickNormal",
+      "getPickNormalByReference"
+    ],
+    "Rendering/Core/Coordinate#instance": [
+      "getValueByReference"
+    ],
+    "Rendering/Core/Glyph3DMapper#instance": [
+      "getBuildTime",
+      "getColorArray",
+      "getMatrixArray",
+      "getNormalArray",
+      "getOrient",
+      "getScaling",
+      "setOrient",
+      "setScaling"
+    ],
+    "Rendering/Core/ImageArrayMapper#instance": [
+      "getSlicingMode"
+    ],
+    "Rendering/Core/ImageCPRMapper#instance": [
+      "getBackgroundColor",
+      "getBackgroundColorByReference",
+      "getBoundsForSlice",
+      "getColorTextureWidth",
+      "getCurrentImage",
+      "getCustomDisplayExtent",
+      "getCustomDisplayExtentByReference",
+      "getIsOpaque",
+      "getLabelOutlineTextureWidth",
+      "getOpacityTextureWidth",
+      "getSlice",
+      "getUseCustomExtents",
+      "setBackgroundColor",
+      "setBackgroundColorFrom",
+      "setColorTextureWidth",
+      "setCustomDisplayExtent",
+      "setCustomDisplayExtentFrom",
+      "setLabelOutlineTextureWidth",
+      "setOpacityTextureWidth",
+      "setSlice",
+      "setUseCustomExtents"
+    ],
+    "Rendering/Core/ImageProperty#instance": [
+      "getUseLookupTableScalarRange"
+    ],
+    "Rendering/Core/ImageSlice#instance": [
+      "getForceOpaque",
+      "getForceTranslucent"
+    ],
+    "Rendering/Core/Light#instance": [
+      "getShadowAttenuation",
+      "getSwitch",
+      "getTransformMatrix"
+    ],
+    "Rendering/Core/Mapper2D#instance": [
+      "getAreScalarsMappedFromCells",
+      "getColorCoordinates",
+      "getColorTextureMap",
+      "getRenderTime",
+      "setRenderTime"
+    ],
+    "Rendering/Core/Property#instance": [
+      "setBaseIOR",
+      "setMetallic",
+      "setRoughness"
+    ],
+    "Rendering/Core/RenderWindow#instance": [
+      "preRender"
+    ],
+    "Rendering/Core/ScalarBarActor#default": [
+      "Orientation",
+      "newScalarBarActorHelper"
+    ],
+    "Rendering/Core/StickMapper#instance": [
+      "getOrientationArray",
+      "setLength",
+      "setOrientationArray"
+    ],
+    "Rendering/Core/VolumeMapper#instance": [
+      "getAnisotropy",
+      "getComputeNormalFromOpacity",
+      "getFilterMode",
+      "getFilterModeAsString",
+      "getGlobalIlluminationReach",
+      "getIpScalarRange",
+      "getIpScalarRangeByReference",
+      "getLAOKernelRadius",
+      "getLAOKernelSize",
+      "getLocalAmbientOcclusion",
+      "getPreferSizeOverAccuracy",
+      "getVolumetricScatteringBlending",
+      "setAnisotropy",
+      "setAverageIPScalarRange",
+      "setComputeNormalFromOpacity",
+      "setFilterMode",
+      "setFilterModeToNormalized",
+      "setFilterModeToOff",
+      "setFilterModeToRaw",
+      "setGlobalIlluminationReach",
+      "setIpScalarRange",
+      "setIpScalarRangeFrom",
+      "setLAOKernelRadius",
+      "setLAOKernelSize",
+      "setLocalAmbientOcclusion",
+      "setPreferSizeOverAccuracy",
+      "setVolumetricScatteringBlending"
+    ],
+    "Rendering/OpenGL/Texture#instance": [
+      "addMissingChildren",
+      "createDepthFromRaw",
+      "getAllocatedGPUMemoryInBytes",
+      "getComponents",
+      "getGenerateMipmap",
+      "getHandle",
+      "getHeight",
+      "getKeyMatrixTime",
+      "getMagnificationFilter",
+      "getMinificationFilter",
+      "getOglNorm16Ext",
+      "getTarget",
+      "getVolumeInfo",
+      "getWidth",
+      "getWrapR",
+      "getWrapS",
+      "getWrapT",
+      "setFormat",
+      "setGenerateMipmap",
+      "setKeyMatrixTime",
+      "setMagnificationFilter",
+      "setMinificationFilter",
+      "setOglNorm16Ext",
+      "setOpenGLDataType",
+      "setWrapR",
+      "setWrapS",
+      "setWrapT",
+      "updateVolumeInfoForGL",
+      "useHalfFloat"
+    ],
+    "Rendering/SceneGraph/ViewNode#instance": [
+      "addMissingChildren"
+    ],
+    "Rendering/WebXR/RenderWindowHelper#instance": [
+      "getDrawControllersRay",
+      "getXrSupported",
+      "setDrawControllersRay"
+    ]
+  },
+  "uninstantiable": [
+    "IO/Core/ImageStream/ViewStream",
+    "IO/Geometry/GLTFImporter",
+    "Interaction/Widgets/OrientationMarkerWidget",
+    "Interaction/Widgets/PiecewiseGaussianWidget",
+    "Proxy/Core/View2DProxy",
+    "Proxy/Core/ViewProxy",
+    "Rendering/Core/AnnotatedCubeActor",
+    "Rendering/Core/RenderWindowInteractor",
+    "Rendering/Core/TextActor",
+    "Rendering/Misc/CanvasView",
+    "Rendering/OpenGL/RenderWindow",
+    "Widgets/Core/AbstractWidget"
+  ]
 }
