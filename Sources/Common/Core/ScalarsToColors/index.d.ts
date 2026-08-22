@@ -8,6 +8,8 @@ import { ScalarMappingTarget, Scale, VectorMode } from './Constants';
  *
  */
 export interface IScalarsToColorsInitialValues {
+  mappingRange?: Range;
+  vectorMode?: VectorMode;
   alpha?: number;
   vectorComponent?: number;
   vectorSize?: number;

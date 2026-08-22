@@ -21,6 +21,9 @@ export interface ISubstitutionResult {
  * Initial values for creating a new instance of vtkShaderProgram.
  */
 export interface IShaderProgramInitialValues {
+  fragmentShader?: vtkShader;
+  geometryShader?: vtkShader;
+  vertexShader?: vtkShader;
   vertexShaderHandle?: WebGLShader | number;
   fragmentShaderHandle?: WebGLShader | number;
   geometryShaderHandle?: WebGLShader | number;

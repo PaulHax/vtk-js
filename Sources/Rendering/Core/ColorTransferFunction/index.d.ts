@@ -1,8 +1,22 @@
 import vtkDataArray from '../../../Common/Core/DataArray';
-import vtkScalarsToColors from '../../../Common/Core/ScalarsToColors';
+import vtkScalarsToColors, {
+  IScalarsToColorsInitialValues,
+} from '../../../Common/Core/ScalarsToColors';
 import { vtkObject } from '../../../interfaces';
 import { RGBAColor } from '../../../types';
 import { ColorSpace, Scale } from './Constants';
+
+export interface IColorTransferFunctionInitialValues extends IScalarsToColorsInitialValues {
+  aboveRangeColor?: RGBAColor;
+  belowRangeColor?: RGBAColor;
+  colorSpace?: ColorSpace;
+  discretize?: boolean;
+  nanColor?: RGBAColor;
+  numberOfValues?: number;
+  scale?: Scale;
+  useAboveRangeColor?: boolean;
+  useBelowRangeColor?: boolean;
+}
 
 export interface vtkColorTransferFunction extends vtkScalarsToColors {
   /**
@@ -503,14 +517,16 @@ export interface vtkColorTransferFunction extends vtkScalarsToColors {
 export function extend(
   publicAPI: object,
   model: object,
-  initialValues?: object
+  initialValues?: IColorTransferFunctionInitialValues
 ): void;
 
 /**
  * Method use to create a new instance of vtkColorTransferFunction
  * @param {object} [initialValues] for pre-setting some of its content
  */
-export function newInstance(initialValues?: object): vtkColorTransferFunction;
+export function newInstance(
+  initialValues?: IColorTransferFunctionInitialValues
+): vtkColorTransferFunction;
 
 /**
  * vtkColorTransferFunction is a color mapping in RGB or HSV space that

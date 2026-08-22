@@ -6,6 +6,8 @@ import vtkViewNode from '../ViewNode';
  *
  */
 export interface IRenderPassInitialValues {
+  currentOperation?: string;
+  currentParent?: any;
   delegates?: Array<any>;
   preDelegateOperations?: Array<any>;
   postDelegateOperations?: Array<any>;

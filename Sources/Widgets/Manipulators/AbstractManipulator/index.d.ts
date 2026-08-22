@@ -6,6 +6,8 @@ import { Matrix3x3, Nullable, Vector3 } from '../../../types';
  *
  */
 export interface IAbstractManipulatorInitialValues {
+  useCameraFocalPoint?: boolean;
+  useCameraNormal?: boolean;
   userOrigin?: Vector3;
   handleOrigin?: Vector3;
   widgetOrigin?: Vector3;

@@ -13,7 +13,9 @@ interface ITIFFReaderOptions {
 /**
  *
  */
-export interface ITIFFReaderInitialValues {}
+export interface ITIFFReaderInitialValues {
+  flipY?: boolean;
+}
 
 type vtkTIFFReaderBase = vtkObject &
   Omit<

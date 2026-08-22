@@ -1,11 +1,20 @@
-import { vtkInteractorObserver } from '../../../Rendering/Core/InteractorObserver';
-import { vtkProp } from '../../../Rendering/Core/Prop';
+import {
+  IInteractorObserverInitialValues,
+  vtkInteractorObserver,
+} from '../../../Rendering/Core/InteractorObserver';
+import { IPropInitialValues, vtkProp } from '../../../Rendering/Core/Prop';
 import { vtkWidgetManager } from '../WidgetManager';
 import { vtkWidgetRepresentation } from '../../Representations/WidgetRepresentation';
 import { vtkWidgetState } from '../WidgetState';
 import { Bounds } from '../../../types';
 import { RenderingTypes } from '../WidgetManager/Constants';
 import { EventHandler, vtkSubscription } from '../../../interfaces';
+
+export interface IAbstractWidgetInitialValues
+  extends IPropInitialValues, IInteractorObserverInitialValues {
+  contextVisibility?: boolean;
+  handleVisibility?: boolean;
+}
 
 export interface vtkAbstractWidget extends vtkProp, vtkInteractorObserver {
   /**
@@ -171,7 +180,7 @@ export interface vtkAbstractWidget extends vtkProp, vtkInteractorObserver {
 export function extend(
   publicAPI: object,
   model: object,
-  initialValues?: object
+  initialValues?: IAbstractWidgetInitialValues
 ): void;
 
 /**
@@ -179,7 +188,9 @@ export function extend(
  *
  * @param initialValues For pre-setting some of its content
  */
-export function newInstance(initialValues?: object): vtkAbstractWidget;
+export function newInstance(
+  initialValues?: IAbstractWidgetInitialValues
+): vtkAbstractWidget;
 
 /**
  * vtkAbstractWidget is an abstract class to construct a widget.

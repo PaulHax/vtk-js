@@ -9,6 +9,7 @@ export enum LIGHT_TYPES {
 }
 
 export interface ILightInitialValues {
+  transformMatrix?: mat4;
   switch?: boolean;
   intensity?: number;
   color?: RGBColor;

@@ -13,6 +13,8 @@ export type { FormatTypes, TextureCoordinatesName };
  *
  */
 export interface IPLYWriterInitialValues {
+  headerComments?: string[];
+  withIndices?: boolean;
   format?: FormatTypes;
   dataByteOrder?: number;
   comments?: string[];

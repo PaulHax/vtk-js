@@ -6,6 +6,8 @@ import vtkAbstractImageMapper from '../AbstractImageMapper';
 import vtkProp3D, { IProp3DInitialValues } from '../Prop3D';
 
 export interface IImageSliceInitialValues extends IProp3DInitialValues {
+  forceOpaque?: boolean;
+  forceTranslucent?: boolean;
   mapper?: vtkAbstractImageMapper;
   property?: vtkImageProperty;
   bounds?: Bounds;

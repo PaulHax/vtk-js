@@ -1,6 +1,9 @@
 import { RGBColor } from '../../../types';
 import { SlicingMode } from '../../../Rendering/Core/ImageMapper/Constants';
-import { vtkAbstractRepresentationProxy } from '../../Core/AbstractRepresentationProxy';
+import {
+  IAbstractRepresentationProxyInitialValues,
+  vtkAbstractRepresentationProxy,
+} from '../../Core/AbstractRepresentationProxy';
 
 export interface vtkSlicedGeometryRepresentationProxy extends vtkAbstractRepresentationProxy {
   /**
@@ -37,14 +40,20 @@ export interface vtkSlicedGeometryRepresentationProxy extends vtkAbstractReprese
   setUseBounds(useBounds: boolean): boolean;
 }
 
+export interface ISlicedGeometryRepresentationProxyInitialValues extends IAbstractRepresentationProxyInitialValues {
+  offset?: number;
+  slice?: number;
+  slicingMode?: string | SlicingMode;
+}
+
 export function extend(
   publicAPI: object,
   model: object,
-  initialValues?: object
+  initialValues?: ISlicedGeometryRepresentationProxyInitialValues
 ): void;
 
 export function newInstance(
-  initialValues?: object
+  initialValues?: ISlicedGeometryRepresentationProxyInitialValues
 ): vtkSlicedGeometryRepresentationProxy;
 
 /**

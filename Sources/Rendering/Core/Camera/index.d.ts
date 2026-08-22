@@ -6,6 +6,7 @@ import { Bounds, Nullable, Vector3, Range } from '../../../types';
  *
  */
 export interface ICameraInitialValues {
+  modelTransformMatrix?: mat4;
   position?: number[];
   focalPoint?: number[];
   viewUp?: number[];

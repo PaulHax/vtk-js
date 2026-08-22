@@ -343,6 +343,9 @@ export interface vtkOpenGLHardwareSelector extends vtkHardwareSelector {
 }
 
 export interface IOpenGLHardwareSelectorInitialValues extends IHardwareSelectorInitialValues {
+  area?: Area;
+  currentPass?: PassTypes;
+  propColorValue?: Vector3;
   maximumPointId?: number;
   maximumCellId?: number;
   idOffset?: number;

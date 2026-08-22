@@ -1,6 +1,8 @@
 import vtkMapper, { IMapperInitialValues } from '../Mapper';
 
 export interface ISphereInitialValues extends IMapperInitialValues {
+  scaleArray?: any;
+  scaleFactor?: number;
   radius?: number;
 }
 

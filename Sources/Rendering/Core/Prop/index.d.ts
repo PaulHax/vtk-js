@@ -6,6 +6,7 @@ import vtkVolume from '../Volume';
 import { CoordinateSystem } from './Constants';
 
 export interface IPropInitialValues {
+  coordinateSystem?: CoordinateSystem;
   visibility?: boolean;
   pickable?: boolean;
   dragable?: boolean;

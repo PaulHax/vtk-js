@@ -10,6 +10,9 @@ import vtkTexture from '../Texture';
 import { EventHandler, vtkSubscription } from '../../../interfaces';
 
 export interface IRendererInitialValues extends IViewportInitialValues {
+  backgroundTexture?: vtkTexture;
+  delegate?: any;
+  renderWindow?: vtkRenderWindow;
   allBounds?: Bounds;
   ambient?: number[];
   allocatedRenderTime?: number;

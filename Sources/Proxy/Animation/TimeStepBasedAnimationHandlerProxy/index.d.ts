@@ -24,8 +24,12 @@ export interface vtkTimeStepBasedAnimationHandlerProxy extends VtkProxy {
   setHandler(handler: ITimeStepBasedAnimationHandler | null): boolean;
 }
 
+export interface ITimeStepBasedAnimationHandlerProxyInitialValues {
+  handler?: ITimeStepBasedAnimationHandler | null;
+}
+
 export function newInstance(
-  initialValues?: object
+  initialValues?: ITimeStepBasedAnimationHandlerProxyInitialValues
 ): vtkTimeStepBasedAnimationHandlerProxy;
 
 /**
@@ -34,6 +38,10 @@ export function newInstance(
  */
 declare const vtkTimeStepBasedAnimationHandlerProxy: {
   newInstance: typeof newInstance;
-  extend: (publicAPI: object, model: object, initialValues?: object) => void;
+  extend: (
+    publicAPI: object,
+    model: object,
+    initialValues?: ITimeStepBasedAnimationHandlerProxyInitialValues
+  ) => void;
 };
 export default vtkTimeStepBasedAnimationHandlerProxy;

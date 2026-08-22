@@ -12,7 +12,10 @@ export type { FormatTypes };
 /**
  *
  */
-export interface ISTLWriterInitialValues {}
+export interface ISTLWriterInitialValues {
+  format?: FormatTypes;
+  transform?: mat4;
+}
 
 type vtkSTLWriterBase = vtkObject & vtkAlgorithm;
 

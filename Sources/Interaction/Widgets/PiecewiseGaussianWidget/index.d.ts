@@ -77,6 +77,8 @@ export interface ISetDataArrayOptions {
  *
  */
 export interface IPiecewiseGaussianWidgetInitialValues {
+  gaussians?: IGaussian[];
+  size?: Vector2;
   numberOfBins?: number;
   piecewiseSize?: number;
   gaussianMinimumHeight?: number;

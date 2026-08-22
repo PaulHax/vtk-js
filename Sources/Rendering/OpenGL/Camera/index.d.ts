@@ -15,6 +15,7 @@ export interface IOpenGLCameraKeyMatrices {
 }
 
 export interface IOpenGLCameraInitialValues extends IViewNodeInitialValues {
+  keyMatrixTime?: vtkObject;
   context?: Nullable<WebGL2RenderingContext>;
   lastRenderer?: Nullable<vtkRenderer>;
 }

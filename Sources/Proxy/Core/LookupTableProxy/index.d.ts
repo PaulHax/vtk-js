@@ -46,6 +46,11 @@ export interface vtkLookupTableProxy extends VtkProxy {
 }
 
 export interface ILookupTableProxyInitialValues {
+  arrayName?: string;
+  dataRange?: [number, number];
+  mode?: number;
+  nodes?: number[][];
+  presetName?: string;
   lookupTable?: vtkColorTransferFunction;
 }
 

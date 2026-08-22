@@ -14,6 +14,7 @@ interface IOBJReaderOptions {
  *
  */
 export interface IOBJReaderInitialValues {
+  trackDuplicates?: boolean;
   numberOfOutputs?: number;
   requestCount?: number;
   splitMode?: string;

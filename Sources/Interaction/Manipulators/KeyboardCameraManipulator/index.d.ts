@@ -187,6 +187,8 @@ export interface vtkKeyboardCameraManipulator
 }
 
 export interface IKeyboardCameraManipulatorInitialValues {
+  interactor?: vtkRenderWindowInteractor;
+  renderer?: vtkRenderer;
   movementSpeed?: number;
   moveForwardKeys?: KeyboardEvent['key'][];
   moveLeftKeys?: KeyboardEvent['key'][];

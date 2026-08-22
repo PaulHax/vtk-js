@@ -23,6 +23,10 @@ interface IAbstractScalars {
 }
 
 export interface IMapperInitialValues extends IAbstractMapper3DInitialValues {
+  colorByArrayName?: string;
+  lookupTable?: any;
+  populateSelectionSettings?: boolean;
+  selectionWebGLIdsToVTKIds?: any;
   static?: boolean;
   scalarVisibility?: boolean;
   scalarRange?: Range;

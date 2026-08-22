@@ -60,7 +60,7 @@ export interface vtkViewProxy extends VtkProxy {
   focusTo(focalPoint: Vector3): void;
 
   getCamera(): vtkCamera;
-  // getAnnotationOpacity
+  getAnnotationOpacity(): number;
   getContainer(): HTMLElement | null | undefined;
   // getCornerAnnotation
   getInteractor(): vtkRenderWindowInteractor;
@@ -75,6 +75,7 @@ export interface vtkViewProxy extends VtkProxy {
   getUseParallelRendering(): boolean;
   getDisableAnimation(): boolean;
   setDisableAnimation(disabled: boolean): boolean;
+  getResetCameraOnFirstRender(): boolean;
 
   onResize(
     cb: (size: { width: number; height: number }) => void
@@ -84,11 +85,25 @@ export interface vtkViewProxy extends VtkProxy {
   // TODO proxy property mappings
 }
 
-export function newInstance(initialValues?: object): vtkViewProxy;
+export interface IViewProxyInitialValues {
+  annotationOpacity?: number;
+  disableAnimation?: boolean;
+  orientationAxesType?: string;
+  presetToOrientationAxes?: any;
+  resetCameraOnFirstRender?: boolean;
+}
+
+export function newInstance(
+  initialValues?: IViewProxyInitialValues
+): vtkViewProxy;
 
 declare const vtkViewProxy: {
   newInstance: typeof newInstance;
-  extend: (publicAPI: object, model: object, initialValues?: object) => void;
+  extend: (
+    publicAPI: object,
+    model: object,
+    initialValues?: IViewProxyInitialValues
+  ) => void;
 };
 
 export default vtkViewProxy;

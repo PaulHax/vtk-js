@@ -62,7 +62,15 @@ export interface vtkAbstractRepresentationProxy
   updateColorByDomain(): void;
 }
 
+export interface IAbstractRepresentationProxyInitialValues {
+  rescaleOnColorBy?: boolean;
+}
+
 declare const vtkAbstractRepresentationProxy: {
-  extend: (publicAPI: object, model: object, initialValues?: object) => void;
+  extend: (
+    publicAPI: object,
+    model: object,
+    initialValues?: IAbstractRepresentationProxyInitialValues
+  ) => void;
 };
 export default vtkAbstractRepresentationProxy;

@@ -1,5 +1,7 @@
 import { vtkObject, vtkSubscription } from '../../../interfaces';
 import { Nullable } from '../../../types';
+import vtkAbstractPicker from '../AbstractPicker';
+import vtkInteractorStyle from '../InteractorStyle';
 import vtkRenderer from '../Renderer';
 import { Axis, Device, Input, MouseButton } from './Constants';
 
@@ -65,6 +67,10 @@ export interface IRenderWindowInteractorInitialValues {
   mouseScrollDebounceByPass?: boolean;
   longTapDuration?: number;
   longTapDistance?: number;
+  container?: HTMLElement;
+  interactorStyle?: vtkInteractorStyle;
+  longTapMaximumDistance?: number;
+  picker?: vtkAbstractPicker;
 }
 
 export interface IPosition {
@@ -187,6 +193,44 @@ export interface vtkRenderWindowInteractor extends vtkObject {
    * @param style
    */
   setInteractorStyle(style: any): void;
+
+  /**
+   *
+   */
+  getInteractorStyle(): Nullable<vtkInteractorStyle>;
+
+  /**
+   *
+   */
+  getContainer(): Nullable<HTMLElement>;
+
+  /**
+   *
+   * @param container
+   */
+  setContainer(container: Nullable<HTMLElement>): boolean;
+
+  /**
+   *
+   */
+  getPicker(): Nullable<vtkAbstractPicker>;
+
+  /**
+   *
+   * @param picker
+   */
+  setPicker(picker: Nullable<vtkAbstractPicker>): boolean;
+
+  /**
+   *
+   */
+  getLongTapMaximumDistance(): number;
+
+  /**
+   *
+   * @param longTapMaximumDistance
+   */
+  setLongTapMaximumDistance(longTapMaximumDistance: number): boolean;
 
   /**
    * ---------------------------------------------------------------------

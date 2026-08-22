@@ -16,6 +16,11 @@ import vtkImageStream from '../ImageStream';
  */
 declare function setSmartConnectClass(smartConnectClass: object): void;
 
+export interface IWSLinkClientInitialValues {
+  notBusyList?: string[];
+  createImageStream?: boolean;
+}
+
 export interface vtkWSLinkClient extends vtkObject {
   /**
    * Virtually increase work load to maybe keep isBusy() on
@@ -89,12 +94,12 @@ export interface vtkWSLinkClient extends vtkObject {
    * Update the list of methods that should be ignore from the busy state monitoring
    * @returns {Boolean} true if the set method modified the object
    */
-  setNotBusyList(methodList: [string]): boolean;
+  setNotBusyList(methodList: string[]): boolean;
 
   /**
-   * @returns {object} the current set of methods to ignore from busy state
+   * @returns {String[]} the current set of methods to ignore from busy state
    */
-  getNotBusyList(): object;
+  getNotBusyList(): string[];
 
   /**
    * Should the client auto listen to image stream topic by creating its imageStream object
@@ -166,21 +171,23 @@ export interface vtkWSLinkClient extends vtkObject {
  *
  * @param publicAPI object on which methods will be bounds (public)
  * @param model object on which data structure will be bounds (protected)
- * @param {object} [initialValues] (default: {})
+ * @param {IWSLinkClientInitialValues} [initialValues] (default: {})
  */
 export function extend(
   publicAPI: object,
   model: object,
-  initialValues?: object
+  initialValues?: IWSLinkClientInitialValues
 ): void;
 
 // ----------------------------------------------------------------------------
 
 /**
  * Method use to create a new instance of vtkWSLinkClient
- * @param {object} [initialValues] for pre-setting some of its content
+ * @param {IWSLinkClientInitialValues} [initialValues] for pre-setting some of its content
  */
-export function newInstance(initialValues?: object): vtkWSLinkClient;
+export function newInstance(
+  initialValues?: IWSLinkClientInitialValues
+): vtkWSLinkClient;
 
 /**
  * vtkWSLinkClient is a WSLink client for talking to a server over WebSocket

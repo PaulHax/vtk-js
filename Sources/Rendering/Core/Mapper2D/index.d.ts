@@ -18,6 +18,11 @@ interface IAbstractScalars {
 }
 
 export interface IMapper2DInitialValues extends IAbstractMapperInitialValues {
+  colorByArrayName?: string;
+  lookupTable?: any;
+  transformCoordinate?: any;
+  useLookupTableScalarRange?: boolean;
+  viewSpecificProperties?: object;
   arrayAccessMode?: number;
   colorMode?: number;
   customShaderAttributes?: any;

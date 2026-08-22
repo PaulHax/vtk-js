@@ -6,6 +6,10 @@ import { Nullable } from '../../../types';
  * @param {boolean} [resizable] Must be set to true if texture can be resized at run time (default: false)
  */
 export interface ITextureInitialValues {
+  canvas?: HTMLCanvasElement;
+  image?: HTMLImageElement;
+  imageBitmap?: ImageBitmap;
+  jsImageData?: ImageData;
   repeat?: boolean;
   interpolate?: boolean;
   edgeClamp?: boolean;

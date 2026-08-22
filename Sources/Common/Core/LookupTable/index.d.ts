@@ -7,7 +7,18 @@ import vtkScalarsToColors from '../ScalarsToColors';
 /**
  *
  */
-export interface ILookupTableInitialValues {}
+export interface ILookupTableInitialValues {
+  aboveRangeColor?: RGBAColor;
+  alphaRange?: Range;
+  belowRangeColor?: RGBAColor;
+  hueRange?: Range;
+  nanColor?: RGBAColor;
+  numberOfColors?: number;
+  saturationRange?: Range;
+  useAboveRangeColor?: boolean;
+  useBelowRangeColor?: boolean;
+  valueRange?: Range;
+}
 
 export interface vtkLookupTable extends vtkScalarsToColors {
   /** Return whether all colors in the table are opaque. */

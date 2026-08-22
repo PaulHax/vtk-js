@@ -47,6 +47,10 @@ export interface vtkSourceProxy<T> extends VtkProxy {
   invokeDatasetChange(...args: unknown[]): void;
 }
 
+export interface ISourceProxyInitialValues {
+  name?: string;
+}
+
 /**
  * Decorates a given publicAPI + model with vtkSourceProxy characteristics.
  *
@@ -57,7 +61,7 @@ export interface vtkSourceProxy<T> extends VtkProxy {
 export function extend(
   publicAPI: object,
   model: object,
-  initialValues?: object
+  initialValues?: ISourceProxyInitialValues
 ): void;
 
 /**
@@ -65,7 +69,7 @@ export function extend(
  * @param {object} [initialValues]
  */
 export function newInstance<T = unknown>(
-  initialValues?: object
+  initialValues?: ISourceProxyInitialValues
 ): vtkSourceProxy<T>;
 
 declare const vtkSourceProxy: {

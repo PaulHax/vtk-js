@@ -1,4 +1,7 @@
-import { vtkAbstractRepresentationProxy } from '../../Core/AbstractRepresentationProxy';
+import {
+  IAbstractRepresentationProxyInitialValues,
+  vtkAbstractRepresentationProxy,
+} from '../../Core/AbstractRepresentationProxy';
 import { vtkImageCropFilter } from '../../../Filters/General/ImageCropFilter';
 import vtkDataArray from '../../../Common/Core/DataArray';
 import vtkImageData from '../../../Common/DataModel/ImageData';
@@ -44,14 +47,20 @@ export interface vtkVolumeRepresentationProxy extends vtkAbstractRepresentationP
   setCroppingPlanes(planes: number[]): boolean;
 }
 
+export interface IVolumeRepresentationProxyInitialValues extends IAbstractRepresentationProxyInitialValues {
+  edgeGradient?: number;
+  is2DVolume?: boolean;
+  sampleDistance?: number;
+}
+
 export function extend(
   publicAPI: object,
   model: object,
-  initialValues?: object
+  initialValues?: IVolumeRepresentationProxyInitialValues
 ): void;
 
 export function newInstance(
-  initialValues?: object
+  initialValues?: IVolumeRepresentationProxyInitialValues
 ): vtkVolumeRepresentationProxy;
 
 declare const vtkVolumeRepresentationProxy: {

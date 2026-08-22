@@ -4,6 +4,8 @@ import { Interpolation, Representation, Shading } from './Constants';
 import { vtkTexture } from '../../Core/Texture';
 
 export interface IPropertyInitialValues {
+  interpolation?: Interpolation;
+  representation?: Representation;
   color?: RGBColor;
   ambientColor?: RGBColor;
   diffuseColor?: RGBColor;

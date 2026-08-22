@@ -9,6 +9,7 @@ import { Nullable } from '../../../types';
  *
  */
 export interface IHttpDataSetReaderInitialValues {
+  maxCacheSize?: number;
   enableArray?: boolean;
   fetchGzip?: boolean;
   arrays?: any[];

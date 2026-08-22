@@ -103,9 +103,9 @@ export interface vtkAbstractPicker extends vtkObject {
  * @param {IAbstractPickerInitialValues} [initialValues] (default: {})
  */
 export function extend(
-  publicAPI: IAbstractPickerInitialValues,
+  publicAPI: object,
   model: object,
-  initialValues?: object
+  initialValues?: IAbstractPickerInitialValues
 ): void;
 
 /**

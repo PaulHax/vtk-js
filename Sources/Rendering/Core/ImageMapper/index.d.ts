@@ -17,6 +17,8 @@ export interface IClosestIJKAxis {
 }
 
 export interface IImageMapperInitialValues extends IAbstractImageMapperInitialValues {
+  preferSizeOverAccuracy?: boolean;
+  slicingMode?: SlicingMode;
   closestIJKAxis?: IClosestIJKAxis;
   renderToRectangle?: boolean;
   sliceAtFocalPoint?: boolean;

@@ -4,6 +4,7 @@ import vtkProp, { IPropInitialValues } from '../Prop';
 import { vtkObject } from '../../../interfaces';
 
 export interface IProp3DInitialValues extends IPropInitialValues {
+  properties?: vtkObject[];
   origin?: number[];
   position?: Vector3;
   orientation?: number[];

@@ -22,9 +22,16 @@ export interface IFaceProperty extends IStyle {
 /**
  *
  */
-export interface IAnnotatedCubeActorInitialValues extends IActorInitialValues {}
+export interface IAnnotatedCubeActorInitialValues extends IActorInitialValues {
+  defaultStyle?: IStyle;
+}
 
 export interface vtkAnnotatedCubeActor extends vtkActor {
+  /**
+   *
+   */
+  getDefaultStyle(): Readonly<Required<IStyle>>;
+
   /**
    * Set the default style.
    * @param {IStyle} style

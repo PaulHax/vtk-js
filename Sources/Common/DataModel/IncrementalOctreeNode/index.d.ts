@@ -7,11 +7,11 @@ import vtkPoints from '../../Core/Points';
 export interface IIncrementalOctreeNodeInitialValues {
   pointIdSet?: number[];
   numberOfPoints?: number;
-  minBounds?: Bounds;
-  maxBounds?: Bounds;
-  minDataBounds?: Bounds;
-  maxDataBounds?: Bounds;
-  parent?: vtkIncrementalOctreeNode;
+  minBounds?: Vector3;
+  maxBounds?: Vector3;
+  minDataBounds?: Vector3;
+  maxDataBounds?: Vector3;
+  parent?: Nullable<vtkIncrementalOctreeNode>;
   children?: vtkIncrementalOctreeNode[];
 }
 
@@ -391,12 +391,12 @@ export interface vtkIncrementalOctreeNode extends vtkObject {
  *
  * @param publicAPI object on which methods will be bounds (public)
  * @param model object on which data structure will be bounds (protected)
- * @param {object} [initialValues] (default: {})
+ * @param {IIncrementalOctreeNodeInitialValues} [initialValues] (default: {})
  */
 export function extend(
   publicAPI: object,
   model: object,
-  initialValues?: object
+  initialValues?: IIncrementalOctreeNodeInitialValues
 ): void;
 
 // ----------------------------------------------------------------------------

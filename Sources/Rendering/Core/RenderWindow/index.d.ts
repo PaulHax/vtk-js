@@ -5,6 +5,7 @@ import vtkRenderWindowInteractor from '../RenderWindowInteractor';
 // import vtkOpenGLRenderWindow from "../../../OpenGL/RenderWindow";
 
 export interface IRenderWindowInitialValues {
+  defaultViewAPI?: string;
   renderers?: vtkRenderer[];
   views?: vtkRenderWindow[];
   interactor?: any;

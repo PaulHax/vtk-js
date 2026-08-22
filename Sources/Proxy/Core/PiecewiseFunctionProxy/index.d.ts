@@ -54,6 +54,12 @@ export interface vtkPiecewiseFunctionProxy extends VtkProxy {
 }
 
 export interface IPiecewiseFunctionProxyInitialValues {
+  arrayName?: string;
+  dataRange?: [number, number];
+  gaussians?: PiecewiseGaussian[];
+  mode?: number;
+  nodes?: PiecewiseNode[];
+  points?: number[][];
   piecewiseFunction?: vtkPiecewiseFunction;
 }
 
