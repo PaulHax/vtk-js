@@ -152,13 +152,13 @@ export interface vtkWSLinkClient extends vtkObject {
   invokeBusyChange(): void;
 
   onConnectionReady(callback: (httpReq: any) => void): vtkSubscription;
-  // invokeConnectionReady(): void
+  invokeConnectionReady(client: vtkWSLinkClient): void;
 
   onConnectionError(callback: (httpReq: any) => void): vtkSubscription;
-  // invokeConnectionError(): void
+  invokeConnectionError(error: any): void;
 
   onConnectionClose(callback: (httpReq: any) => void): vtkSubscription;
-  // invokeConnectionClose(): void
+  invokeConnectionClose(close: any): void;
 }
 
 /**

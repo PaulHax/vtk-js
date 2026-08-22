@@ -45,6 +45,8 @@ export function extend(
 
 export const vtkCompositeVRManipulator: {
   extend: typeof extend;
+  Device: typeof Device;
+  Input: typeof Input;
 };
 
 export default vtkCompositeVRManipulator;

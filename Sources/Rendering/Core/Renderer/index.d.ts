@@ -305,25 +305,31 @@ export interface vtkRenderer extends Omit<
    *
    * @default false
    */
-  getTexturedbackground(): boolean;
+  getTexturedBackground(): boolean;
 
   /**
    *
    * @default true
    */
-  getTwosidedlighting(): boolean;
+  getTwoSidedLighting(): boolean;
 
   /**
    *
    * @default false
    */
-  getUsedepthpeeling(): boolean;
+  getUseDepthPeeling(): boolean;
 
   /**
    *
    * @default false
    */
-  getUseshadows(): boolean;
+  getUseShadows(): boolean;
+
+  /**
+   *
+   * @default null
+   */
+  getBackgroundTexture(): Nullable<vtkTexture>;
 
   /**
    *
@@ -500,6 +506,12 @@ export interface vtkRenderer extends Omit<
    * @param {Boolean} preserveDepthBuffer
    */
   setPreserveDepthBuffer(preserveDepthBuffer: boolean): boolean;
+
+  /**
+   *
+   * @param {vtkTexture} backgroundTexture
+   */
+  setBackgroundTexture(backgroundTexture: vtkTexture): boolean;
 
   /**
    *

@@ -1,7 +1,9 @@
 import vtkCompositeVRManipulator from '../CompositeVRManipulator';
+import { vtkObject } from '../../../interfaces';
 import { Nullable } from '../../../types';
 
-export interface vtk3DControllerModelSelectorManipulator extends vtkCompositeVRManipulator {
+export interface vtk3DControllerModelSelectorManipulator
+  extends vtkObject, vtkCompositeVRManipulator {
   getLastWorldPosition(): Nullable<Float64Array> | undefined;
   getLastOrientation(): Nullable<Float64Array> | undefined;
 }

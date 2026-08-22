@@ -103,12 +103,6 @@ export interface vtkMTLReader extends vtkObject {
    * @param {String} content The content to parse.
    */
   parseAsText(content: string): void;
-  /**
-   *
-   * @param inData
-   * @param outData
-   */
-  requestData(inData: any, outData: any): void;
 
   /**
    *

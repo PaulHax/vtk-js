@@ -58,45 +58,6 @@ export interface vtkScalarBarActor extends Omit<
 > {
   /**
    *
-   * @param {Boolean} doUpdate
-   */
-  completedImage(doUpdate: boolean): void;
-
-  /**
-   * based on all the settins compute a barSegments array containing the
-   * segments opf the scalar bar each segment contains :
-   *  corners[4][2]
-   *  title - e.g. NaN, Above, ticks
-   *  scalars - the normalized scalars values to use for that segment
-   *
-   * Note that the bar consumes the space in the box that remains
-   * after leaving room for the text labels.
-   * @param {ITextSizes} textSizes
-   */
-  computeBarSize(textSizes: ITextSizes): Size;
-
-  /**
-   * Called by updatePolyDataForLabels modifies class constants ptv3, tmpv3
-   * @param text
-   * @param pos
-   * @param xdir
-   * @param ydir
-   * @param dir
-   * @param offset
-   * @param results
-   */
-  createPolyDataForOneLabel(
-    text: string,
-    pos: Vector3,
-    xdir: Vector3,
-    ydir: Vector3,
-    dir: Vector2,
-    offset: number,
-    results: IResult
-  ): void;
-
-  /**
-   *
    */
   getActors(): vtkActor[];
 
@@ -198,18 +159,22 @@ export interface vtkScalarBarActor extends Omit<
   /**
    *
    */
-  getTickTextStyle(): IStyle;
+  getTickLabelPixelOffset(): number;
 
   /**
    *
-   * @param {ITextSizes} textSizes
    */
-  recomputeBarSegments(textSizes: ITextSizes): void;
+  getTickTextStyle(): IStyle;
 
   /**
    *
    */
   resetAutoLayoutToDefault(): void;
+
+  /**
+   *
+   */
+  resetGenerateTicksToDefault(): void;
 
   /**
    *
@@ -368,31 +333,6 @@ export interface vtkScalarBarActor extends Omit<
    *
    */
   setVisibility(visibility: boolean): boolean;
-
-  /**
-   * main method to rebuild the scalarBar when something has changed tracks
-   * modified times
-   */
-  update(): void;
-
-  /**
-   *
-   */
-  updatePolyDataForBarSegments(): void;
-
-  /**
-   * Udate the polydata associated with drawing the text labels
-   * specifically the quads used for each label and their associated tcoords
-   * etc. This changes every time the camera viewpoint changes
-   */
-  updatePolyDataForLabels(): void;
-
-  /**
-   * create the texture map atlas that contains the rendering of
-   * all the text strings. Only needs to be called when the text strings
-   * have changed (labels and ticks)
-   */
-  updateTextureAtlas(): ITextSizes;
 }
 
 /**

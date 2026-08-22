@@ -73,6 +73,12 @@ export interface vtkSynchronizableRenderWindow extends vtkRenderWindow {
    */
   getSynchronizerContext(): ISynchronizerContext;
 
+  /**
+   * Handle any pre render initializations, such as creating a camera for
+   * renderers which do not have one yet.
+   */
+  preRender(): void;
+
   // methods added by createSyncFunction
 
   /**
@@ -190,6 +196,7 @@ export declare const DEFAULT_VALUES: Readonly<{
 
 export declare const vtkSynchronizableRenderWindow: {
   newInstance: typeof newInstance;
+  extend: typeof extend;
   getSynchronizerContext: typeof getSynchronizerContext;
   setSynchronizerContext: typeof setSynchronizerContext;
   clearSynchronizerContext: typeof clearSynchronizerContext;

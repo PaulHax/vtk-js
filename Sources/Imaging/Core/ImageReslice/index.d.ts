@@ -731,5 +731,6 @@ export function newInstance(
 export declare const vtkImageReslice: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  SlabMode: typeof SlabMode;
 };
 export default vtkImageReslice;

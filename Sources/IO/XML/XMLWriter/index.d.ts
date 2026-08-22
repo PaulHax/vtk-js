@@ -21,7 +21,8 @@ export interface IXMLWriterInitialValues {
   format?: FormatTypes;
 }
 
-type vtkXMLWriterBase = vtkObject & vtkAlgorithm;
+type vtkXMLWriterBase = vtkObject &
+  Omit<vtkAlgorithm, 'getOutputData' | 'getOutputPort'>;
 
 export interface vtkXMLWriter extends vtkXMLWriterBase {
   /**

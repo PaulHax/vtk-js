@@ -10,7 +10,12 @@ export enum Resolve {
 
 export const CATEGORIES: string[];
 
-export interface StaticCoincidentTopologyMethods {
+export interface StaticOffsetAPI {
+  /**
+   *
+   */
+  modified(): void;
+
   /**
    *
    * @param {ICoincidentTopology} params
@@ -79,6 +84,10 @@ export interface StaticCoincidentTopologyMethods {
    *
    */
   getResolveCoincidentTopologyPolygonOffsetParameters(): ICoincidentTopology;
+}
+
+export interface OtherStaticMethods {
+  Resolve: typeof Resolve;
 
   /**
    *
@@ -122,6 +131,9 @@ export interface StaticCoincidentTopologyMethods {
    */
   getResolveCoincidentTopologyAsString(): string;
 }
+
+export interface StaticCoincidentTopologyMethods
+  extends StaticOffsetAPI, OtherStaticMethods {}
 
 export interface CoincidentTopologyHelper extends StaticCoincidentTopologyMethods {
   /**
@@ -181,6 +193,21 @@ export interface CoincidentTopologyHelper extends StaticCoincidentTopologyMethod
   /**
    *
    */
+  getRelativeCoincidentTopologyLineOffsetParameters(): ICoincidentTopology;
+
+  /**
+   *
+   */
+  getRelativeCoincidentTopologyPointOffsetParameters(): ICoincidentTopology;
+
+  /**
+   *
+   */
+  getRelativeCoincidentTopologyPolygonOffsetParameters(): ICoincidentTopology;
+
+  /**
+   *
+   */
   getCoincidentTopologyPolygonOffsetParameters(): ICoincidentTopology;
 
   /**
@@ -191,8 +218,21 @@ export interface CoincidentTopologyHelper extends StaticCoincidentTopologyMethod
   /**
    *
    */
-  getCoincidentTopologyPointOffsetParameters(): ICoincidentTopology;
+  getCoincidentTopologyPointOffsetParameter(): ICoincidentTopology;
 }
 
-declare const _default: CoincidentTopologyHelper;
-export default _default;
+declare const vtkCoincidentTopologyHelper: {
+  /**
+   * Method used to decorate a given object (publicAPI+model) with coincident
+   * topology methods.
+   *
+   * @param publicAPI object on which methods will be bounds (public)
+   * @param model object on which data structure will be bounds (protected)
+   */
+  implementCoincidentTopologyMethods(publicAPI: object, model: object): void;
+  staticOffsetAPI: StaticOffsetAPI;
+  otherStaticMethods: OtherStaticMethods;
+  CATEGORIES: string[];
+  Resolve: typeof Resolve;
+};
+export default vtkCoincidentTopologyHelper;

@@ -41,6 +41,21 @@ export interface vtkHDRReader extends vtkHDRReaderBase {
     | LiteHttpDataAccessHelper;
 
   /**
+   * Get the exposure value parsed from the file header.
+   */
+  getExposure(): number;
+
+  /**
+   * Get the gamma value parsed from the file header.
+   */
+  getGamma(): number;
+
+  /**
+   * Get the pixel aspect ratio parsed from the file header.
+   */
+  getPixelAspect(): number;
+
+  /**
    * Get the url of the object to load.
    */
   getUrl(): string | undefined;

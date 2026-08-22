@@ -13,9 +13,27 @@ export interface IEdge<T = unknown> {
 
 export interface vtkEdgeLocator {
   /**
+   * Whether the edge orientation is taken into account when generating keys.
+   */
+  oriented: boolean;
+
+  /**
+   * Map storing the inserted edges, indexed by their key.
+   */
+  edgeMap: Map<number, IEdge>;
+
+  /**
    * Remove all the edges previously added.
    */
   initialize(): void;
+
+  /**
+   * Compute the unique key associated with the given edge point ids.
+   * @param {Number} pointId0 Edge first point id
+   * @param {Number} pointId1 Edge last point id
+   * @return {Number} the edge key
+   */
+  computeEdgeKey(pointId0: number, pointId1: number): number;
 
   /**
    * Returns the inserted edge or undefined if no edge was inserted.

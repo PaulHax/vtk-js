@@ -176,6 +176,11 @@ export interface vtkInteractorStyleManipulator extends vtkInteractorStyle {
   handleRightButtonRelease(callData: unknown): void;
 
   /**
+   * Handles the end of a pointer lock event.
+   */
+  handleEndPointerLock(): void;
+
+  /**
    * Handles the start of a wheel event.
    * @param callData event data
    */
@@ -309,7 +314,7 @@ export interface vtkInteractorStyleManipulator extends vtkInteractorStyle {
 
   getMouseManipulators(): vtkCompositeMouseManipulator[];
   getKeyboardManipulators(): vtkCompositeKeyboardManipulator[];
-  getVRManipulators(): vtkCompositeVRManipulator[];
+  getVrManipulators(): vtkCompositeVRManipulator[];
   getGestureManipulators(): vtkCompositeGestureManipulator[];
 
   /**

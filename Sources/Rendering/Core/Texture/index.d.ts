@@ -1,4 +1,4 @@
-import { vtkAlgorithm } from '../../../interfaces';
+import { vtkAlgorithm, vtkObject } from '../../../interfaces';
 import { Nullable } from '../../../types';
 
 /**
@@ -14,7 +14,10 @@ export interface ITextureInitialValues {
   resizable?: boolean;
 }
 
-export interface vtkTexture extends vtkAlgorithm {
+type vtkTextureBase = vtkObject &
+  Omit<vtkAlgorithm, 'getOutputData' | 'getOutputPort'>;
+
+export interface vtkTexture extends vtkTextureBase {
   /** Return the number of non-singleton dimensions in the texture input. */
   getDimensionality(): number;
 
@@ -54,6 +57,11 @@ export interface vtkTexture extends vtkAlgorithm {
   getImageLoaded(): boolean;
 
   /**
+   * Returns the input image data as a JavaScript ImageData object.
+   */
+  getJsImageData(): Nullable<ImageData>;
+
+  /**
    * Returns the input image data object.
    */
   getInputAsJsImageData(): Nullable<
@@ -71,6 +79,12 @@ export interface vtkTexture extends vtkAlgorithm {
    * interaction or other factors.
    */
   getResizable(): boolean;
+
+  /**
+   * Marks the image as loaded and notifies listeners.
+   * Called automatically once the image set with setImage() has loaded.
+   */
+  imageLoaded(): void;
 
   /**
    * Returns the canvas used by the texture.

@@ -1136,8 +1136,8 @@ export const negInf: number;
  * **Contrary to the rest of vtk.js, vtkMath is in row-major format (similar to VTK C++).**
  */
 declare const vtkMath: {
-  createArray: typeof createArray;
   Pi: typeof Pi;
+  ldexp: typeof ldexp;
   radiansFromDegrees: typeof radiansFromDegrees;
   degreesFromRadians: typeof degreesFromRadians;
   round: typeof round;
@@ -1182,10 +1182,6 @@ declare const vtkMath: {
   norm2D: typeof norm2D;
   normalize2D: typeof normalize2D;
   determinant2x2: typeof determinant2x2;
-  rowsToMat4: typeof rowsToMat4;
-  columnsToMat4: typeof columnsToMat4;
-  rowsToMat3: typeof rowsToMat3;
-  columnsToMat3: typeof columnsToMat3;
   LUFactor3x3: typeof LUFactor3x3;
   LUSolve3x3: typeof LUSolve3x3;
   linearSolve3x3: typeof linearSolve3x3;
@@ -1195,6 +1191,9 @@ declare const vtkMath: {
   transpose3x3: typeof transpose3x3;
   invert3x3: typeof invert3x3;
   identity3x3: typeof identity3x3;
+  identity: typeof identity;
+  isIdentity: typeof isIdentity;
+  isIdentity3x3: typeof isIdentity3x3;
   determinant3x3: typeof determinant3x3;
   quaternionToMatrix3x3: typeof quaternionToMatrix3x3;
   areEquals: typeof areEquals;

@@ -144,6 +144,12 @@ export interface vtkCursor3D extends vtkCursor3DBase {
   setModelBounds(bounds: Bounds): void;
 
   /**
+   * Turn on/off the wireframe bounding box.
+   * @param {Boolean} outline
+   */
+  setOutline(outline: boolean): boolean;
+
+  /**
    * Enable/disable the translation mode.
    * If on, changes in cursor position cause the entire widget to translate
    * along with the cursor.

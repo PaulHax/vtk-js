@@ -1,6 +1,8 @@
 import vtkCompositeMouseManipulator, {
   ICompositeMouseManipulatorInitialValues,
 } from '../../../Interaction/Manipulators/CompositeMouseManipulator';
+import vtkRenderer from '../../../Rendering/Core/Renderer';
+import vtkRenderWindowInteractor from '../../../Rendering/Core/RenderWindowInteractor';
 import { vtkObject } from '../../../interfaces';
 
 export interface IMouseRangeManipulatorInitialValues extends ICompositeMouseManipulatorInitialValues {
@@ -40,6 +42,28 @@ export interface vtkMouseRangeManipulator
   removeVerticalListener();
   removeScrollListener();
   removeAllListeners();
+
+  /**
+   * Starts listening to mouse move events while the pointer is locked.
+   * @param interactor the interactor
+   * @param renderer the renderer
+   */
+  startPointerLockEvent(
+    interactor: vtkRenderWindowInteractor,
+    renderer: vtkRenderer
+  ): void;
+
+  /**
+   * Handles a mouse move event while the pointer is locked.
+   * @param interactor the interactor
+   * @param renderer the renderer
+   * @param event the mouse event
+   */
+  onPointerLockMove(
+    interactor: vtkRenderWindowInteractor,
+    renderer: vtkRenderer,
+    event: MouseEvent
+  ): void;
 
   /**
    *

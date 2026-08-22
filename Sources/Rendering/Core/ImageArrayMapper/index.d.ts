@@ -148,6 +148,5 @@ export function newInstance(
 export declare const vtkImageArrayMapper: {
   newInstance: typeof newInstance;
   extend: typeof extend;
-  SlicingMode: typeof SlicingMode;
 } & StaticCoincidentTopologyMethods;
 export default vtkImageArrayMapper;

@@ -44,6 +44,11 @@ export interface vtkIFCImporter extends vtkIFCImporterBase {
     | LiteHttpDataAccessHelper;
 
   /**
+   * Get whether the geometries are merged into a single actor when imported.
+   */
+  getMergeGeometries(): boolean;
+
+  /**
    * Get the url of the object to load.
    */
   getUrl(): string | undefined;
@@ -74,13 +79,6 @@ export interface vtkIFCImporter extends vtkIFCImporterBase {
 
   /**
    *
-   * @param inData
-   * @param outData
-   */
-  requestData(inData: any, outData: any): void;
-
-  /**
-   *
    * @param dataAccessHelper
    */
   setDataAccessHelper(
@@ -90,6 +88,12 @@ export interface vtkIFCImporter extends vtkIFCImporterBase {
       | JSZipDataAccessHelper
       | LiteHttpDataAccessHelper
   ): boolean;
+
+  /**
+   * Set whether the geometries are merged into a single actor when imported.
+   * @param {Boolean} mergeGeometries
+   */
+  setMergeGeometries(mergeGeometries: boolean): boolean;
 
   /**
    * Set the url of the object to load.

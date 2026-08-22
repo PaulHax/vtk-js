@@ -59,22 +59,11 @@ export interface vtkXMLReader extends vtkXMLReaderBase {
   loadData(options?: IXMLReaderOptions): Promise<any>;
 
   /**
-   * Parse data.
-   * @param {String | ArrayBuffer} content The content to parse.
-   */
-  parse(content: string | ArrayBuffer): void;
-
-  /**
    * Parse data as ArrayBuffer.
    * @param {ArrayBuffer} content The content to parse.
    */
   parseAsArrayBuffer(content: ArrayBuffer): boolean;
 
-  /**
-   * Parse data as text.
-   * @param {String} content The content to parse.
-   */
-  parseAsText(content: string): void;
   /**
    *
    * @param inData

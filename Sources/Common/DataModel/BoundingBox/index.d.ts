@@ -366,6 +366,8 @@ export function computeDivisions(
 export function distance2ToBounds(x: Vector3, bounds: Bounds): number;
 
 declare class BoundingBox {
+  bounds: Bounds;
+
   getBounds(): Bounds;
   /**
    * Tests whether two bounds equal.
@@ -472,15 +474,6 @@ declare class BoundingBox {
    * @param {Bounds} bounds
    */
   getCenter(bounds: Bounds): Vector3;
-
-  /**
-   * Scales a bounding box around its center.
-   * @param {Bounds} bounds
-   * @param {number} sx
-   * @param {number} sy
-   * @param {number} sz
-   */
-  scaleAboutCenter(bounds: Bounds, sx: number, sy: number, sz: number): boolean;
 
   /**
    * Gets the bounding box side length.
@@ -663,6 +656,20 @@ declare class BoundingBox {
   cutWithPlane(bounds: Bounds, origin: Vector3, normal: Vector3): boolean;
 
   /**
+   * Compute the number of divisions given the current bounding box and a
+   * target number of buckets/bins. Handles degenerate bounding boxes properly.
+   * @param {Number} totalBins - Target number of bins
+   * @param {Number[]} divs - Output array to store divisions [divX, divY, divZ]
+   * @param {Bounds} [adjustedBounds] - Output array to store adjusted bounds if needed
+   * @returns {Number} The actual total number of bins
+   */
+  computeDivisions(
+    totalBins: number,
+    divs: number[],
+    adjustedBounds?: Bounds
+  ): number;
+
+  /**
    * Calculate the squared distance from point x to the specified bounds.
    * @param {Vector3} x  The point coordinates
    * @param {Bounds} bounds  The bounding box coordinates
@@ -712,6 +719,8 @@ declare const vtkBoundingBox: {
   intersects: typeof intersects;
   containsPoint: typeof containsPoint;
   contains: typeof contains;
+  computeDivisions: typeof computeDivisions;
+  clampDivisions: typeof clampDivisions;
   distance2ToBounds: typeof distance2ToBounds;
   INIT_BOUNDS: Bounds;
 };

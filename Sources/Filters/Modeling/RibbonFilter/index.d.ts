@@ -1,6 +1,18 @@
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
 import { Vector3 } from '../../../types';
 
+declare enum GenerateTCoords {
+  TCOORDS_OFF,
+  TCOORDS_FROM_SCALARS,
+  TCOORDS_FROM_LENGTH,
+  TCOORDS_FROM_NORMALIZED_LENGTH,
+}
+
+/**
+ * The type is public; the value is reached through the module default export.
+ */
+export type { GenerateTCoords };
+
 export type IGenerateTCoords =
   | 'TCOORDS_OFF'
   | 'TCOORDS_FROM_SCALARS'
@@ -191,5 +203,6 @@ export function newInstance(
 export declare const vtkRibbonFilter: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  GenerateTCoords: typeof GenerateTCoords;
 };
 export default vtkRibbonFilter;

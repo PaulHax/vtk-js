@@ -188,9 +188,22 @@ export interface vtkMapper
   getLookupTable(): any;
 
   /**
+   * Check whether the mapper populates selection settings when processing a
+   * selection made with the hardware selector.
+   * @default true
+   */
+  getPopulateSelectionSettings(): boolean;
+
+  /**
    *
    */
   getPrimitiveCount(): IPrimitiveCount;
+
+  /**
+   *
+   * @default 0
+   */
+  getRenderTime(): number;
 
   /**
    * Return the method for obtaining scalar data.
@@ -325,6 +338,21 @@ export interface vtkMapper
    * Set a lookup table for the mapper to use.
    */
   setLookupTable(lookupTable: any): boolean;
+
+  /**
+   * Turn on/off flag to control whether the mapper populates selection
+   * settings when processing a selection made with the hardware selector.
+   * @param {Boolean} populateSelectionSettings
+   * @default true
+   */
+  setPopulateSelectionSettings(populateSelectionSettings: boolean): boolean;
+
+  /**
+   *
+   * @param {Number} renderTime
+   * @default 0
+   */
+  setRenderTime(renderTime: number): boolean;
 
   /**
    * Control how the filter works with scalar point data and cell attribute

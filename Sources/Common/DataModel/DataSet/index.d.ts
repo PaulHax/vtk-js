@@ -125,7 +125,7 @@ export function newInstance(initialValues?: IDataSetInitialValues): vtkDataSet;
 export declare const vtkDataSet: {
   newInstance: typeof newInstance;
   extend: typeof extend;
-  FieldAssociation: typeof FieldAssociations;
+  FieldAssociations: typeof FieldAssociations;
   FieldDataTypes: typeof FieldDataTypes;
 };
 export default vtkDataSet;

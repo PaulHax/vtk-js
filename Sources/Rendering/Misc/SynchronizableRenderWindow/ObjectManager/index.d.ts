@@ -32,6 +32,18 @@ export interface IObjectManager {
   ): Promise<Error | void>;
 
   /**
+   * Generic updater function which applies the state properties, dependencies,
+   * calls and arrays to the given instance.
+   */
+  genericUpdater: UpdaterFunction;
+
+  /**
+   * Updater function which applies the generic update process only once per
+   * state id.
+   */
+  oneTimeGenericUpdater: UpdaterFunction;
+
+  /**
    * Defines a new type handler with the specified builder and updater functions
    *
    * @param {String} type The type you wish to register
