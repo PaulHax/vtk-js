@@ -6,6 +6,15 @@ import { vtkObject } from '../../../interfaces';
 import { RGBAColor } from '../../../types';
 import { ColorSpace, Scale } from './Constants';
 
+export interface IColorTransferFunctionNode {
+  x: number;
+  r: number;
+  g: number;
+  b: number;
+  midpoint: number;
+  sharpness: number;
+}
+
 export interface IColorTransferFunctionInitialValues extends IScalarsToColorsInitialValues {
   aboveRangeColor?: RGBAColor;
   belowRangeColor?: RGBAColor;
@@ -131,7 +140,7 @@ export interface vtkColorTransferFunction extends vtkScalarsToColors {
    * the nodes can end up unsorted, the cached range stale, and the change
    * will not propagate through the pipeline.
    */
-  getDataPointer(): any[];
+  getDataPointer(): IColorTransferFunctionNode[];
 
   /**
    * Set nodes directly
@@ -139,7 +148,7 @@ export interface vtkColorTransferFunction extends vtkScalarsToColors {
    *
    * @returns true if a change happen
    */
-  setNodes(nodes: any): boolean;
+  setNodes(nodes: IColorTransferFunctionNode[]): boolean;
 
   /**
    * Sort the vector in increasing order, then fill in

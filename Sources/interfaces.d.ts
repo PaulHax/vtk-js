@@ -55,7 +55,7 @@ export interface vtkAlgorithm {
   /**
    * @param {Number} [port] The port number (default 0).
    */
-  getInputData(port?: number): any;
+  getInputData<T = any>(port?: number): T;
 
   /**
    * @param outputPort
@@ -85,7 +85,7 @@ export interface vtkAlgorithm {
    * port.
    * @param {Number} [port] The port number (default 0).
    */
-  getOutputData(port?: number): any;
+  getOutputData<T = any>(port?: number): T;
 
   /**
    *
@@ -236,7 +236,7 @@ export interface vtkObject {
    * @param name of the field to extract from the instance model
    * @returns model[name]
    */
-  getReferenceByName(name: string): any;
+  getReferenceByName<T = any>(name: string): T;
 
   /**
    * Dereference any internal object and remove any subscription.

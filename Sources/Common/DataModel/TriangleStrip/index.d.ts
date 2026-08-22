@@ -85,15 +85,17 @@ export interface vtkTriangleStrip extends vtkCell {
 
   /**
    * Evaluate the location of a point in the triangle strip.
+   * @param {Number} subId The triangle within the strip to evaluate against.
    * @param {Vector3} pcoords The parametric coordinates of the point.
-   * @param {Vector3} closestPoint The closest point on the triangle strip.
-   * @param {Number[]} weights The interpolation weights.
+   * @param {Vector3} x The interpolated position, written in place.
+   * @param {Number[]} weights The interpolation weights, written in place.
    */
   evaluateLocation(
+    subId: number,
     pcoords: Vector3,
-    closestPoint: Vector3,
+    x: Vector3,
     weights: number[]
-  ): number;
+  ): void;
 
   /**
    * Evaluate the position of a point in the triangle strip.

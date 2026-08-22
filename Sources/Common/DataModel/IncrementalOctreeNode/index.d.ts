@@ -19,7 +19,7 @@ export interface vtkIncrementalOctreeNode extends vtkObject {
   /**
    * Create a list object for storing point indices.
    */
-  createPointIdSet(): void;
+  createPointIdSet(initSize: number, growSize: number): void;
 
   /**
    * Set the spatial bounding box of the node. This function sets a default

@@ -1,7 +1,10 @@
 import { vtkObject } from '../../../interfaces';
+import { Nullable } from '../../../types';
 import vtkCanvasView from '../CanvasView';
 import vtkImageStream from '../../../IO/Core/ImageStream';
 import vtkViewStream from '../../../IO/Core/ImageStream/ViewStream';
+import vtkRenderWindowInteractor from '../../Core/RenderWindowInteractor';
+import vtkInteractorStyleRemoteMouse from '../../../Interaction/Style/InteractorStyleRemoteMouse';
 
 interface IRemoteViewInitialValues {
   viewId?: string;
@@ -40,12 +43,12 @@ export interface vtkRemoteView extends vtkObject {
   /**
    *
    */
-  getInteractor(): any;
+  getInteractor(): vtkRenderWindowInteractor;
 
   /**
    *
    */
-  getInteractorStyle(): any;
+  getInteractorStyle(): vtkInteractorStyleRemoteMouse;
 
   /**
    *
@@ -92,24 +95,24 @@ export interface vtkRemoteView extends vtkObject {
   /**
    *
    */
-  getRpcGestureEvent(): any;
+  getRpcGestureEvent(): Nullable<string>;
 
   /**
    *
    * @param rpcGestureEvent
    */
-  setRpcGestureEvent(rpcGestureEvent: any): boolean;
+  setRpcGestureEvent(rpcGestureEvent: Nullable<string>): boolean;
 
   /**
    *
    */
-  getRpcWheelEvent(): any;
+  getRpcWheelEvent(): Nullable<string>;
 
   /**
    *
    * @param rpcWheelEvent
    */
-  setRpcWheelEvent(rpcWheelEvent: any): boolean;
+  setRpcWheelEvent(rpcWheelEvent: Nullable<string>): boolean;
 
   /**
    * Release GL context

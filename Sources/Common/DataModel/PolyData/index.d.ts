@@ -1,6 +1,8 @@
-import { CellType } from '../../../types';
+import { CellType, Nullable } from '../../../types';
 import vtkCellArray from '../../Core/CellArray';
 import vtkCell from '../Cell';
+import vtkCellLinks from '../CellLinks';
+import vtkCellTypes from '../CellTypes';
 import vtkPointSet, { IPointSetInitialValues } from '../PointSet';
 
 /**
@@ -64,7 +66,7 @@ export interface vtkPolyData extends vtkPointSet {
   /**
    * Get the cell array defining cells.
    */
-  getCells(): any; // vtkCellTypes
+  getCells(): Nullable<vtkCellTypes>;
 
   /**
    * Get the cell array defining lines.
@@ -74,7 +76,7 @@ export interface vtkPolyData extends vtkPointSet {
   /**
    * Get the links between points and cells.
    */
-  getLinks(): any; // vtkCellLinks
+  getLinks(): Nullable<vtkCellLinks>;
 
   /**
    * Get the maximum cell size.

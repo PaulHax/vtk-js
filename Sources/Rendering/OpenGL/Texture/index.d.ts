@@ -57,6 +57,15 @@ export interface ITextureVolumeInfo {
 }
 
 /**
+ * Scale and shift needed to map normalized OpenGL data type values back to
+ * data values, as `data = value * scale + shift`.
+ */
+export interface ITextureShiftAndScale {
+  shift: number;
+  scale: number;
+}
+
+/**
  * Interface for OpenGL Texture.
  */
 export interface vtkOpenGLTexture extends vtkViewNode {
@@ -120,7 +129,7 @@ export interface vtkOpenGLTexture extends vtkViewNode {
    * @param numComps The number of components in the texture.
    * @returns The internal format.
    */
-  getInternalFormat(vtktype: VtkDataTypes, numComps: number): any;
+  getInternalFormat(vtktype: VtkDataTypes, numComps: number): number;
 
   /**
    * Gets the default internal format for the texture based on the VTK data type and number of components.
@@ -128,13 +137,13 @@ export interface vtkOpenGLTexture extends vtkViewNode {
    * @param numComps The number of components in the texture.
    * @returns The default internal format.
    */
-  getDefaultInternalFormat(vtktype: VtkDataTypes, numComps: number): any;
+  getDefaultInternalFormat(vtktype: VtkDataTypes, numComps: number): number;
 
   /**
    * Sets the internal format for the texture.
    * @param iformat The internal format to set.
    */
-  setInternalFormat(iformat: any): void;
+  setInternalFormat(iformat: number): void;
 
   /**
    * Gets the format for the texture based on the VTK data type and number of components.
@@ -142,7 +151,7 @@ export interface vtkOpenGLTexture extends vtkViewNode {
    * @param numComps The number of components in the texture.
    * @returns The format.
    */
-  getFormat(vtktype: VtkDataTypes, numComps: number): any;
+  getFormat(vtktype: VtkDataTypes, numComps: number): number;
 
   /**
    * Gets the default format for the texture based on the VTK data type and number of components.
@@ -150,7 +159,7 @@ export interface vtkOpenGLTexture extends vtkViewNode {
    * @param numComps The number of components in the texture.
    * @returns The default format.
    */
-  getDefaultFormat(vtktype: VtkDataTypes, numComps: number): any;
+  getDefaultFormat(vtktype: VtkDataTypes, numComps: number): number;
 
   /**
    * Resets the texture format and type to their default values.
@@ -162,7 +171,7 @@ export interface vtkOpenGLTexture extends vtkViewNode {
    * @param vtkScalarType The VTK scalar type.
    * @returns The default data type.
    */
-  getDefaultDataType(vtkScalarType: VtkDataTypes): any;
+  getDefaultDataType(vtkScalarType: VtkDataTypes): number;
 
   /**
    * Gets the OpenGL data type for the texture based on the VTK scalar type and whether to force an update.
@@ -170,27 +179,27 @@ export interface vtkOpenGLTexture extends vtkViewNode {
    * @param forceUpdate Whether to force the update of the data type.
    * @returns The OpenGL data type.
    */
-  getOpenGLDataType(vtkScalarType: VtkDataTypes, forceUpdate: boolean): any;
+  getOpenGLDataType(vtkScalarType: VtkDataTypes, forceUpdate: boolean): number;
 
   /**
    * Gets the shift and scale values for the texture.
    * @returns The shift and scale values.
    */
-  getShiftAndScale(): any;
+  getShiftAndScale(): ITextureShiftAndScale;
 
   /**
    * Gets the OpenGL filter mode for the texture.
    * @param emode The filter mode.
    * @returns The OpenGL filter mode.
    */
-  getOpenGLFilterMode(emode: Filter): any;
+  getOpenGLFilterMode(emode: Filter): number;
 
   /**
    * Gets the OpenGL wrap mode for the texture.
    * @param vtktype The wrap type.
    * @returns The OpenGL wrap mode.
    */
-  getOpenGLWrapMode(vtktype: Wrap): any;
+  getOpenGLWrapMode(vtktype: Wrap): number;
 
   /**
    * Updates the data array to match the required data type for OpenGL.
@@ -607,13 +616,13 @@ export interface vtkOpenGLTexture extends vtkViewNode {
   /**
    * Gets the EXT_texture_norm16 extension object, if available.
    */
-  getOglNorm16Ext(): any;
+  getOglNorm16Ext(): Nullable<EXT_texture_norm16>;
 
   /**
    * Sets the EXT_texture_norm16 extension object.
    * @param oglNorm16Ext The extension object.
    */
-  setOglNorm16Ext(oglNorm16Ext: any): boolean;
+  setOglNorm16Ext(oglNorm16Ext: Nullable<EXT_texture_norm16>): boolean;
 }
 
 /**

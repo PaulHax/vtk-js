@@ -4,6 +4,7 @@ import { vtkObject } from '../../../interfaces';
 import { Nullable } from '../../../types';
 import vtkWebGPUDevice from '../Device';
 import vtkWebGPUSampler from '../Sampler';
+import vtkWebGPUTexture from '../Texture';
 
 export interface IWebGPUTextureViewInitialValues {
   texture?: any;
@@ -65,7 +66,7 @@ export interface vtkWebGPUTextureView extends vtkObject {
   /**
    * Get the vtkWebGPUTexture this is a view of.
    */
-  getTexture(): any;
+  getTexture(): Nullable<vtkWebGPUTexture>;
 
   /**
    * Get the bind group layout entry describing this view.

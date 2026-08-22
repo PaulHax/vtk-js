@@ -1,5 +1,6 @@
 import { vtkObject } from '../../../interfaces';
-import { Size } from '../../../types';
+import { Nullable, Size } from '../../../types';
+import vtkRenderWindowInteractor from '../../Core/RenderWindowInteractor';
 
 /**
  *
@@ -32,22 +33,22 @@ export interface vtkCanvasView extends vtkObject {
   /**
    * Get the interactor
    */
-  getInteractor(): any;
+  getInteractor(): Nullable<vtkRenderWindowInteractor>;
 
   /**
    *
    */
-  getRenderable(): any;
+  getRenderable(): vtkCanvasView;
 
   /**
    *
    */
-  getRenderers(): any[];
+  getRenderers(): vtkCanvasView[];
 
   /**
    *
    */
-  getRenderersByReference(): any[];
+  getRenderersByReference(): vtkCanvasView[];
 
   /**
    * Get the size of the canvas view
@@ -102,7 +103,7 @@ export interface vtkCanvasView extends vtkObject {
    *
    * @param interactor
    */
-  setInteractor(interactor: any): boolean;
+  setInteractor(interactor: Nullable<vtkRenderWindowInteractor>): boolean;
 
   /**
    * Set the size of the canvas view.

@@ -1,6 +1,7 @@
 import { EventHandler, vtkObject, vtkSubscription } from '../../../interfaces';
 import { Nullable } from '../../../types';
 import vtkOpenGLRenderWindow from '../../OpenGL/RenderWindow';
+import vtkRenderWindow from '../../Core/RenderWindow';
 import { XrSessionTypes } from './Constants';
 
 /**
@@ -21,7 +22,7 @@ export interface vtkWebXRRenderWindowHelper extends vtkObject {
   /**
    * Initialize the instance.
    */
-  initialize(): void;
+  initialize(renderWindow: vtkRenderWindow): void;
 
   /**
    * Whether the browser exposes the WebXR device API.

@@ -3,6 +3,9 @@
 import { vtkObject } from '../../../interfaces';
 import { Nullable } from '../../../types';
 import vtkWebGPUBufferManager from '../BufferManager';
+import vtkWebGPUShaderCache from '../ShaderCache';
+import vtkWebGPUShaderModule from '../ShaderModule';
+import vtkWebGPUTextureManager from '../TextureManager';
 
 /**
  * A map of key to weak reference. Entries whose value has been garbage
@@ -51,7 +54,7 @@ export interface vtkWebGPUDevice extends vtkObject {
    * Get a shader module from the shader cache for the given shader description.
    * @param sd The vtkWebGPUShaderDescription to compile.
    */
-  getShaderModule(sd: any): any;
+  getShaderModule(sd: any): vtkWebGPUShaderModule;
 
   /**
    * Get a bind group layout matching the given description, creating and
@@ -124,12 +127,12 @@ export interface vtkWebGPUDevice extends vtkObject {
   /**
    * Get the shader cache owned by this device.
    */
-  getShaderCache(): any;
+  getShaderCache(): vtkWebGPUShaderCache;
 
   /**
    * Get the texture manager owned by this device.
    */
-  getTextureManager(): any;
+  getTextureManager(): vtkWebGPUTextureManager;
 }
 
 /**

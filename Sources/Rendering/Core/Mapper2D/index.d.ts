@@ -2,6 +2,8 @@ import { Nullable } from '../../../types';
 import { ColorMode, GetArray, ScalarMode } from '../Mapper/Constants';
 import { vtkDataArray } from '../../../Common/Core/DataArray';
 import { vtkImageData } from '../../../Common/DataModel/ImageData';
+import { vtkScalarsToColors } from '../../../Common/Core/ScalarsToColors';
+import { vtkCoordinate } from '../Coordinate';
 import vtkAbstractMapper, {
   IAbstractMapperInitialValues,
 } from '../AbstractMapper';
@@ -19,13 +21,13 @@ interface IAbstractScalars {
 
 export interface IMapper2DInitialValues extends IAbstractMapperInitialValues {
   colorByArrayName?: string;
-  lookupTable?: any;
-  transformCoordinate?: any;
+  lookupTable?: Nullable<vtkScalarsToColors>;
+  transformCoordinate?: Nullable<vtkCoordinate>;
   useLookupTableScalarRange?: boolean;
   viewSpecificProperties?: object;
   arrayAccessMode?: number;
   colorMode?: number;
-  customShaderAttributes?: any;
+  customShaderAttributes?: string[];
   renderTime?: number;
   scalarMode?: number;
   scalarRange?: Range;
@@ -110,17 +112,17 @@ export interface vtkMapper2D extends vtkAbstractMapper {
    *
    * @default []
    */
-  getCustomShaderAttributes(): any;
+  getCustomShaderAttributes(): string[];
 
   /**
    * Get a lookup table for the mapper to use.
    */
-  getLookupTable(): any;
+  getLookupTable(): Nullable<vtkScalarsToColors>;
 
   /**
    * Get the transformCoordinate.
    */
-  getTransformCoordinate(): any;
+  getTransformCoordinate(): Nullable<vtkCoordinate>;
 
   /**
    *
@@ -231,12 +233,12 @@ export interface vtkMapper2D extends vtkAbstractMapper {
   /**
    * Set a lookup table for the mapper to use.
    */
-  setLookupTable(lookupTable: any): boolean;
+  setLookupTable(lookupTable: Nullable<vtkScalarsToColors>): boolean;
 
   /**
    * Set the transformCoordinate.
    */
-  setTransformCoordinate(coordinate: any): boolean;
+  setTransformCoordinate(coordinate: Nullable<vtkCoordinate>): boolean;
 
   /**
    *

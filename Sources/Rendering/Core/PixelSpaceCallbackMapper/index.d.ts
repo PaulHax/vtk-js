@@ -6,7 +6,12 @@ import vtkMapper, { IMapperInitialValues } from '../Mapper';
  *
  */
 export interface IPixelSpaceCallbackMapperInitialValues extends IMapperInitialValues {
-  callback?: any;
+  callback?: (
+    coords: Vector3[],
+    camera: vtkCamera,
+    aspect: number,
+    depthBuffer: Uint8Array
+  ) => any;
   useZValues?: boolean;
 }
 
@@ -19,7 +24,12 @@ export interface vtkPixelSpaceCallbackMapper extends vtkMapper {
   /**
    *
    */
-  getCallback(): any;
+  getCallback(): (
+    coords: Vector3[],
+    camera: vtkCamera,
+    aspect: number,
+    depthBuffer: Uint8Array
+  ) => any;
 
   /**
    *

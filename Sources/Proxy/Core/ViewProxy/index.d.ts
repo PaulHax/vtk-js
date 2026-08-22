@@ -68,7 +68,7 @@ export interface vtkViewProxy extends VtkProxy {
   getInteractorStyle3D(): vtkInteractorStyle;
   getApiSpecificRenderWindow(): vtkOpenGLRenderWindow | vtkWebGPURenderWindow;
   getOrientationAxesType(): string;
-  getPresetToOrientationAxes(): any;
+  getPresetToOrientationAxes(): string;
   getRenderer(): vtkRenderer;
   getRenderWindow(): vtkRenderWindow;
   getRepresentations(): vtkAbstractRepresentationProxy[];

@@ -23,7 +23,7 @@ export interface vtkCellArray extends vtkDataArray {
    * Get the sizes of the cells in this array.
    * @param {Boolean} [recompute] Recompute the cell sizes.
    */
-  getCellSizes(recompute?: boolean): any;
+  getCellSizes(recompute?: boolean): number[];
 
   /**
    * Set the data of this array.

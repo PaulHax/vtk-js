@@ -27,7 +27,7 @@ export interface vtkRenderPass extends vtkObject {
   /**
    *
    */
-  getDelegates(): any;
+  getDelegates(): vtkRenderPass[];
 
   /**
    *
@@ -37,12 +37,12 @@ export interface vtkRenderPass extends vtkObject {
   /**
    *
    */
-  getPostDelegateOperations(): any;
+  getPostDelegateOperations(): string[];
 
   /**
    *
    */
-  getPreDelegateOperations(): any;
+  getPreDelegateOperations(): string[];
 
   /**
    *
@@ -65,19 +65,19 @@ export interface vtkRenderPass extends vtkObject {
    *
    * @param delegates
    */
-  setDelegates(delegates: any): boolean;
+  setDelegates(delegates: vtkRenderPass[]): boolean;
 
   /**
    *
    * @param postDelegateOperations
    */
-  setPostDelegateOperations(postDelegateOperations: any): boolean;
+  setPostDelegateOperations(postDelegateOperations: string[]): boolean;
 
   /**
    *
    * @param preDelegateOperations
    */
-  setPreDelegateOperations(preDelegateOperations: any): boolean;
+  setPreDelegateOperations(preDelegateOperations: string[]): boolean;
 
   /**
    * by default this class will traverse all of its

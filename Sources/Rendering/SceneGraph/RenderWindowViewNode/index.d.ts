@@ -1,7 +1,8 @@
 import vtkHardwareSelector from '../../Core/HardwareSelector';
 import vtkRenderer from '../../Core/Renderer';
-import { Vector2, Vector3 } from '../../../types';
+import { Nullable, Vector2, Vector3 } from '../../../types';
 import vtkViewNode, { IViewNodeInitialValues } from '../ViewNode';
+import vtkViewNodeFactory from '../ViewNodeFactory';
 
 /**
  *
@@ -62,7 +63,7 @@ export interface vtkRenderWindowViewNode extends vtkViewNode {
   /**
    * Returns null, api specific subclasses provide their own factory.
    */
-  getViewNodeFactory(): any;
+  getViewNodeFactory(): Nullable<vtkViewNodeFactory>;
 
   /**
    * Get the center of the viewport.

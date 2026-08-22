@@ -5,6 +5,8 @@ import {
 } from '../AbstractMapper3D';
 import { ColorMode, GetArray, ScalarMode } from './Constants';
 import { vtkDataArray } from '../../../Common/Core/DataArray';
+import { vtkImageData } from '../../../Common/DataModel/ImageData';
+import { vtkScalarsToColors } from '../../../Common/Core/ScalarsToColors';
 import {
   CoincidentTopologyHelper,
   StaticCoincidentTopologyMethods,
@@ -24,7 +26,7 @@ interface IAbstractScalars {
 
 export interface IMapperInitialValues extends IAbstractMapper3DInitialValues {
   colorByArrayName?: string;
-  lookupTable?: any;
+  lookupTable?: Nullable<vtkScalarsToColors>;
   populateSelectionSettings?: boolean;
   selectionWebGLIdsToVTKIds?: any;
   static?: boolean;
@@ -39,7 +41,7 @@ export interface IMapperInitialValues extends IAbstractMapper3DInitialValues {
   interpolateScalarsBeforeMapping?: boolean;
   forceCompileOnly?: number;
   useInvertibleColors?: boolean;
-  customShaderAttributes?: any;
+  customShaderAttributes?: string[];
 }
 
 export interface vtkMapper
@@ -163,19 +165,19 @@ export interface vtkMapper
    * Provide read access to the color texture array
    * @todo Check the retun type
    */
-  getColorTextureMap(): any;
+  getColorTextureMap(): Nullable<vtkImageData>;
 
   /**
    *
    * @default []
    */
-  getCustomShaderAttributes(): any;
+  getCustomShaderAttributes(): string[];
 
   /**
    *
    * @default -1
    */
-  getFieldDataTupleId(): any;
+  getFieldDataTupleId(): number;
 
   /**
    * By default, vertex color is used to map colors to a surface.
@@ -199,7 +201,7 @@ export interface vtkMapper
   /**
    * Get a lookup table for the mapper to use.
    */
-  getLookupTable(): any;
+  getLookupTable(): Nullable<vtkScalarsToColors>;
 
   /**
    * Check whether the mapper populates selection settings when processing a
@@ -351,7 +353,7 @@ export interface vtkMapper
   /**
    * Set a lookup table for the mapper to use.
    */
-  setLookupTable(lookupTable: any): boolean;
+  setLookupTable(lookupTable: Nullable<vtkScalarsToColors>): boolean;
 
   /**
    * Turn on/off flag to control whether the mapper populates selection

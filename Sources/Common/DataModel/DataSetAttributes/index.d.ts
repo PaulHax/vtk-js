@@ -1,4 +1,5 @@
 import { vtkObject } from '../../../interfaces';
+import { Nullable } from '../../../types';
 import { IFieldDataInitialValues, vtkFieldData } from './FieldData';
 import vtkDataArray from '../../Core/DataArray';
 import {
@@ -35,7 +36,7 @@ export interface vtkDataSetAttributes extends vtkFieldData {
    *
    * @param {string} attType
    */
-  getActiveAttribute(attType: string): any;
+  getActiveAttribute(attType: string): Nullable<vtkDataArray>;
 
   /**
    * Get a list of attribute names that the given array

@@ -2,12 +2,12 @@ import { vtkObject, vtkSubscription } from '../../../interfaces';
 import { Nullable } from '../../../types';
 import vtkRenderer from '../Renderer';
 import vtkRenderWindowInteractor from '../RenderWindowInteractor';
-// import vtkOpenGLRenderWindow from "../../../OpenGL/RenderWindow";
+import vtkRenderWindowViewNode from '../../SceneGraph/RenderWindowViewNode';
 
 export interface IRenderWindowInitialValues {
   defaultViewAPI?: string;
   renderers?: vtkRenderer[];
-  views?: vtkRenderWindow[];
+  views?: vtkRenderWindowViewNode[];
   interactor?: any;
   neverRendered?: boolean;
   numberOfLayers?: number;
@@ -109,9 +109,7 @@ export interface vtkRenderWindow extends vtkObject {
   /**
    *
    */
-  getViews(): any[];
-
-  // getViews(): vtkOpenGLRenderWindow[];
+  getViews(): vtkRenderWindowViewNode[];
 
   /**
    *
@@ -201,9 +199,7 @@ export interface vtkRenderWindow extends vtkObject {
    *
    * @param views
    */
-  setViews(views: any[]): boolean;
-
-  // setViews(views: vtkOpenGLRenderWindow[]): boolean;
+  setViews(views: vtkRenderWindowViewNode[]): boolean;
 }
 
 /**

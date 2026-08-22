@@ -37,7 +37,7 @@ export interface IScalarBarActorInitialValues extends Omit<
   'orientation'
 > {
   automated?: boolean;
-  autoLayout?: (publicAPI: object, model: object) => void;
+  autoLayout?: (helper: vtkScalarBarActorHelper) => void;
   axisLabel?: string;
   barPosition?: Vector2;
   barSize?: Size;
@@ -48,7 +48,7 @@ export interface IScalarBarActorInitialValues extends Omit<
   axisTextStyle?: IStyle;
   tickLabelPixelOffset?: number;
   tickTextStyle?: IStyle;
-  generateTicks?: (helper: any) => void;
+  generateTicks?: (helper: vtkScalarBarActorHelper) => void;
   drawBelowRangeSwatch?: boolean;
   drawAboveRangeSwatch?: boolean;
   drawNanAnnotation?: boolean;
@@ -67,12 +67,12 @@ export interface vtkScalarBarActor extends Omit<
   /**
    *
    */
-  getAutoLayout(): any;
+  getAutoLayout(): (helper: vtkScalarBarActorHelper) => void;
 
   /**
    *
    */
-  getGenerateTicks(): any;
+  getGenerateTicks(): (helper: vtkScalarBarActorHelper) => void;
 
   /**
    *
@@ -183,7 +183,7 @@ export interface vtkScalarBarActor extends Omit<
    *
    * @param autoLayout
    */
-  setAutoLayout(autoLayout: any): boolean;
+  setAutoLayout(autoLayout: (helper: vtkScalarBarActorHelper) => void): boolean;
 
   /**
    * Sets the function used to generate legend ticks.
@@ -201,7 +201,9 @@ export interface vtkScalarBarActor extends Omit<
    * ```
    * @param generateTicks
    */
-  setGenerateTicks(generateTicks: (helper: any) => void): boolean;
+  setGenerateTicks(
+    generateTicks: (helper: vtkScalarBarActorHelper) => void
+  ): boolean;
 
   /**
    *

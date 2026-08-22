@@ -21,7 +21,7 @@ export interface ISynchronizerContext {
 
   // instanceMap
   getInstance(id: any): any;
-  getInstanceId(instance: any): any | null;
+  getInstanceId(instance: any): Nullable<string>;
   registerInstance(id: any, instance: any): void;
   unregister(id: any): void;
   emptyCachedInstances(): void;

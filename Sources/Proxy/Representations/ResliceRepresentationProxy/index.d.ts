@@ -16,6 +16,7 @@ export interface vtkResliceRepresentationProxy extends vtkAbstractRepresentation
   getInterpolationType(): number;
   setOutlineLineWidth(lineWidth: number): boolean;
   getOutlineLineWidth(): number;
+  setOutlineColor(r: number, g: number, b: number): boolean;
   setOutlineColor(color: RGBColor): boolean;
   getOutlineColor(): RGBColor;
   setOutlineVisibility(visibility: boolean): boolean;

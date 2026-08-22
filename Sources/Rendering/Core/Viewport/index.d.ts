@@ -90,7 +90,7 @@ export interface vtkViewport extends vtkObject {
   /**
    *
    */
-  getViewPropsWithNestedProps(): any;
+  getViewPropsWithNestedProps(): vtkProp[];
 
   /**
    *

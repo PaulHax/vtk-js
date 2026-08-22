@@ -1,6 +1,7 @@
 import { ObjectType } from './Constants';
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
 import { Nullable } from '../../../types';
+import vtkOpenGLRenderWindow from '../RenderWindow';
 
 /**
  * Interface for initial values of BufferObject
@@ -75,13 +76,13 @@ export interface vtkOpenGLBufferObject extends vtkObject {
    * Sets the OpenGL render window.
    * @param renWin The render window to set.
    */
-  setOpenGLRenderWindow(renWin: any): void;
+  setOpenGLRenderWindow(renWin: vtkOpenGLRenderWindow): void;
 
   /**
    * Gets the OpenGL render window.
    * @returns The render window.
    */
-  getOpenGLRenderWindow(): any;
+  getOpenGLRenderWindow(): Nullable<vtkOpenGLRenderWindow>;
 
   /**
    * Gets the amount of GPU memory allocated by the buffer object in bytes.

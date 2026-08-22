@@ -192,7 +192,7 @@ export interface vtkRenderWindowInteractor extends vtkObject {
    * External switching between joystick/trackball/new? modes.
    * @param style
    */
-  setInteractorStyle(style: any): void;
+  setInteractorStyle(style: Nullable<vtkInteractorStyle>): void;
 
   /**
    *

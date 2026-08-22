@@ -1,4 +1,5 @@
 import { vtkObject } from '../../../interfaces';
+import { Nullable } from '../../../types';
 import vtkActor from '../Actor';
 import vtkActor2D from '../Actor2D';
 import vtkTexture from '../Texture';
@@ -118,7 +119,7 @@ export interface vtkProp extends vtkObject {
   /**
    *
    */
-  getNestedProps(): any;
+  getNestedProps(): Nullable<vtkProp[]>;
 
   /**
    * Return parent prop set by setParentProp

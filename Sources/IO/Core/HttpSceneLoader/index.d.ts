@@ -4,6 +4,7 @@ import vtkAnnotatedCubeActor from '../../../Rendering/Core/AnnotatedCubeActor';
 import vtkAxesActor from '../../../Rendering/Core/AxesActor';
 import vtkRenderer from '../../../Rendering/Core/Renderer';
 import vtkRenderWindowInteractor from '../../../Rendering/Core/RenderWindowInteractor';
+import vtkTimeStepBasedAnimationHandler from '../../../Interaction/Animations/TimeStepBasedAnimationHandler';
 
 /**
  *
@@ -20,7 +21,7 @@ export interface vtkHttpSceneLoader extends vtkObject {
   /**
    *
    */
-  getAnimationHandler(): any; // vtkTimeStepBasedAnimationHandler
+  getAnimationHandler(): Nullable<vtkTimeStepBasedAnimationHandler>;
 
   /**
    *

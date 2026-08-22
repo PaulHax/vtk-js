@@ -1,5 +1,7 @@
 import { EventHandler, vtkObject, vtkSubscription } from '../../../interfaces';
+import { Nullable } from '../../../types';
 import vtkRenderPass from '../RenderPass';
+import vtkViewNodeFactory from '../ViewNodeFactory';
 
 /**
  * The traversal passes a view node supports, in traversal order.
@@ -69,12 +71,12 @@ export interface vtkViewNode extends vtkObject {
   /**
    *
    */
-  getChildren(): any;
+  getChildren(): vtkViewNode[];
 
   /**
    *
    */
-  getChildrenByReference(): any;
+  getChildrenByReference(): vtkViewNode[];
 
   /**
    * Find the first parent/grandparent of the desired type
@@ -91,17 +93,17 @@ export interface vtkViewNode extends vtkObject {
   /**
    *
    */
-  getMyFactory(): any;
+  getMyFactory(): Nullable<vtkViewNodeFactory>;
 
   /**
    *
    */
-  getParent(): any;
+  getParent(): Nullable<vtkViewNode>;
 
   /**
    * Get The data object (thing to be rendered).
    */
-  getRenderable(): any;
+  getRenderable(): Nullable<vtkObject>;
 
   /**
    * Returns the view node that corresponding to the provided object
@@ -109,7 +111,7 @@ export interface vtkViewNode extends vtkObject {
    * @param dataObject
    * @param [hint] the previously found node (for optimization)
    */
-  getViewNodeFor(dataObject: any, hint?: any): any;
+  getViewNodeFor(dataObject: any, hint?: any): vtkViewNode | undefined;
 
   /**
    *
@@ -139,19 +141,19 @@ export interface vtkViewNode extends vtkObject {
    *
    * @param myFactory
    */
-  setMyFactory(myFactory: any): boolean;
+  setMyFactory(myFactory: Nullable<vtkViewNodeFactory>): boolean;
 
   /**
    *
    * @param parent
    */
-  setParent(parent: any): boolean;
+  setParent(parent: Nullable<vtkViewNode>): boolean;
 
   /**
    *
    * @param renderable
    */
-  setRenderable(renderable: any): boolean;
+  setRenderable(renderable: Nullable<vtkObject>): boolean;
 
   /**
    *

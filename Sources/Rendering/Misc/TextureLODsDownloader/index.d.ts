@@ -40,7 +40,7 @@ export interface vtkTextureLODsDownloader extends vtkObject {
   /**
    *
    */
-  getStepFinishedCallback(): any;
+  getStepFinishedCallback(): Nullable<() => void>;
 
   /**
    * Get the vtkTexture object
@@ -85,7 +85,7 @@ export interface vtkTextureLODsDownloader extends vtkObject {
    *
    * @param stepFinishedCallback
    */
-  setStepFinishedCallback(stepFinishedCallback: any): boolean;
+  setStepFinishedCallback(stepFinishedCallback: Nullable<() => void>): boolean;
 
   /**
    * Set the vtkTexture object

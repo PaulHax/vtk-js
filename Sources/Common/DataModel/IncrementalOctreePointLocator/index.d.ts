@@ -180,7 +180,10 @@ export interface vtkIncrementalOctreePointLocator extends vtkIncrementalOctreePo
    * @param {Vector3} x
    * @returns {IInsertedPointResult}
    */
-  isInsertedPoint(x: Vector3): IInsertedPointResult;
+  isInsertedPoint(
+    x: Vector3,
+    leafContainer?: vtkIncrementalOctreeNode
+  ): IInsertedPointResult;
 
   /**
    * Determine whether a point with exactly these coordinates is already

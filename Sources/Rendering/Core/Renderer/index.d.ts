@@ -7,6 +7,7 @@ import vtkProp from '../Prop';
 import vtkViewport, { IViewportInitialValues } from '../Viewport';
 import vtkVolume from '../Volume';
 import vtkTexture from '../Texture';
+import vtkHardwareSelector from '../HardwareSelector';
 import { EventHandler, vtkSubscription } from '../../../interfaces';
 
 export interface IRendererInitialValues extends IViewportInitialValues {
@@ -290,7 +291,7 @@ export interface vtkRenderer extends Omit<
    *
    * @default null
    */
-  getSelector(): any;
+  getSelector(): Nullable<vtkHardwareSelector>;
 
   /**
    *

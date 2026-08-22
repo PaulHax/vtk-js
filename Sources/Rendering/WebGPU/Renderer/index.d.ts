@@ -1,6 +1,7 @@
 import { Nullable, Vector3 } from '../../../types';
 import { IViewNodeInitialValues, vtkViewNode } from '../../SceneGraph/ViewNode';
 import vtkWebGPUBindGroup from '../BindGroup';
+import vtkWebGPUHardwareSelector from '../HardwareSelector';
 import vtkWebGPURenderEncoder from '../RenderEncoder';
 import vtkWebGPUUniformBuffer from '../UniformBuffer';
 
@@ -169,13 +170,13 @@ export interface vtkWebGPURenderer extends vtkViewNode {
   /**
    * Get the hardware selector currently selecting through this renderer.
    */
-  getSelector(): any;
+  getSelector(): Nullable<vtkWebGPUHardwareSelector>;
 
   /**
    * Set the hardware selector currently selecting through this renderer.
    * @param selector
    */
-  setSelector(selector: any): boolean;
+  setSelector(selector: Nullable<vtkWebGPUHardwareSelector>): boolean;
 
   /**
    * Whether clearing the viewport is suppressed, e.g. when another renderer
