@@ -46,11 +46,10 @@ The baseline's sections:
   implement; the single entry is `vtkAbstractManipulator.handleEvent`, which
   every concrete manipulator defines and the abstract factory does not.
 - `undeclaredRuntimeExports` and `undeclaredMembers` are accepted declaration
-  debt. Three groups make up most of the member debt: `vtkVolumeMapper`
-  installs throwing stubs for the methods that moved to the volume property,
-  and those must stay undeclared; `vtkIncrementalOctreePointLocator` declares
-  no instance members at all; and the OpenGL and WebXR backends expose
-  render-pass internals their declarations skip.
+  debt. Only one entry is left: `vtkVolumeMapper` installs throwing stubs for
+  the methods that moved to the volume property, and those must stay
+  undeclared — declaring them would advertise methods whose only behavior is to
+  throw. Anything else appearing here is a real gap, not a category.
 - `arityMismatches` are members whose declaration demands more parameters than
   the implementation accepts, written as `name(declared>runtime)`. Parameters
   that are optional, defaulted or rest are not counted on either side, and
