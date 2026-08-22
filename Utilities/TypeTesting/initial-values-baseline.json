@@ -1,0 +1,90 @@
+{
+  "missingOptions": {
+    "Proxy/Animation/AnimationProxyManager": []
+  },
+  "readOnlyOptions": {
+    "Common/DataModel/ImageData": [
+      "indexToWorld",
+      "worldToIndex"
+    ],
+    "Filters/Sources/Cursor3D": [
+      "focus"
+    ],
+    "IO/Image/HDRReader": [
+      "exposure",
+      "gamma",
+      "pixelAspect"
+    ],
+    "IO/Misc/HttpDataSetLODsLoader": [
+      "currentSource"
+    ],
+    "Imaging/Core/AbstractImageInterpolator": [
+      "origin",
+      "spacing"
+    ],
+    "Imaging/Core/ImagePointDataIterator": [
+      "id",
+      "index"
+    ],
+    "Interaction/Widgets/OrientationMarkerWidget": [
+      "interactiveRenderer"
+    ],
+    "Proxy/Animation/AnimationProxyManager": [
+      "currentFrameIndex",
+      "frames"
+    ],
+    "Proxy/Core/AbstractRepresentationProxy": [
+      "actors",
+      "volumes"
+    ],
+    "Proxy/Core/LookupTableProxy": [
+      "hsvPoints",
+      "rgbPoints"
+    ],
+    "Proxy/Core/View2DProxy": [
+      "axis"
+    ],
+    "Proxy/Core/ViewProxy": [
+      "representations"
+    ],
+    "Rendering/Core/ColorTransferFunction": [
+      "buildTime"
+    ],
+    "Rendering/Core/Mapper": [
+      "areScalarsMappedFromCells",
+      "colorCoordinates",
+      "colorMapColors",
+      "colorTextureMap",
+      "numberOfColorsInRange"
+    ],
+    "Rendering/Core/Mapper2D": [
+      "areScalarsMappedFromCells",
+      "colorMapColors"
+    ],
+    "Rendering/Core/Picker": [
+      "dataSet",
+      "mapper"
+    ],
+    "Rendering/Core/RenderWindowInteractor": [
+      "recentAnimationFrameRate"
+    ],
+    "Rendering/Core/Renderer": [
+      "selector"
+    ],
+    "Rendering/OpenGL/Framebuffer": [
+      "colorBuffers"
+    ],
+    "Rendering/WebGPU/Actor": [
+      "keyMatricesTime"
+    ],
+    "Rendering/WebGPU/Actor2D": [
+      "keyMatricesTime"
+    ],
+    "Rendering/WebGPU/Volume": [
+      "keyMatricesTime"
+    ]
+  },
+  "untypedOptions": [
+    "Proxy/Animation/AnimationProxyManager"
+  ]
+}

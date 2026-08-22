@@ -22,6 +22,15 @@ compiling the declarations alone.
   re-optimize its dependency graph mid-run, and that reload breaks whichever
   sibling test file happens to be importing at the time. Its filename deliberately
   does not match the suite's `test*.js` pattern for the same reason.
+- `npm run test:types:initial-values` censuses what each factory accepts as
+  `newInstance` options. `newInstance` copies its argument straight onto the
+  model, so every `DEFAULT_VALUES` key with a public setter is a real option.
+  This reads those keys and the registered accessor names out of each
+  `index.js`, resolves the type the declaration gives the `initialValues`
+  parameter — the declared type, not whatever interface is named
+  `I*InitialValues`, because several modules name it differently — and reports
+  the options that type omits. It is pure static analysis, so unlike the
+  declaration census it needs no build.
 - `npm run test:types:contracts` compiles focused source-tree API contracts.
 - `npm run test:types:packed` installs the generated ESM tarball into a clean
   temporary consumer, compiles those same contracts through package deep
@@ -82,3 +91,29 @@ position even though the factory object is only a default runtime export.
 Modules with no `.d.ts` at all are outside the census: it walks declarations,
 not the runtime. Adding declarations for a module brings it into scope
 automatically.
+
+`initial-values-baseline.json` records the same kind of reviewed exceptions for
+the options census, in three sections:
+
+- `missingOptions` are settable keys the declared options type omits, and should
+  stay empty. An entry here means `newInstance({ key })` is rejected for a key
+  the runtime honors.
+- `readOnlyOptions` are keys whose only accessor is a read-only `macro.get`.
+  They are assignable at construction because `newInstance` assigns the whole
+  object, but they hold internal state — cached tables, timestamps, values
+  derived from the input — so they are deliberately not declared.
+- `untypedOptions` lists factories whose `initialValues` parameter is still
+  `object` or `any`, which accepts anything and completes nothing. The single
+  entry is `vtkAnimationProxyManager`: it has no settable options of its own,
+  but `macro.proxy` reads `proxyId` and `ui` off the model, so an empty
+  interface would reject the keys the proxy manager legitimately constructs it
+  with. Typing it needs the shared proxy option set declared first.
+
+Regenerate it with `--write-baseline`, and only after reviewing the diff: a new
+`missingOptions` entry is a gap to close, not a line to record.
+
+A disagreement between a `DEFAULT_VALUES` key and the accessor registered for it
+is worth reading closely rather than declaring around. The three this branch's
+base still carries are misspellings that leave a documented option inert, fixed
+on `runtime-defect-cleanup` and written up in
+`plans/runtime-defects-from-declaration-audit.md` in the fork's parent directory.

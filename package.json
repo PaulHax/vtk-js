@@ -93,6 +93,7 @@
     "typecheck": "tsc --noEmit",
     "test:types:contracts": "tsc -p Utilities/TypeTesting/tsconfig.json",
     "test:types:declarations": "node Utilities/TypeTesting/check-declarations.mjs --emit-unverified Utilities/TypeTesting/unverified-surface.json",
+    "test:types:initial-values": "node Utilities/TypeTesting/check-initial-values.mjs",
     "test:types:browser": "npm run test:types:declarations && vitest run -c vitest.declarations.config.js",
     "test:types:packed": "node Utilities/TypeTesting/check-packed-types.mjs",
     "docs:dev": "vitepress dev Documentation",
