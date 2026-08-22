@@ -86,6 +86,17 @@ export interface vtkAbstractManipulator extends vtkObject {
   /* ------------------------------------------------------------------- */
 
   /**
+   * Get the user normal currently stored on the manipulator, or `undefined` when it
+   * has never been set. It takes precedence over the handle and widget normals.
+   */
+  getUserNormal(): Nullable<Vector3> | undefined;
+
+  /**
+   * Get the user normal without copying it out of the model (see getUserNormal).
+   */
+  getUserNormalByReference(): Nullable<Vector3> | undefined;
+
+  /**
    * Set the user normal.
    * This normal take precedence on the handleNormal and the widgetNormal.
    * This normal should not be set within the widget internal code.
@@ -106,6 +117,17 @@ export interface vtkAbstractManipulator extends vtkObject {
    * @param {Vector3} normal The normal coordinate.
    */
   setUserNormalFrom(normal: Vector3): void;
+
+  /**
+   * Get the user origin currently stored on the manipulator, or `undefined` when it
+   * has never been set. It takes precedence over the handle and widget origins.
+   */
+  getUserOrigin(): Nullable<Vector3> | undefined;
+
+  /**
+   * Get the user origin without copying it out of the model (see getUserOrigin).
+   */
+  getUserOriginByReference(): Nullable<Vector3> | undefined;
 
   /**
    * Set the user origin.
@@ -132,6 +154,17 @@ export interface vtkAbstractManipulator extends vtkObject {
   /* ------------------------------------------------------------------- */
 
   /**
+   * Get the handle normal currently stored on the manipulator, or `undefined` when it
+   * has never been set. It is used after the user normal and before the widget normal.
+   */
+  getHandleNormal(): Nullable<Vector3> | undefined;
+
+  /**
+   * Get the handle normal without copying it out of the model (see getHandleNormal).
+   */
+  getHandleNormalByReference(): Nullable<Vector3> | undefined;
+
+  /**
    * Set the handle normal.
    * This normal is used after the userNormal and before the widgetNormal.
    * This normal is automatically set by any state having a manipulatorMixin,
@@ -153,6 +186,17 @@ export interface vtkAbstractManipulator extends vtkObject {
    * @param {Vector3} normal The normal coordinate.
    */
   setHandleNormalFrom(normal: Vector3): void;
+
+  /**
+   * Get the handle origin currently stored on the manipulator, or `undefined` when it
+   * has never been set. It is used after the user origin and before the widget origin.
+   */
+  getHandleOrigin(): Nullable<Vector3> | undefined;
+
+  /**
+   * Get the handle origin without copying it out of the model (see getHandleOrigin).
+   */
+  getHandleOriginByReference(): Nullable<Vector3> | undefined;
 
   /**
    * Set the handle origin.
@@ -180,6 +224,17 @@ export interface vtkAbstractManipulator extends vtkObject {
   /* ------------------------------------------------------------------- */
 
   /**
+   * Get the widget normal currently stored on the manipulator, or `undefined` when it
+   * has never been set. It is used when no other normal is set.
+   */
+  getWidgetNormal(): Nullable<Vector3> | undefined;
+
+  /**
+   * Get the widget normal without copying it out of the model (see getWidgetNormal).
+   */
+  getWidgetNormalByReference(): Nullable<Vector3> | undefined;
+
+  /**
    * Set the widget normal.
    * This normal is used if no other normals are set.
    * It can be used to define a normal global to the whole widget.
@@ -200,6 +255,17 @@ export interface vtkAbstractManipulator extends vtkObject {
    * @param {Vector3} normal The normal coordinate.
    */
   setWidgetNormalFrom(normal: Vector3): void;
+
+  /**
+   * Get the widget origin currently stored on the manipulator, or `undefined` when it
+   * has never been set. It is used when no other origin is set.
+   */
+  getWidgetOrigin(): Nullable<Vector3> | undefined;
+
+  /**
+   * Get the widget origin without copying it out of the model (see getWidgetOrigin).
+   */
+  getWidgetOriginByReference(): Nullable<Vector3> | undefined;
 
   /**
    * Set the widget origin.

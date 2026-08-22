@@ -1,10 +1,10 @@
-import { vtkObject, vtkSubscription } from '../../../interfaces';
+import { vtkSubscription } from '../../../interfaces';
 import { vtkSourceProxy } from '../SourceProxy';
 import { vtkViewProxy } from '../ViewProxy';
 import { vtkAbstractRepresentationProxy } from '../AbstractRepresentationProxy';
 import { vtkLookupTableProxy } from '../LookupTableProxy';
 import { vtkPiecewiseFunctionProxy } from '../PiecewiseFunctionProxy';
-import { VtkProxy } from '../../../macros';
+import { VtkProxy, VtkProxySection } from '../../../macros';
 
 export type ProxyConfiguration = object;
 
@@ -20,7 +20,7 @@ export interface IProxyManagerInitialValues {
   proxyConfiguration?: ProxyConfiguration;
 }
 
-export interface vtkProxyManager extends vtkObject {
+export interface vtkProxyManager extends VtkProxy {
   // core //
 
   setProxyConfiguration(config: ProxyConfiguration): boolean;
@@ -82,7 +82,47 @@ export interface vtkProxyManager extends vtkObject {
   createRepresentationInAllViews(source: vtkSourceProxy<any>): void;
   resetCameraInAllViews(): void;
 
+  // state //
+
+  /**
+   * Rebuild the proxy graph described by a state previously produced by
+   * `saveState`. Resolves with the state's `userData` plus a `$oldToNewIdMapping`
+   * entry mapping saved proxy ids to the ids of the recreated proxies.
+   */
+  loadState(
+    state: object,
+    options?: { datasetHandler?: (dataset: any) => any }
+  ): Promise<object>;
+
+  /**
+   * Serialize the registered sources, views and representations. `options` is
+   * copied into the state, minus its `datasetHandler` entry, and `userData` is
+   * stored alongside it.
+   */
+  saveState(
+    options?: { datasetHandler?: (dataset: any, source?: any) => any },
+    userData?: object
+  ): Promise<object>;
+
   // properties //
+
+  /**
+   * UI sections of the active source, its representation in the active view and
+   * the active view, skipping the ones with an empty ui description.
+   */
+  getSections(): Array<VtkProxySection & { collapsed?: boolean }>;
+
+  /**
+   * Record whether the section with the given name is collapsed.
+   */
+  updateCollapseState(name: string, state: boolean): void;
+
+  /**
+   * Apply a set of `${proxyId}:${propertyName}` changes at once, then render
+   * every view. The value `__command_execute__` calls the named method instead
+   * of setting it.
+   */
+  applyChanges(changeSet: Record<string, unknown>): void;
 
   // these are specific to the proxy configuration...
   getLookupTable(arrayName: string, options?: any): vtkLookupTableProxy;

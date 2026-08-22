@@ -1,5 +1,11 @@
 import vtkAbstractWidget from '../../Core/AbstractWidget';
-import { Vector3, Bounds } from '../../../types';
+import vtkAbstractManipulator from '../../Manipulators/AbstractManipulator';
+import {
+  IAbstractWidgetFactoryInitialValues,
+  vtkAbstractWidgetFactory,
+} from '../../Core/AbstractWidgetFactory';
+import { ViewTypes } from '../../Core/WidgetManager/Constants';
+import { Vector3 } from '../../../types';
 import { vtkWidgetState } from '../../Core/WidgetState';
 import { vtkBoundsMixinState } from '../../Core/StateBuilder/boundsMixin';
 import { vtkColor3MixinState } from '../../Core/StateBuilder/color3Mixin';
@@ -28,7 +34,7 @@ export interface vtkSeedWidgetState
 
 // Object returned by vtkWidgetManager.addWidget().
 // One instance per view.
-export interface vtkSeedWidgetHandle {
+export interface vtkSeedWidgetHandle extends vtkAbstractWidget {
   /**
    * Place the seed position.
    * @param center Vector3 3D position
@@ -48,15 +54,27 @@ export interface vtkSeedWidgetHandle {
   endInteract(): void;
 }
 
-export interface vtkSeedWidget {
-  // Abstract widget methods.
+export interface vtkSeedWidget extends vtkAbstractWidgetFactory<vtkSeedWidgetHandle> {
   getWidgetState(): vtkSeedWidgetState;
-  onWidgetChange(fn: () => void): void;
-  placeWidget(bounds: Bounds): void;
-  setPlaceFactor(factor: number): void;
+  setWidgetState(widgetState: vtkSeedWidgetState): boolean;
+
+  /**
+   * The representation builders the widget uses in the given view type.
+   */
+  getRepresentationsForViewType(viewType: ViewTypes): unknown;
+
+  /**
+   * The manipulator the move handle is driven by.
+   */
+  getManipulator(): vtkAbstractManipulator | undefined;
+
+  /**
+   * Set the manipulator on the widget and on its move handle.
+   */
+  setManipulator(manipulator: vtkAbstractManipulator): void;
 }
 
-export interface ISeedWidgetInitialValues {}
+export interface ISeedWidgetInitialValues extends IAbstractWidgetFactoryInitialValues<vtkSeedWidgetHandle> {}
 
 export function extend(
   publicAPI: object,

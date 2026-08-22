@@ -310,5 +310,6 @@ export function newInstance(initialValues?: IPropInitialValues): vtkProp;
 export declare const vtkProp: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  CoordinateSystem: typeof CoordinateSystem;
 };
 export default vtkProp;

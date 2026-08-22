@@ -200,5 +200,6 @@ export function newInstance(
 export declare const vtkProperty2D: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  DisplayLocation: typeof DisplayLocation;
 };
 export default vtkProperty2D;

@@ -9,7 +9,7 @@ import vtkSelectionNode from '../../../Common/DataModel/SelectionNode';
 import vtkWidgetRepresentation from '../../Representations/WidgetRepresentation';
 import vtkWidgetState from '../WidgetState';
 import { vtkObject } from '../../../interfaces';
-import { CaptureOn, ViewTypes } from './Constants';
+import Constants, { CaptureOn, ViewTypes } from './Constants';
 import { Nullable, Vector3 } from '../../../types';
 
 export interface IDisplayScaleParams {
@@ -249,6 +249,8 @@ export function newInstance(
 export declare const vtkWidgetManager: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  Constants: typeof Constants;
+  getPixelWorldHeightAtCoord: typeof getPixelWorldHeightAtCoord;
 };
 
 export default vtkWidgetManager;

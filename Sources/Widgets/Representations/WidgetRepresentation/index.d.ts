@@ -140,5 +140,8 @@ export function allocateArray(
 
 export declare const vtkWidgetRepresentation: {
   extend: typeof extend;
+  mergeStyles: typeof mergeStyles;
+  applyStyles: typeof applyStyles;
+  connectPipeline: typeof connectPipeline;
 };
 export default vtkWidgetRepresentation;

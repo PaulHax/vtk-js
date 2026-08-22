@@ -29,9 +29,11 @@ export interface vtkLookupTableProxy extends VtkProxy {
   setPresetName(name: string): void;
   getPresetName(): string;
   setRGBPoints(points: RGBHSVPoint[]): void;
-  getRGBPoints(): RGBHSVPoint[];
+  getRgbPoints(): RGBHSVPoint[];
   setHSVPoints(points: RGBHSVPoint[]): void;
-  getHSVPoints(): RGBHSVPoint[];
+  getHsvPoints(): RGBHSVPoint[];
+  setArrayName(arrayName: string): boolean;
+  getArrayName(): string;
   // Node: { x, y, midpoint, sharpness }
   setNodes(nodes: number[][]): void;
   getNodes(): number[][];

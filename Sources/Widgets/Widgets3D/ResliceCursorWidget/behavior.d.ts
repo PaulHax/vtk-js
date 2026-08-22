@@ -144,5 +144,13 @@ export interface vtkResliceCursorWidgetDefaultInstance extends vtkAbstractWidget
   rotateLine(callData: any): void;
 }
 
-declare const _default: vtkResliceCursorWidgetDefaultInstance;
-export default _default;
+/**
+ * Decorates a widget instance (publicAPI+model) with the reslice cursor
+ * interaction methods described by `vtkResliceCursorWidgetDefaultInstance`.
+ *
+ * @param publicAPI object on which methods will be bounds (public)
+ * @param model object on which data structure will be bounds (protected)
+ */
+declare function widgetBehavior(publicAPI: object, model: object): void;
+
+export default widgetBehavior;

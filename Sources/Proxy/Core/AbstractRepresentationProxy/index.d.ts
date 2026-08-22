@@ -8,6 +8,7 @@ import { vtkActor } from '../../../Rendering/Core/Actor';
 import { vtkVolume } from '../../../Rendering/Core/Volume';
 import { vtkLookupTableProxy } from '../LookupTableProxy';
 import { vtkPiecewiseFunctionProxy } from '../PiecewiseFunctionProxy';
+import { vtkProp } from '../../../Rendering/Core/Prop';
 
 export interface IRepresentationDataArrayInfo {
   name: string;
@@ -16,7 +17,12 @@ export interface IRepresentationDataArrayInfo {
   dataRange: Range;
 }
 
-export interface vtkAbstractRepresentationProxy extends VtkProxy {
+/**
+ * Representation proxies are also props: `setVisibility` is overridden to
+ * forward the flag to every actor and volume, and reports nothing back.
+ */
+export interface vtkAbstractRepresentationProxy
+  extends VtkProxy, Omit<vtkProp, 'setVisibility'> {
   setInput<T>(source: vtkSourceProxy<T>): void;
   getInputDataSet(): vtkObject | null;
   getDataArray(arrayName?: string, arrayLocation?: string): vtkDataArray | null;
@@ -36,6 +42,12 @@ export interface vtkAbstractRepresentationProxy extends VtkProxy {
     arrayLocation: string,
     componentIndex?: number
   );
+  /**
+   * Get the array name, array location and component index currently driving
+   * the coloring. Trailing entries are omitted when the matching state is not
+   * set, so the tuple may come back empty.
+   */
+  getColorBy(): [string?, string?, number?];
   setRescaleOnColorBy(rescale: boolean): boolean;
   getRescaleOnColorBy(): boolean;
   getInput(): VtkProxy | undefined;

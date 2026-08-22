@@ -1,11 +1,12 @@
 import { vtkObject } from '../../../interfaces';
-import { Bounds, Vector3 } from '../../../types';
+import { Bounds, Nullable, Vector3 } from '../../../types';
 import vtkPoints from '../../Core/Points';
 /**
  *
  */
 export interface IIncrementalOctreeNodeInitialValues {
   pointIdSet?: number[];
+  numberOfPoints?: number;
   minBounds?: Bounds;
   maxBounds?: Bounds;
   minDataBounds?: Bounds;
@@ -51,16 +52,19 @@ export interface vtkIncrementalOctreeNode extends vtkObject {
   /**
    * Get the minimum coordinates of the spatial bounding box of the node.
    */
-  getMinBounds(): Bounds;
+  getMinBounds(): Vector3;
 
   /**
    * Get the minimum coordinates of the spatial bounding box of the node by
    * reference.
    */
-  getMinBoundsByReference(): Bounds;
+  getMinBoundsByReference(): Vector3;
 
   /**
    * Set the minimum coordinates of the spatial bounding box of the node.
+   *
+   * The array accessors are generated with a size of six, so the setter only
+   * accepts six values even though the node itself keeps three of them.
    *
    * @param {Bounds} minBounds
    */
@@ -71,18 +75,18 @@ export interface vtkIncrementalOctreeNode extends vtkObject {
    *
    * @param {Bounds} minBounds
    */
-  setMinBoundsFrom(minBounds: Bounds): void;
+  setMinBoundsFrom(minBounds: Vector3): void;
 
   /**
    * Get the maximum coordinates of the spatial bounding box of the node.
    */
-  getMaxBounds(): Bounds;
+  getMaxBounds(): Vector3;
 
   /**
    * Get the maximum coordinates of the spatial bounding box of the node by
    * reference.
    */
-  getMaxBoundsByReference(): Bounds;
+  getMaxBoundsByReference(): Vector3;
 
   /**
    * Set the maximum coordinates of the spatial bounding box of the node.
@@ -96,18 +100,18 @@ export interface vtkIncrementalOctreeNode extends vtkObject {
    *
    * @param {Bounds} maxBounds
    */
-  setMaxBoundsFrom(maxBounds: Bounds): void;
+  setMaxBoundsFrom(maxBounds: Vector3): void;
 
   /**
    * Get the minimum coordinates of the data bounding box of the node.
    */
-  getMinDataBounds(): Bounds;
+  getMinDataBounds(): Vector3;
 
   /**
    * Get the minimum coordinates of the data bounding box of the node by
    * reference.
    */
-  getMinDataBoundsByReference(): Bounds;
+  getMinDataBoundsByReference(): Vector3;
 
   /**
    * Set the minimum coordinates of the data bounding box of the node.
@@ -121,18 +125,18 @@ export interface vtkIncrementalOctreeNode extends vtkObject {
    *
    * @param {Bounds} minDataBounds
    */
-  setMinDataBoundsFrom(minDataBounds: Bounds): void;
+  setMinDataBoundsFrom(minDataBounds: Vector3): void;
 
   /**
    * Get the maximum coordinates of the data bounding box of the node.
    */
-  getMaxDataBounds(): Bounds;
+  getMaxDataBounds(): Vector3;
 
   /**
    * Get the maximum coordinates of the data bounding box of the node by
    * reference.
    */
-  getMaxDataBoundsByReference(): Bounds;
+  getMaxDataBoundsByReference(): Vector3;
 
   /**
    * Set the maximum coordinates of the data bounding box of the node.
@@ -146,17 +150,19 @@ export interface vtkIncrementalOctreeNode extends vtkObject {
    *
    * @param {Bounds} maxDataBounds
    */
-  setMaxDataBoundsFrom(maxDataBounds: Bounds): void;
+  setMaxDataBoundsFrom(maxDataBounds: Vector3): void;
 
   /**
-   * Get the list of point indices maintained by the node.
+   * Get the list of point indices maintained by the node, or null while the
+   * node holds none.
    */
-  getPointIdSet(): number[];
+  getPointIdSet(): Nullable<number[]>;
 
   /**
-   * Get the number of points maintained by the node.
+   * Get the number of points maintained by the node. The node does not seed
+   * the counter, so it is undefined unless one was passed as an initial value.
    */
-  getNumberOfPoints(): number;
+  getNumberOfPoints(): number | undefined;
 
   /**
    * Set the parent node.

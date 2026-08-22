@@ -1,6 +1,7 @@
 import { EventHandler, vtkObject, vtkSubscription } from '../../../interfaces';
 import { Nullable } from '../../../types';
 import vtkOpenGLRenderWindow from '../../OpenGL/RenderWindow';
+import { XrSessionTypes } from './Constants';
 
 /**
  *
@@ -101,5 +102,6 @@ export function newInstance(
 export declare const vtkWebXRRenderWindowHelper: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  XrSessionTypes: typeof XrSessionTypes;
 };
 export default vtkWebXRRenderWindowHelper;

@@ -671,5 +671,7 @@ export declare const vtkVolumeProperty: {
   extend: typeof extend;
   InterpolationType: typeof InterpolationType;
   OpacityMode: typeof OpacityMode;
+  ColorMixPreset: typeof ColorMixPreset;
+  FilterMode: typeof FilterMode;
 };
 export default vtkVolumeProperty;

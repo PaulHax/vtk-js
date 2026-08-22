@@ -41,6 +41,16 @@ export interface IMapperInitialValues extends IAbstractMapper3DInitialValues {
 export interface vtkMapper
   extends vtkAbstractMapper3D, CoincidentTopologyHelper {
   /**
+   * Translate the WebGL ids of a hardware selection pass back into the point
+   * and cell ids of the mapped dataset, on the buffers the selector captured
+   * for this mapper. Does nothing unless `populateSelectionSettings` is set.
+   *
+   * @param selector The vtkOpenGLHardwareSelector driving the pass
+   * @param pixelOffsets Offsets of this prop's pixels in the raw buffers
+   */
+  processSelectorPixelBuffers(selector: any, pixelOffsets: number[]): void;
+
+  /**
    *
    */
   acquireInvertibleLookupTable(): void;

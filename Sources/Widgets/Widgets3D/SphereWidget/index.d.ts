@@ -1,5 +1,11 @@
 import vtkAbstractWidget from '../../Core/AbstractWidget';
-import { Vector3, Bounds } from '../../../types';
+import vtkAbstractManipulator from '../../Manipulators/AbstractManipulator';
+import {
+  IAbstractWidgetFactoryInitialValues,
+  vtkAbstractWidgetFactory,
+} from '../../Core/AbstractWidgetFactory';
+import { ViewTypes } from '../../Core/WidgetManager/Constants';
+import { Vector3 } from '../../../types';
 import { vtkWidgetState } from '../../Core/WidgetState';
 import { vtkBoundsMixinState } from '../../Core/StateBuilder/boundsMixin';
 import { vtkColorMixinState } from '../../Core/StateBuilder/colorMixin';
@@ -33,23 +39,35 @@ export interface vtkSphereWidgetState
 }
 
 // The type of object returned by vtkWidgetManager.addWidget()
-export interface vtkSphereWidgetHandle {
+export interface vtkSphereWidgetHandle extends vtkAbstractWidget {
   // Set the sphere parameters.
   setCenterAndRadius(center: Vector3, radius: number): void;
 }
 
-export interface vtkSphereWidget {
-  // Abstract widget methods.
+export interface vtkSphereWidget extends vtkAbstractWidgetFactory<vtkSphereWidgetHandle> {
   getWidgetState(): vtkSphereWidgetState;
-  onWidgetChange(fn: () => void): void;
-  placeWidget(bounds: Bounds): void;
-  setPlaceFactor(factor: number): void;
+  setWidgetState(widgetState: vtkSphereWidgetState): boolean;
+
+  /**
+   * The representation builders the widget uses in the given view type.
+   */
+  getRepresentationsForViewType(viewType: ViewTypes): unknown;
+
+  /**
+   * The manipulator the widget handles are driven by.
+   */
+  getManipulator(): vtkAbstractManipulator | undefined;
+
+  /**
+   * Set the manipulator on the widget and on each of its handles.
+   */
+  setManipulator(manipulator: vtkAbstractManipulator): void;
 
   // Methods specific to vtkSphereWidget.
   getRadius(): number;
 }
 
-export interface ISphereWidgetInitialValues {}
+export interface ISphereWidgetInitialValues extends IAbstractWidgetFactoryInitialValues<vtkSphereWidgetHandle> {}
 
 export function extend(
   publicAPI: object,

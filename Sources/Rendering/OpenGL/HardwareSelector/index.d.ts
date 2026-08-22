@@ -378,6 +378,7 @@ export function extend(
 export const vtkOpenGLHardwareSelector: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  PassTypes: typeof PassTypes;
 };
 
 export default vtkOpenGLHardwareSelector;

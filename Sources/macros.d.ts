@@ -545,7 +545,6 @@ export interface VtkProxy extends VtkKeyStore, vtkObject {
   getProxyManager: () => VtkProxyManager;
 
   updateUI: (ui: object) => void;
-  listProxyProperties: (groupName: string) => Array<vtkProperty>;
   updateProxyProperty: (propertyName: string, propUI: object) => void;
   activate: () => void;
   registerPropertyLinkForGC: (otherLink: VtkLink, type: string) => void;
@@ -558,11 +557,6 @@ export interface VtkProxy extends VtkKeyStore, vtkObject {
    */
   getPropertyLink(id: string, persistent?: boolean): VtkLink;
 
-  /**
-   *
-   * @param groupName (default: ROOT_GROUP_NAME)
-   */
-  getProperties(groupName?: string): Array<any>;
   listPropertyNames: () => Array<string>;
   getPropertyByName: (name: string) => vtkProperty;
   getPropertyDomainByName: (name: string) => vtkPropertyDomain;

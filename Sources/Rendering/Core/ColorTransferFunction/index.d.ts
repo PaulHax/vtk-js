@@ -1,5 +1,7 @@
 import vtkDataArray from '../../../Common/Core/DataArray';
 import vtkScalarsToColors from '../../../Common/Core/ScalarsToColors';
+import { vtkObject } from '../../../interfaces';
+import { RGBAColor } from '../../../types';
 import { ColorSpace, Scale } from './Constants';
 
 export interface vtkColorTransferFunction extends vtkScalarsToColors {
@@ -350,6 +352,145 @@ export interface vtkColorTransferFunction extends vtkScalarsToColors {
    * @param {Scale} scale
    */
   setScale(scale: Scale): boolean;
+
+  /**
+   * The timestamp of the last color table build.
+   */
+  getBuildTime(): vtkObject;
+
+  /**
+   * Get the color used for NaN values.
+   */
+  getNanColor(): RGBAColor;
+
+  /**
+   * Get the color used for NaN values, without copying it out of the model.
+   */
+  getNanColorByReference(): RGBAColor;
+
+  /**
+   * Set the color used for NaN values.
+   * @param {RGBAColor} nanColor
+   */
+  setNanColor(nanColor: RGBAColor): boolean;
+
+  /**
+   * Set the color used for NaN values.
+   */
+  setNanColor(r: number, g: number, b: number, a: number): boolean;
+
+  /**
+   * Copy the four components of the given color into the NaN color without
+   * marking the function modified.
+   */
+  setNanColorFrom(nanColor: RGBAColor): void;
+
+  /**
+   * Get the color used for values below the mapping range.
+   * @see getUseBelowRangeColor
+   */
+  getBelowRangeColor(): RGBAColor;
+
+  /**
+   * Get the below range color, without copying it out of the model.
+   */
+  getBelowRangeColorByReference(): RGBAColor;
+
+  /**
+   * Set the color used for values below the mapping range.
+   * @param {RGBAColor} belowRangeColor
+   */
+  setBelowRangeColor(belowRangeColor: RGBAColor): boolean;
+
+  /**
+   * Set the color used for values below the mapping range.
+   */
+  setBelowRangeColor(r: number, g: number, b: number, a: number): boolean;
+
+  /**
+   * Copy the four components of the given color into the below range color
+   * without marking the function modified.
+   */
+  setBelowRangeColorFrom(belowRangeColor: RGBAColor): void;
+
+  /**
+   * Get the color used for values above the mapping range.
+   * @see getUseAboveRangeColor
+   */
+  getAboveRangeColor(): RGBAColor;
+
+  /**
+   * Get the above range color, without copying it out of the model.
+   */
+  getAboveRangeColorByReference(): RGBAColor;
+
+  /**
+   * Set the color used for values above the mapping range.
+   * @param {RGBAColor} aboveRangeColor
+   */
+  setAboveRangeColor(aboveRangeColor: RGBAColor): boolean;
+
+  /**
+   * Set the color used for values above the mapping range.
+   */
+  setAboveRangeColor(r: number, g: number, b: number, a: number): boolean;
+
+  /**
+   * Copy the four components of the given color into the above range color
+   * without marking the function modified.
+   */
+  setAboveRangeColorFrom(aboveRangeColor: RGBAColor): void;
+
+  /**
+   * Whether values below the mapping range are mapped to the below range color
+   * rather than clamped to the first node.
+   * @default false
+   */
+  getUseBelowRangeColor(): boolean;
+
+  /**
+   * @param {Boolean} useBelowRangeColor
+   * @see getUseBelowRangeColor
+   */
+  setUseBelowRangeColor(useBelowRangeColor: boolean): boolean;
+
+  /**
+   * Whether values above the mapping range are mapped to the above range color
+   * rather than clamped to the last node.
+   * @default false
+   */
+  getUseAboveRangeColor(): boolean;
+
+  /**
+   * @param {Boolean} useAboveRangeColor
+   * @see getUseAboveRangeColor
+   */
+  setUseAboveRangeColor(useAboveRangeColor: boolean): boolean;
+
+  /**
+   * Whether the function is discretized into `numberOfValues` colors when it is
+   * used to build a table.
+   * @default false
+   */
+  getDiscretize(): boolean;
+
+  /**
+   * @param {Boolean} discretize
+   * @see getDiscretize
+   */
+  setDiscretize(discretize: boolean): boolean;
+
+  /**
+   * The number of colors the discretized function is built with.
+   * @default 256
+   */
+  getNumberOfValues(): number;
+
+  /**
+   * @param {Number} numberOfValues
+   * @see getNumberOfValues
+   */
+  setNumberOfValues(numberOfValues: number): boolean;
 }
 
 /**

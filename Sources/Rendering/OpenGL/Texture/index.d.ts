@@ -456,6 +456,8 @@ export function newInstance(
 export declare const vtkOpenGLTexture: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  Filter: typeof Filter;
+  Wrap: typeof Wrap;
 };
 
 export default vtkOpenGLTexture;

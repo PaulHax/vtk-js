@@ -4,6 +4,7 @@ import vtkAbstractWidget from '../../Core/AbstractWidget';
 import vtkAbstractWidgetFactory, {
   IAbstractWidgetFactoryInitialValues,
 } from '../../Core/AbstractWidgetFactory';
+import { ViewTypes } from '../../Core/WidgetManager/Constants';
 import { vtkWidgetState } from '../../Core/WidgetState';
 import { vtkBoundsMixinState } from '../../Core/StateBuilder/boundsMixin';
 import { vtkColorMixinState } from '../../Core/StateBuilder/colorMixin';
@@ -102,6 +103,11 @@ export interface IImageCroppingWidgetInitialValues extends IAbstractWidgetFactor
 
 export interface vtkImageCroppingWidget extends vtkAbstractWidgetFactory<vtkImageCroppingViewWidget> {
   getWidgetState(): ImageCroppingWidgetState;
+
+  /**
+   * The representation builders the widget uses in the given view type.
+   */
+  getRepresentationsForViewType(viewType: ViewTypes): unknown;
 
   /**
    * Get the manipulator driving the corner handles.

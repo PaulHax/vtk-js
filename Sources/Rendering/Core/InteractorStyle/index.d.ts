@@ -1,5 +1,6 @@
 import { EventHandler, vtkSubscription } from '../../../interfaces';
 import { Nullable } from '../../../types';
+import { States } from './Constants';
 import { vtkInteractorObserver } from '../InteractorObserver';
 import { vtkRenderer } from '../Renderer';
 
@@ -248,6 +249,7 @@ export function newInstance(
 export const vtkInteractorStyle: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  States: typeof States;
 };
 
 export default vtkInteractorStyle;

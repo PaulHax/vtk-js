@@ -21,7 +21,7 @@ export interface vtkResliceRepresentationProxy extends vtkAbstractRepresentation
   setOutlineVisibility(visibility: boolean): boolean;
   getOutlineVisibility(): boolean;
   setSlabType(type: number): boolean;
-  getSlabtype(): number;
+  getSlabType(): number;
   setSlicePlane(plane: vtkPlane): boolean;
   getSlicePlane(): vtkPlane;
   setSlicePolyData(polydata: vtkPolyData): boolean;

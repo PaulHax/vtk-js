@@ -15,6 +15,12 @@ export interface vtkSourceProxy<T> extends VtkProxy {
   ): void;
   update(): void;
 
+  /**
+   * Returns true when the algorithm has been modified more recently than the
+   * dataset it produced. Requires both an algorithm and a dataset to be set.
+   */
+  getUpdate(): boolean;
+
   getName(): string;
   setName(name: string): boolean;
   getType(): string | undefined;
