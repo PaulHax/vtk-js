@@ -1,6 +1,9 @@
 import vtkScalarsToColors from '../../../Common/Core/ScalarsToColors';
 import { Size, Vector2, Vector3 } from '../../../types';
 import vtkActor, { IActorInitialValues } from '../Actor';
+import { Orientation } from './Constants';
+
+export type { Orientation };
 
 export interface ITextSizes {
   titleWidth: number;
@@ -23,8 +26,6 @@ export interface IStyle {
   fontFamily?: string;
   fontSize?: number | string;
 }
-
-export type Orientation = 'horizontal' | 'vertical' | 'auto' | null;
 
 /**
  *
@@ -49,7 +50,7 @@ export interface IScalarBarActorInitialValues extends Omit<
   drawBelowRangeSwatch?: boolean;
   drawAboveRangeSwatch?: boolean;
   drawNanAnnotation?: boolean;
-  orientation?: Orientation;
+  orientation?: Orientation | null;
 }
 
 export interface vtkScalarBarActor extends Omit<
@@ -221,7 +222,7 @@ export interface vtkScalarBarActor extends Omit<
   /**
    * Get the current bar orientation setting
    */
-  getOrientation(): Orientation;
+  getOrientation(): Orientation | null;
 
   /**
    * Forces the scalar bar to use horizontal orientation regardless of aspect ratio
@@ -237,7 +238,7 @@ export interface vtkScalarBarActor extends Omit<
    * Set the orientation of the scalar bar
    * @param orientation 'horizontal' to force horizontal, 'vertical' to force vertical, or null/undefined for auto
    */
-  setOrientation(orientation: Orientation): boolean;
+  setOrientation(orientation: Orientation | null): boolean;
 
   /**
    *
@@ -366,5 +367,6 @@ export function newInstance(
 export declare const vtkScalarBarActor: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  Orientation: typeof Orientation;
 };
 export default vtkScalarBarActor;

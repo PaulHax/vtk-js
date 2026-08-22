@@ -1,14 +1,8 @@
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
-
-declare enum ExtractionMode {
-  ExtractionMode_ALL,
-  ExtractionMode_LARGEST,
-  ExtractionMode_SMALLEST,
-  ExtractionMode_CUSTOM,
-}
+import { ExtractionMode } from './Constants';
 
 /**
- * The type is public; the value is reached through the module default export.
+ * The type is public; the value is reached through the Constants module.
  */
 export type { ExtractionMode };
 

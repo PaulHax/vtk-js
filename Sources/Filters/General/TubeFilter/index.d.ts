@@ -1,29 +1,11 @@
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
 import { DesiredOutputPrecision } from '../../../Common/DataModel/DataSetAttributes/Constants';
-
-declare enum VaryRadius {
-  VARY_RADIUS_OFF,
-  VARY_RADIUS_BY_SCALAR,
-  VARY_RADIUS_BY_VECTOR,
-  VARY_RADIUS_BY_ABSOLUTE_SCALAR,
-}
+import { VaryRadius, GenerateTCoords } from './Constants';
 
 /**
- * The type is public; the value is reached through the module default export.
+ * The type is public; the value is reached through the Constants module.
  */
-export type { VaryRadius };
-
-declare enum GenerateTCoords {
-  TCOORDS_OFF,
-  TCOORDS_FROM_NORMALIZED_LENGTH,
-  TCOORDS_FROM_LENGTH,
-  TCOORDS_FROM_SCALARS,
-}
-
-/**
- * The type is public; the value is reached through the module default export.
- */
-export type { GenerateTCoords };
+export type { VaryRadius, GenerateTCoords };
 
 /**
  *

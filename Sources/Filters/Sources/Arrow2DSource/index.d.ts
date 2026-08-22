@@ -1,15 +1,9 @@
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
 import { Vector3 } from '../../../types';
-
-declare enum ShapeType {
-  TRIANGLE,
-  STAR,
-  ARROW_4,
-  ARROW_6,
-}
+import { ShapeType } from './Constants';
 
 /**
- * The type is public; the value is reached through the module default export.
+ * The type is public; the value is reached through the Constants module.
  */
 export type { ShapeType };
 

@@ -1,16 +1,8 @@
 import { quat } from 'gl-matrix';
 import { Vector3, Vector2, Nullable } from '../../../types';
 import vtkCell from '../Cell';
+import { IntersectionState } from './Constants';
 
-declare enum IntersectionState {
-  NO_INTERSECTION,
-  YES_INTERSECTION,
-  ON_LINE,
-}
-
-/**
- * The type is public; the value is reached through the module default export.
- */
 export type { IntersectionState };
 
 export interface ILineInitialValues {
@@ -176,6 +168,7 @@ export declare const vtkLine: {
   extend: typeof extend;
   distanceToLine: typeof distanceToLine;
   intersection: typeof intersection;
+  IntersectionState: typeof IntersectionState;
 };
 export declare const STATIC: Readonly<{
   distanceToLine: typeof distanceToLine;

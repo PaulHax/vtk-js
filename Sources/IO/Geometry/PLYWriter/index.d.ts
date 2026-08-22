@@ -2,26 +2,12 @@ import { mat4 } from 'gl-matrix';
 import vtkPolyData from '../../../Common/DataModel/PolyData';
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
 import { Nullable } from '../../../types';
-
-declare enum FormatTypes {
-  ASCII,
-  BINARY,
-}
+import { FormatTypes, TextureCoordinatesName } from './Constants';
 
 /**
- * The type is public; the value is reached through the module default export.
+ * The type is public; the value is reached through the Constants module.
  */
-export type { FormatTypes };
-
-declare enum TextureCoordinatesName {
-  UV,
-  TEXTURE_UV,
-}
-
-/**
- * The type is public; the value is reached through the module default export.
- */
-export type { TextureCoordinatesName };
+export type { FormatTypes, TextureCoordinatesName };
 
 /**
  *

@@ -1,20 +1,26 @@
 import vtkDataArray from '../../../Common/Core/DataArray';
 import vtkPolyData from '../../../Common/DataModel/PolyData';
-import { vtkObject } from '../../../interfaces';
-import vtkProp from '../../../Rendering/Core/Prop';
+import { vtkAlgorithm, vtkObject } from '../../../interfaces';
+import vtkProp, { IPropInitialValues } from '../../../Rendering/Core/Prop';
 import vtkActor from '../../../Rendering/Core/Actor';
 import { IDisplayScaleParams } from '../../../Widgets/Core/WidgetManager';
 import { RenderingTypes } from '../../../Widgets/Core/WidgetManager/Constants';
 import vtkWidgetState from '../../../Widgets/Core/WidgetState';
+import { Behavior } from './Constants';
 
-export interface IWidgetRepresentationInitialValues {
+export interface IWidgetRepresentationInitialValues extends IPropInitialValues {
   labels?: Array<any>;
   coincidentTopologyParameters?: object;
   displayScaleParams?: IDisplayScaleParams;
   scaleInPixels?: boolean;
+  behavior?: Behavior;
+  actors?: Array<vtkActor>;
+  activeScaleFactor?: number;
+  activeColor?: number;
+  useActiveColor?: boolean;
 }
 
-export interface vtkWidgetRepresentation extends vtkProp {
+export interface vtkWidgetRepresentation extends vtkProp, vtkAlgorithm {
   /** Add an actor and apply the representation's mapper settings. */
   addActor(actor: vtkActor): void;
 
@@ -46,6 +52,26 @@ export interface vtkWidgetRepresentation extends vtkProp {
    * @see setScaleInPixels()
    */
   setDisplayScaleParams(params: object): boolean;
+
+  /**
+   * Gets the current view and camera scale parameters.
+   */
+  getDisplayScaleParams(): IDisplayScaleParams;
+
+  /**
+   * Gets the scale applied to the representation while it is active.
+   */
+  getActiveScaleFactor(): number;
+  setActiveScaleFactor(activeScaleFactor: number): boolean;
+
+  /**
+   * Gets the scalar value the mapper turns into the active color.
+   */
+  getActiveColor(): number;
+  setActiveColor(activeColor: number): boolean;
+
+  getUseActiveColor(): boolean;
+  setUseActiveColor(useActiveColor: boolean): boolean;
 
   /**
    * Gets wether actors should have a fix size in display coordinates.

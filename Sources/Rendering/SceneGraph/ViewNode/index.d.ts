@@ -41,6 +41,13 @@ export interface vtkViewNode extends vtkObject {
   addMissingNodes(dataObjs: any): void;
 
   /**
+   * Adopt child nodes that have no renderable of their own, so that a node can
+   * delegate passes to a helper.
+   * @param children
+   */
+  addMissingChildren(children: vtkViewNode[]): void;
+
+  /**
    *
    * @param {vtkRenderPass} renderPass
    * @param prepass

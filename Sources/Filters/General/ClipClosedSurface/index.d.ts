@@ -1,15 +1,7 @@
 import { vtkAlgorithm, vtkObject } from '../../../interfaces';
 import { Nullable, Vector3 } from '../../../types';
 import vtkPlane from '../../../Common/DataModel/Plane';
-
-/**
- *
- */
-declare enum ScalarMode {
-  NONE,
-  COLORS,
-  LABELS,
-}
+import { ScalarMode } from './Constants';
 
 /**
  * The type is public; the value is reached through the module default export.

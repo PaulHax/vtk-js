@@ -1,16 +1,8 @@
 import { mat4 } from 'gl-matrix';
 import { vtkObject } from '../../../interfaces';
 import vtkPoints from '../../Core/Points';
+import { Mode } from './Constants';
 
-declare enum Mode {
-  RIGID_BODY,
-  SIMILARITY,
-  AFFINE,
-}
-
-/**
- * The type is public; the value is reached through the module default export.
- */
 export type { Mode };
 
 export interface ILandmarkTransformInitialValues {
@@ -110,5 +102,6 @@ export function newInstance(
 export declare const vtkLandmarkTransform: {
   newInstance: typeof newInstance;
   extend: typeof extend;
+  Mode: typeof Mode;
 };
 export default vtkLandmarkTransform;
