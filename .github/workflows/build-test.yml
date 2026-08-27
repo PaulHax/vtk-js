@@ -48,6 +48,7 @@ jobs:
           npx tsc -p tsconfig.umd-check.json
           npm run test:types:contracts
           npm run test:types:declarations
+          npm run test:types:initial-values
       - name: Census declarations that need a browser
         env:
           TEST_BROWSER: ${{ matrix.browser }}
