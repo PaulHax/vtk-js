@@ -1,0 +1,141 @@
+{
+  "arityMismatches": {
+    "Interaction/Manipulators/MouseRangeManipulator#instance": [
+      "onStartScroll(3>0)"
+    ],
+    "Interaction/Style/InteractorStyleHMDXR#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleMiddleButtonRelease(1>0)",
+      "handleRightButtonRelease(1>0)"
+    ],
+    "Interaction/Style/InteractorStyleImage#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleStartMouseWheel(1>0)"
+    ],
+    "Interaction/Style/InteractorStyleMPRSlice#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleMiddleButtonRelease(1>0)",
+      "handleRightButtonRelease(1>0)"
+    ],
+    "Interaction/Style/InteractorStyleManipulator#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleMiddleButtonRelease(1>0)",
+      "handleRightButtonRelease(1>0)"
+    ],
+    "Interaction/Style/InteractorStyleRemoteMouse#instance": [
+      "handleKeyPress(1>0)"
+    ],
+    "Interaction/Style/InteractorStyleTrackballCamera#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleStartMouseWheel(1>0)"
+    ],
+    "Interaction/Style/InteractorStyleUnicam#instance": [
+      "handleEndMouseWheel(1>0)",
+      "handleEndPan(1>0)",
+      "handleEndPinch(1>0)",
+      "handleEndRotate(1>0)",
+      "handleLeftButtonRelease(1>0)",
+      "handleMiddleButtonRelease(1>0)",
+      "handleRightButtonRelease(1>0)"
+    ],
+    "Widgets/Manipulators/PickerManipulator#instance": [
+      "handleEvent(2>1)"
+    ]
+  },
+  "underDeclaredArity": {
+    "Interaction/Manipulators/MouseBoxSelectorManipulator#instance": [
+      "onButtonUp(1<2)"
+    ]
+  },
+  "defaultMismatches": {},
+  "ghostDeclarations": {},
+  "ghostMembers": {
+    "Widgets/Manipulators/AbstractManipulator#instance": [
+      "handleEvent"
+    ]
+  },
+  "importFailures": [
+    "Filters/General/MoleculeToRepresentation",
+    "IO/Misc/PDBReader",
+    "Proxy/Representations/MoleculeRepresentationProxy",
+    "Rendering/Misc/FullScreenRenderWindow",
+    "Rendering/Misc/GenericRenderWindow",
+    "Rendering/Misc/RemoteView",
+    "Rendering/Misc/RenderWindowWithControlBar"
+  ],
+  "undeclaredMembers": {
+    "Rendering/Core/VolumeMapper#instance": [
+      "getAnisotropy",
+      "getComputeNormalFromOpacity",
+      "getFilterMode",
+      "getFilterModeAsString",
+      "getGlobalIlluminationReach",
+      "getIpScalarRange",
+      "getIpScalarRangeByReference",
+      "getLAOKernelRadius",
+      "getLAOKernelSize",
+      "getLocalAmbientOcclusion",
+      "getPreferSizeOverAccuracy",
+      "getVolumetricScatteringBlending",
+      "setAnisotropy",
+      "setAverageIPScalarRange",
+      "setComputeNormalFromOpacity",
+      "setFilterMode",
+      "setFilterModeToNormalized",
+      "setFilterModeToOff",
+      "setFilterModeToRaw",
+      "setGlobalIlluminationReach",
+      "setIpScalarRange",
+      "setIpScalarRangeFrom",
+      "setLAOKernelRadius",
+      "setLAOKernelSize",
+      "setLocalAmbientOcclusion",
+      "setPreferSizeOverAccuracy",
+      "setVolumetricScatteringBlending"
+    ]
+  },
+  "undeclaredRuntimeExports": {},
+  "uninstantiable": [
+    "IO/Core/ImageStream/ViewStream",
+    "Interaction/UI/CornerAnnotation",
+    "Interaction/UI/FPSMonitor",
+    "Interaction/UI/Slider",
+    "Interaction/UI/VolumeController",
+    "Interaction/Widgets/OrientationMarkerWidget",
+    "Interaction/Widgets/PiecewiseGaussianWidget",
+    "Proxy/Core/View2DProxy",
+    "Proxy/Core/ViewProxy",
+    "Rendering/Core/AnnotatedCubeActor",
+    "Rendering/Core/CubeAxesActor",
+    "Rendering/Core/RenderWindowInteractor",
+    "Rendering/Core/TextActor",
+    "Rendering/Misc/CanvasView",
+    "Rendering/OpenGL/RenderWindow",
+    "Rendering/OpenGL/ScalarBarActor",
+    "Rendering/WebGPU/RenderWindow",
+    "Rendering/WebGPU/Sampler",
+    "Rendering/WebGPU/ScalarBarActor",
+    "Rendering/WebGPU/TextureView",
+    "Widgets/Core/AbstractWidget"
+  ]
+}
