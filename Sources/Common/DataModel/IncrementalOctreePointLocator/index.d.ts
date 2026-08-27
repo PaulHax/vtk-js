@@ -66,6 +66,8 @@ export interface vtkIncrementalOctreePointLocator extends vtkIncrementalOctreePo
    * @param {Vector3} point
    * @param {Number} radius2 the squared search radius
    * @param {vtkIncrementalOctreeNode} maskNode a node to exclude from the search
+   * @param {Number} minDist2 the initial upper bound on the squared distance;
+   * the search stops descending once it cannot improve on it
    * @param {Number} refDist2
    * @returns {PointIdAndDistance2}
    */
@@ -73,6 +75,7 @@ export interface vtkIncrementalOctreePointLocator extends vtkIncrementalOctreePo
     point: Vector3,
     radius2: number,
     maskNode: vtkIncrementalOctreeNode,
+    minDist2: number,
     refDist2: number
   ): PointIdAndDistance2;
 
