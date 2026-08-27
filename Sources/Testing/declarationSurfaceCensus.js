@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import unverified from 'vtk.js/Utilities/TypeTesting/unverified-surface.json';
+import { instanceKeys } from 'vtk.js/Utilities/TypeTesting/instance-keys.mjs';
 
 // The Node census cannot construct these modules: they need a DOM, a WebGL
 // context or a GPU adapter. It hands their declared instance surface here so a
@@ -12,20 +13,6 @@ const modules = import.meta.glob([
   '!/Sources/**/test/**',
   '!/Sources/**/*.worker.js',
 ]);
-
-function instanceKeys(instance) {
-  const names = new Set(Object.keys(instance));
-  for (
-    let prototype = Object.getPrototypeOf(instance);
-    prototype && prototype !== Object.prototype;
-    prototype = Object.getPrototypeOf(prototype)
-  ) {
-    for (const name of Object.getOwnPropertyNames(prototype)) {
-      if (name !== 'constructor') names.add(name);
-    }
-  }
-  return names;
-}
 
 // The modules that build their own DOM read the container from initial values.
 function initialValues(moduleName) {
@@ -81,8 +68,9 @@ it('declares only members the browser runtime provides', async () => {
     verified += 1;
     const missing = declared.required.filter((name) => !result.names.has(name));
     if (missing.length) ghosts[moduleName] = missing;
+    const declaredAll = new Set(declared.all);
     const extra = [...result.names].filter(
-      (name) => !name.startsWith('_') && !declared.all.includes(name)
+      (name) => !name.startsWith('_') && !declaredAll.has(name)
     );
     if (extra.length) undeclared[moduleName] = extra.sort();
   }

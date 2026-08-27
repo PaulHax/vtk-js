@@ -82,12 +82,11 @@ try {
 
   execFileSync(
     process.execPath,
-    ['-e', "require('@kitware/vtk.js/Utilities/config/rules-vtk')"],
-    { cwd: temporaryDirectory, stdio: 'inherit' }
-  );
-  execFileSync(
-    process.execPath,
-    ['-e', "require('@kitware/vtk.js/Utilities/config/chainWebpack')"],
+    [
+      '-e',
+      "require('@kitware/vtk.js/Utilities/config/rules-vtk');" +
+        "require('@kitware/vtk.js/Utilities/config/chainWebpack');",
+    ],
     { cwd: temporaryDirectory, stdio: 'inherit' }
   );
   execFileSync(

@@ -1,12 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export function walk(directory, suffix) {
+export function walk(directory, suffix, skipDirectory) {
   const files = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const entryPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...walk(entryPath, suffix));
-    else if (entry.name.endsWith(suffix)) files.push(entryPath);
+    if (entry.isDirectory()) {
+      if (skipDirectory?.(entry.name)) continue;
+      files.push(...walk(entryPath, suffix, skipDirectory));
+    } else if (entry.name.endsWith(suffix)) files.push(entryPath);
   }
   return files;
 }
@@ -36,7 +38,7 @@ export function modulePair(declarationPath, sourcesDir, distDir) {
 }
 
 export function stable(value) {
-  if (Array.isArray(value)) return value.map(stable);
+  if (Array.isArray(value)) return [...value].map(stable).sort();
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value)
@@ -46,3 +48,35 @@ export function stable(value) {
   }
   return value;
 }
+
+/**
+ * Compare a census against its reviewed baseline and report. Both censuses gate
+ * the same way: identical means pass, anything else prints both sides so the
+ * diff is readable in CI. `--write-baseline` regenerates instead of comparing.
+ */
+export function compareToBaseline(census, baselinePath, { subject, summary }) {
+  const normalized = stable(census);
+
+  if (process.argv.includes('--write-baseline')) {
+    fs.writeFileSync(baselinePath, `${JSON.stringify(normalized, null, 2)}\n`);
+    console.log(`Wrote ${path.relative(process.cwd(), baselinePath)}.`);
+    return true;
+  }
+
+  const baseline = stable(JSON.parse(fs.readFileSync(baselinePath, 'utf8')));
+  if (JSON.stringify(normalized) === JSON.stringify(baseline)) {
+    console.log(summary());
+    return true;
+  }
+
+  console.error(subject);
+  console.error('Expected baseline:');
+  console.error(JSON.stringify(baseline, null, 2));
+  console.error('Actual census:');
+  console.error(JSON.stringify(normalized, null, 2));
+  return false;
+}
+
+/** Count the names held across a census section keyed by module. */
+export const total = (collection) =>
+  Object.values(collection).reduce((count, names) => count + names.length, 0);

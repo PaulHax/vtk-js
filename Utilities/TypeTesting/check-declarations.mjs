@@ -2,7 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
-import { walk, modulePair, stable } from './module-pairs.mjs';
+import {
+  walk,
+  modulePair,
+  stable,
+  compareToBaseline,
+  total,
+} from './module-pairs.mjs';
+import { instanceKeys } from './instance-keys.mjs';
 
 const root = process.cwd();
 const sourcesDir = path.join(root, 'Sources');
@@ -73,46 +80,36 @@ function typeOnlyExport(symbol) {
 // ----------------------------------------------------------------------------
 
 /**
- * The fewest parameters any overload demands, or null when the member is not
- * callable. Optional, rest and defaulted parameters do not count.
+ * The parameter bounds of a callable member, or null when it is not callable.
+ *
+ * `required` is the fewest parameters any overload demands; optional, rest and
+ * defaulted parameters do not count. `accepted` is the most any overload can
+ * take, or null when a rest parameter makes that unbounded. Both come from one
+ * walk of the signatures — this runs over ~43k properties.
  */
-function requiredParameters(symbol) {
+function parameterBounds(symbol) {
   const signatures = checker.getTypeOfSymbol(symbol).getCallSignatures();
   if (!signatures.length) return null;
-  return Math.min(
-    ...signatures.map(
-      (signature) =>
-        signature.getParameters().filter((parameter) => {
-          const declaration = parameter.valueDeclaration;
-          return !(
-            declaration &&
-            (declaration.questionToken ||
-              declaration.dotDotDotToken ||
-              declaration.initializer)
-          );
-        }).length
-    )
-  );
-}
 
-/**
- * The most parameters any overload can accept, or null when the member is not
- * callable or takes a rest parameter, which makes the count unbounded.
- */
-function acceptedParameters(symbol) {
-  const signatures = checker.getTypeOfSymbol(symbol).getCallSignatures();
-  if (!signatures.length) return null;
-  let most = 0;
+  let required = Infinity;
+  let accepted = 0;
+  let unbounded = false;
+
   for (const signature of signatures) {
     const parameters = signature.getParameters();
-    if (
-      parameters.some((parameter) => parameter.valueDeclaration?.dotDotDotToken)
-    ) {
-      return null;
+    let demanded = 0;
+    for (const parameter of parameters) {
+      const declaration = parameter.valueDeclaration;
+      if (declaration?.dotDotDotToken) unbounded = true;
+      else if (!(declaration?.questionToken || declaration?.initializer)) {
+        demanded += 1;
+      }
     }
-    most = Math.max(most, parameters.length);
+    required = Math.min(required, demanded);
+    accepted = Math.max(accepted, parameters.length);
   }
-  return most;
+
+  return { required, accepted: unbounded ? null : accepted };
 }
 
 function members(type) {
@@ -125,10 +122,10 @@ function members(type) {
     if (name.startsWith('__')) continue;
     all.add(name);
     if (!(property.flags & ts.SymbolFlags.Optional)) required.add(name);
-    const parameters = requiredParameters(property);
-    if (parameters !== null) arity.set(name, parameters);
-    const most = acceptedParameters(property);
-    if (most !== null) accepted.set(name, most);
+    const bounds = parameterBounds(property);
+    if (bounds === null) continue;
+    arity.set(name, bounds.required);
+    if (bounds.accepted !== null) accepted.set(name, bounds.accepted);
   }
   return { required, all, arity, accepted };
 }
@@ -201,7 +198,6 @@ const localExportBlock = /^export\s*\{([^}]*)\}\s*;?\s*$/gm;
  * loader cannot execute are still covered.
  */
 function runtimeExports(content) {
-  localExportBlock.lastIndex = 0;
   const blocks = Array.from(content.matchAll(localExportBlock));
   if (!blocks.length) return new Set();
   return new Set(
@@ -246,22 +242,6 @@ function silenced(action) {
 
 function isPlainObject(value) {
   return !!value && Object.getPrototypeOf(value) === Object.prototype;
-}
-
-// Class-based helpers (vtkBoundingBox, vtkEdgeLocator) keep their methods on
-// the prototype, where Object.keys cannot see them.
-function instanceKeys(instance) {
-  const names = new Set(Object.keys(instance));
-  for (
-    let prototype = Object.getPrototypeOf(instance);
-    prototype && prototype !== Object.prototype;
-    prototype = Object.getPrototypeOf(prototype)
-  ) {
-    for (const name of Object.getOwnPropertyNames(prototype)) {
-      if (name !== 'constructor') names.add(name);
-    }
-  }
-  return names;
 }
 
 // A runtime surface is the object that carries the members plus their names,
@@ -383,7 +363,7 @@ function trailingParametersAreGuarded(fn, from) {
  */
 function underDeclaredArity(declared, holder) {
   const mismatches = [];
-  for (const [name, accepted] of declared.accepted ?? []) {
+  for (const [name, accepted] of declared.accepted) {
     if (internal(name)) continue;
     const fn = holder[name];
     if (typeof fn !== 'function' || fn.length === 0) continue;
@@ -548,30 +528,19 @@ if (emitPath) {
   );
 }
 
-const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
-
-if (JSON.stringify(stable(census)) !== JSON.stringify(stable(baseline))) {
-  console.error('The declared API surface diverged from the built runtime.');
-  console.error('Expected baseline:');
-  console.error(JSON.stringify(stable(baseline), null, 2));
-  console.error('Actual census:');
-  console.error(JSON.stringify(stable(census), null, 2));
-  process.exitCode = 1;
-} else {
-  const total = (collection) =>
-    Object.values(collection).reduce((count, names) => count + names.length, 0);
-  console.log(
+const passed = compareToBaseline(census, baselinePath, {
+  subject: 'The declared API surface diverged from the built runtime.',
+  summary: () =>
     `Declaration census passed over ${pairs.length} typed modules ` +
-      `(${counters.statics} static, ${counters.instances} instance, ` +
-      `${counters.constants} constant surfaces; ` +
-      `${total(census.ghostDeclarations)} baselined export ghosts, ` +
-      `${total(census.undeclaredRuntimeExports)} baselined undeclared exports, ` +
-      `${total(census.ghostMembers)} baselined member ghosts, ` +
-      `${total(census.undeclaredMembers)} baselined undeclared members, ` +
-      `${total(census.arityMismatches)} baselined arity mismatches, ` +
-      `${total(census.underDeclaredArity)} baselined under-declared arities, ` +
-      `${census.uninstantiable.length} uninstantiable headless).`
-  );
-}
+    `(${counters.statics} static, ${counters.instances} instance, ` +
+    `${counters.constants} constant surfaces; ` +
+    `${total(census.ghostDeclarations)} baselined export ghosts, ` +
+    `${total(census.undeclaredRuntimeExports)} baselined undeclared exports, ` +
+    `${total(census.ghostMembers)} baselined member ghosts, ` +
+    `${total(census.undeclaredMembers)} baselined undeclared members, ` +
+    `${total(census.arityMismatches)} baselined arity mismatches, ` +
+    `${total(census.underDeclaredArity)} baselined under-declared arities, ` +
+    `${census.uninstantiable.length} uninstantiable headless).`,
+});
 
-process.exit(process.exitCode ?? 0);
+process.exit(passed ? 0 : 1);

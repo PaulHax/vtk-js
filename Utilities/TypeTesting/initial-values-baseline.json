@@ -1,7 +1,5 @@
 {
-  "missingOptions": {
-    "Proxy/Animation/AnimationProxyManager": []
-  },
+  "missingOptions": {},
   "readOnlyOptions": {
     "Common/DataModel/ImageData": [
       "indexToWorld",
@@ -9,14 +7,6 @@
     ],
     "Filters/Sources/Cursor3D": [
       "focus"
-    ],
-    "IO/Image/HDRReader": [
-      "exposure",
-      "gamma",
-      "pixelAspect"
-    ],
-    "IO/Misc/HttpDataSetLODsLoader": [
-      "currentSource"
     ],
     "Imaging/Core/AbstractImageInterpolator": [
       "origin",
@@ -28,6 +18,14 @@
     ],
     "Interaction/Widgets/OrientationMarkerWidget": [
       "interactiveRenderer"
+    ],
+    "IO/Image/HDRReader": [
+      "exposure",
+      "gamma",
+      "pixelAspect"
+    ],
+    "IO/Misc/HttpDataSetLODsLoader": [
+      "currentSource"
     ],
     "Proxy/Animation/AnimationProxyManager": [
       "currentFrameIndex",
@@ -65,11 +63,11 @@
       "dataSet",
       "mapper"
     ],
-    "Rendering/Core/RenderWindowInteractor": [
-      "recentAnimationFrameRate"
-    ],
     "Rendering/Core/Renderer": [
       "selector"
+    ],
+    "Rendering/Core/RenderWindowInteractor": [
+      "recentAnimationFrameRate"
     ],
     "Rendering/OpenGL/Framebuffer": [
       "colorBuffers"

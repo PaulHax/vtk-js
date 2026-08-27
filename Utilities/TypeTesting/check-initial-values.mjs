@@ -10,9 +10,10 @@
 // timestamps, values derived from the input), so they are baselined rather than
 // declared.
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import ts from 'typescript';
+import { walk, compareToBaseline, total } from './module-pairs.mjs';
 
 const ROOT = process.cwd();
 const SOURCES = path.join(ROOT, 'Sources');
@@ -22,18 +23,6 @@ const baselinePath = path.join(
 );
 
 const SKIP_DIR = /^(example|examples|test)$/i;
-
-const moduleFiles = (dir, out = []) => {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (!SKIP_DIR.test(entry.name)) moduleFiles(full, out);
-    } else if (entry.name === 'index.js') {
-      out.push(full);
-    }
-  }
-  return out;
-};
 
 const parseJs = (file) =>
   ts.createSourceFile(
@@ -180,29 +169,32 @@ const optionsType = (declaration) => {
   return found;
 };
 
-const jsFiles = moduleFiles(SOURCES);
-const declarationFiles = jsFiles
-  .map((file) => file.replace(/index\.js$/, 'index.d.ts'))
-  .filter((file) => fs.existsSync(file));
+const modulePairs = walk(SOURCES, 'index.js', (name) => SKIP_DIR.test(name))
+  .map((js) => ({
+    js,
+    declarationPath: js.replace(/index\.js$/, 'index.d.ts'),
+  }))
+  .filter((pair) => fs.existsSync(pair.declarationPath));
 
-const program = ts.createProgram(declarationFiles, {
-  target: ts.ScriptTarget.ESNext,
-  module: ts.ModuleKind.ESNext,
-  moduleResolution: ts.ModuleResolutionKind.Bundler,
-  strict: false,
-  skipLibCheck: true,
-  noEmit: true,
-});
+const program = ts.createProgram(
+  modulePairs.map((pair) => pair.declarationPath),
+  {
+    target: ts.ScriptTarget.ESNext,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    strict: false,
+    skipLibCheck: true,
+    noEmit: true,
+  }
+);
 const checker = program.getTypeChecker();
 
 const census = { missingOptions: {}, readOnlyOptions: {}, untypedOptions: [] };
 let audited = 0;
 
-for (const js of jsFiles) {
-  const declarationPath = js.replace(/index\.js$/, 'index.d.ts');
-  if (!fs.existsSync(declarationPath)) continue;
-
-  const keys = defaultValueKeys(parseJs(js));
+for (const { js, declarationPath } of modulePairs) {
+  const source = parseJs(js);
+  const keys = defaultValueKeys(source);
   if (!keys?.size) continue;
 
   const declaration = program.getSourceFile(declarationPath);
@@ -212,29 +204,25 @@ for (const js of jsFiles) {
     .relative(SOURCES, path.dirname(js))
     .split(path.sep)
     .join('/');
-  const { all, writable } = accessors(parseJs(js));
+  const { all, writable } = accessors(source);
   const configurable = [...keys].filter((key) => all.has(key));
   if (!configurable.length) continue;
   audited += 1;
 
+  // A factory typed `object`/`any` accepts anything and completes nothing, so
+  // it declares no option: treat it as an empty declared set and report through
+  // the same path as everything else.
   const options = optionsType(declaration);
-  const optionsName = options?.getText();
-  if (!options || /^(object|any)$/.test(optionsName)) {
-    census.untypedOptions.push(moduleName);
-    census.missingOptions[moduleName] = configurable
-      .filter((key) => writable.has(key))
-      .sort();
-    census.readOnlyOptions[moduleName] = configurable
-      .filter((key) => !writable.has(key))
-      .sort();
-    continue;
-  }
+  const untyped = !options || /^(object|any)$/.test(options.getText());
+  if (untyped) census.untypedOptions.push(moduleName);
 
-  const declared = new Set(
-    checker
-      .getPropertiesOfType(checker.getTypeAtLocation(options))
-      .map((symbol) => symbol.name)
-  );
+  const declared = untyped
+    ? new Set()
+    : new Set(
+        checker
+          .getPropertiesOfType(checker.getTypeAtLocation(options))
+          .map((symbol) => symbol.name)
+      );
   const gap = configurable.filter((key) => !declared.has(key));
   const missing = gap.filter((key) => writable.has(key)).sort();
   const readOnly = gap.filter((key) => !writable.has(key)).sort();
@@ -242,43 +230,13 @@ for (const js of jsFiles) {
   if (readOnly.length) census.readOnlyOptions[moduleName] = readOnly;
 }
 
-const stable = (value) => {
-  if (Array.isArray(value)) return [...value].sort();
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.keys(value)
-        .sort()
-        .map((key) => [key, stable(value[key])])
-    );
-  }
-  return value;
-};
-
-if (process.argv.includes('--write-baseline')) {
-  fs.writeFileSync(
-    baselinePath,
-    `${JSON.stringify(stable(census), null, 2)}\n`
-  );
-  console.log(`Wrote ${path.relative(ROOT, baselinePath)}.`);
-  process.exit(0);
-}
-
-const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
-
-if (JSON.stringify(stable(census)) !== JSON.stringify(stable(baseline))) {
-  console.error('The declared newInstance options diverged from the runtime.');
-  console.error('Expected baseline:');
-  console.error(JSON.stringify(stable(baseline), null, 2));
-  console.error('Actual census:');
-  console.error(JSON.stringify(stable(census), null, 2));
-  process.exit(1);
-}
-
-const total = (collection) =>
-  Object.values(collection).reduce((count, keys) => count + keys.length, 0);
-console.log(
-  `Initial-values census passed over ${audited} configurable modules ` +
+const passed = compareToBaseline(census, baselinePath, {
+  subject: 'The declared newInstance options diverged from the runtime.',
+  summary: () =>
+    `Initial-values census passed over ${audited} configurable modules ` +
     `(${total(census.missingOptions)} baselined undeclared options, ` +
     `${total(census.readOnlyOptions)} baselined read-only options, ` +
-    `${census.untypedOptions.length} factories still typed as object).`
-);
+    `${census.untypedOptions.length} factories still typed as object).`,
+});
+
+process.exit(passed ? 0 : 1);

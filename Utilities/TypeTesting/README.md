@@ -43,7 +43,8 @@ check rewrites its `../../Sources/` specifiers to `@kitware/vtk.js/` on the way
 into the temporary consumer, so an assertion added there is checked both ways.
 
 `declaration-baseline.json` records known mismatches that still lack matching
-declarations. Do not refresh it mechanically when the census fails. Review the
+declarations. Both censuses take `--write-baseline` to regenerate, but do not
+refresh either one mechanically when it fails. Review the
 JavaScript and the declaration first, then either fix the mismatch or add the
 specific intentional exception. Removing a known mismatch also requires
 removing its baseline entry.
