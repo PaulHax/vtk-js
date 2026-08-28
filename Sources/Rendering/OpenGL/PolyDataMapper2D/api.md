@@ -10,6 +10,13 @@ Prepare for rendering.
 
 Do the rendering.
 
+### releaseGraphicsResources(openGLRenderWindow)
+
+Free the GPU buffers and textures this view of the mapper owns. The buffers are
+rebuilt on the next render. It is called automatically when the mapper's view
+node is deleted, which is how a view that shares its context with sibling views
+frees its own buffers without touching theirs.
+
 ## Shader customization
 
 In order to provide specific properties for rendering, you will have to add
