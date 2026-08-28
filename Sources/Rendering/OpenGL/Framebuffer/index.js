@@ -10,6 +10,31 @@ function vtkFramebuffer(publicAPI, model) {
   // Set our className
   model.classHierarchy.push('vtkFramebuffer');
 
+  function releaseOwnedColorBuffer() {
+    if (model.ownedColorBuffer) {
+      if (!model._openGLRenderWindow?.isDeleted()) {
+        model.ownedColorBuffer.releaseGraphicsResources(
+          model._openGLRenderWindow
+        );
+      } else if (model.ownedColorBuffer.getHandle()) {
+        // a shared GL context can outlive the render window
+        model.context?.deleteTexture(model.ownedColorBuffer.getHandle());
+      }
+      model.ownedColorBuffer.delete();
+      model.ownedColorBuffer = null;
+    }
+  }
+
+  // Releases owned attachments; borrowed ones and the framebuffer stay alive.
+  function releaseAttachments() {
+    releaseOwnedColorBuffer();
+    if (model.depthTexture) {
+      model.context?.deleteRenderbuffer(model.depthTexture);
+      model.depthTexture = null;
+    }
+    model.colorBuffers = [];
+  }
+
   publicAPI.getBothMode = () => model.context.FRAMEBUFFER;
   // publicAPI.getDrawMode = () => model.context.DRAW_FRAMEBUFFER;
   // publicAPI.getReadMode = () => model.context.READ_FRAMEBUFFER;
@@ -74,7 +99,8 @@ function vtkFramebuffer(publicAPI, model) {
     }
     model.context.bindFramebuffer(mode, model.glFramebuffer);
     for (let i = 0; i < model.colorBuffers.length; i++) {
-      model.colorBuffers[i].bind();
+      // removed attachments leave empty slots; indices match attachment points
+      model.colorBuffers[i]?.bind();
     }
     model._openGLRenderWindow.setActiveFramebuffer(publicAPI);
   };
@@ -87,9 +113,18 @@ function vtkFramebuffer(publicAPI, model) {
       return;
     }
 
-    model.glFramebuffer = model.context.createFramebuffer();
+    const gl = model.context;
+    const wasBound =
+      model.glFramebuffer &&
+      gl.getParameter(gl.FRAMEBUFFER_BINDING) === model.glFramebuffer;
+    publicAPI.releaseGraphicsResources();
+    model.glFramebuffer = gl.createFramebuffer();
     model.glFramebuffer.width = width;
     model.glFramebuffer.height = height;
+    if (wasBound) {
+      // deleting a bound framebuffer resets the GL binding to default
+      publicAPI.bind();
+    }
   };
 
   publicAPI.setColorBuffer = (texture, attachment = 0) => {
@@ -100,6 +135,13 @@ function vtkFramebuffer(publicAPI, model) {
         'you must set the OpenGLRenderWindow before calling setColorBuffer'
       );
       return;
+    }
+
+    if (
+      model.colorBuffers[attachment] === model.ownedColorBuffer &&
+      texture !== model.ownedColorBuffer
+    ) {
+      releaseOwnedColorBuffer();
     }
 
     let glAttachment = gl.COLOR_ATTACHMENT0;
@@ -126,6 +168,10 @@ function vtkFramebuffer(publicAPI, model) {
       return;
     }
 
+    if (model.colorBuffers[attachment] === model.ownedColorBuffer) {
+      releaseOwnedColorBuffer();
+    }
+
     let glAttachment = gl.COLOR_ATTACHMENT0;
     if (attachment > 0) {
       glAttachment += attachment;
@@ -139,7 +185,14 @@ function vtkFramebuffer(publicAPI, model) {
       0
     );
 
-    model.colorBuffers = model.colorBuffers.splice(attachment, 1);
+    // clear without shifting: indices map to GL attachment points
+    model.colorBuffers[attachment] = null;
+    while (
+      model.colorBuffers.length &&
+      model.colorBuffers[model.colorBuffers.length - 1] == null
+    ) {
+      model.colorBuffers.pop();
+    }
   };
 
   publicAPI.setDepthBuffer = (texture) => {
@@ -193,8 +246,10 @@ function vtkFramebuffer(publicAPI, model) {
   };
 
   publicAPI.releaseGraphicsResources = () => {
+    releaseAttachments();
     if (model.glFramebuffer) {
-      model.context.deleteFramebuffer(model.glFramebuffer);
+      model.context?.deleteFramebuffer(model.glFramebuffer);
+      model.glFramebuffer = null;
     }
   };
 
@@ -214,6 +269,8 @@ function vtkFramebuffer(publicAPI, model) {
     publicAPI.bind();
     const gl = model.context;
 
+    releaseAttachments();
+
     const texture = vtkOpenGLTexture.newInstance();
     texture.setOpenGLRenderWindow(model._openGLRenderWindow);
     texture.setMinificationFilter(Filter.LINEAR);
@@ -225,6 +282,7 @@ function vtkFramebuffer(publicAPI, model) {
       dataType: VtkDataTypes.UNSIGNED_CHAR,
       data: null,
     });
+    model.ownedColorBuffer = texture;
     publicAPI.setColorBuffer(texture);
 
     // use a renderbuffer for depth; no consumer samples this
@@ -245,6 +303,11 @@ function vtkFramebuffer(publicAPI, model) {
     );
   };
 
+  publicAPI.delete = macro.chain(
+    () => publicAPI.releaseGraphicsResources(),
+    publicAPI.delete
+  );
+
   // For backwards compatibility. Use getColorBuffers()[0] going forward.
   publicAPI.getColorTexture = () => model.colorBuffers[0];
 }
@@ -256,6 +319,7 @@ const DEFAULT_VALUES = {
   // _openGLRenderWindow: null,
   glFramebuffer: null,
   colorBuffers: null,
+  ownedColorBuffer: null,
   depthTexture: null,
   previousDrawBinding: 0,
   previousReadBinding: 0,
