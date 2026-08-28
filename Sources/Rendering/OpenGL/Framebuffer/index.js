@@ -208,6 +208,15 @@ function vtkFramebuffer(publicAPI, model) {
   publicAPI.releaseGraphicsResources = () => {
     if (model.glFramebuffer) {
       model.context.deleteFramebuffer(model.glFramebuffer);
+      // Deleting the bound framebuffer reverts GL to the default one, so a
+      // tracked binding still naming this handle would let a later save and
+      // restore rebind an object the context no longer has.
+      if (
+        getFramebufferBindingState(model._openGLRenderWindow)?.binding ===
+        model.glFramebuffer
+      ) {
+        trackBinding(null);
+      }
     }
   };
 
