@@ -1,6 +1,6 @@
 import { mat4 } from 'gl-matrix';
 import { vtkObject } from '../../../interfaces';
-import { Bounds, Vector3, Range } from '../../../types';
+import { Bounds, Nullable, Vector3, Range } from '../../../types';
 
 /**
  *
@@ -141,6 +141,12 @@ export interface vtkCamera extends vtkObject {
   getDistance(): number;
 
   /**
+   * Get the explicit projection matrix, or null when the camera computes
+   * its projection from its standard parameters.
+   */
+  getExplicitProjectionMatrix(): Nullable<mat4>;
+
+  /**
    * Get the focal of the camera in world coordinates.
    */
   getFocalPoint(): Vector3;
@@ -241,8 +247,15 @@ export interface vtkCamera extends vtkObject {
    * @param {Number} aspect Camera frustum aspect ratio.
    * @param {Number} nearz Camera frustum near plane.
    * @param {Number} farz Camera frustum far plane.
+   * @param {mat4} [out] Optional output matrix to mutate and return, instead
+   * of allocating a new one.
    */
-  getProjectionMatrix(aspect: number, nearz: number, farz: number): mat4;
+  getProjectionMatrix(
+    aspect: number,
+    nearz: number,
+    farz: number,
+    out?: mat4
+  ): mat4;
 
   /**
    * Not implemented yet
@@ -446,6 +459,12 @@ export interface vtkCamera extends vtkObject {
   setDistance(distance: number): boolean;
 
   /**
+   * Set the explicit projection matrix, or null to use a projection
+   * computed from the camera's standard parameters.
+   */
+  setExplicitProjectionMatrix(mat: Nullable<mat4>): boolean;
+
+  /**
    * Set the focal of the camera in world coordinates.
    * @param {Number} x The x coordinate.
    * @param {Number} y The y coordinate.
@@ -566,10 +585,9 @@ export interface vtkCamera extends vtkObject {
   setPositionAndFocalPoint(position: number[], focalPoint: number[]): boolean;
 
   /**
-   *
-   * @param {mat4} mat
+   * @deprecated Use setExplicitProjectionMatrix instead.
    */
-  setProjectionMatrix(mat: mat4): boolean;
+  setProjectionMatrix(mat: Nullable<mat4>): boolean;
 
   /**
    * Set the roll angle of the camera about the direction of projection.
