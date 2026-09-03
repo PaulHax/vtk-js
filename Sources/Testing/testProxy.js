@@ -77,6 +77,24 @@ it('Proxy activation via config', () => {
   proxy.getState();
 });
 
+it('Proxy getState serializes the proxy', () => {
+  const proxyManager = newProxyManager();
+  const proxy = proxyManager.createProxy('Sources', 'TrivialProducer');
+
+  const state = proxy.getState();
+  expect(state, 'getState returns a state, not null').not.toBeNull();
+  expect(state.vtkClass).toBe('vtkTestProxyClass');
+  expect(
+    state.proxyManager.vtkClass,
+    'the proxy manager serializes instead of recursing forever'
+  ).toBe('vtkProxyManager');
+
+  // JSON.stringify routes through toJSON()/getState() and must terminate
+  // even though the proxy and its manager reference each other.
+  expect(() => JSON.stringify(proxy)).not.toThrow();
+  expect(() => JSON.stringify(proxyManager)).not.toThrow();
+});
+
 it('Proxy activation via .activate()', () => {
   const proxyManager = newProxyManager();
   expect(
