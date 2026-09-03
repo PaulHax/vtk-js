@@ -49,8 +49,10 @@ function vtkWebGPUCamera(publicAPI, model) {
       outMat[0] = 2.0 * xr;
       outMat[5] = 2.0 * yr;
       outMat[10] = 1.0 / (cRange[1] - cRange[0]);
-      outMat[12] = (xmax + xmin) * xr;
-      outMat[13] = (ymax + ymin) * yr;
+      // Sign matches gl-matrix's mat4.ortho and Core: positive windowCenter
+      // shifts NDC negative.
+      outMat[12] = -(xmax + xmin) * xr;
+      outMat[13] = -(ymax + ymin) * yr;
       outMat[14] = cRange[1] / (cRange[1] - cRange[0]);
     } else {
       const tmp = Math.tan((Math.PI * model.renderable.getViewAngle()) / 360.0);
