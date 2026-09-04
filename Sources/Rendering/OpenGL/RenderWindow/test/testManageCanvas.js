@@ -32,18 +32,18 @@ it('does not manage externally owned canvases', () => {
   expect(canvas.style.display).toBe('inline');
 });
 
-it('captures at the current size when a resize would be needed', async () => {
+it('rejects captures that require resizing an externally owned canvas', async () => {
   const glWindow = vtkOpenGLRenderWindow.newInstance({ manageCanvas: false });
 
-  // the size/scale request is dropped, so the capture takes the single-pass
-  // path and resolves on the next imageReady without a canvas resize
+  const currentSizeCapture = glWindow.captureNextImage();
+  glWindow.invokeImageReady('data:current-size');
+  await expect(currentSizeCapture).resolves.toBe('data:current-size');
+
   const sizedCapture = glWindow.captureNextImage('image/png', {
     size: [320, 300],
   });
-  glWindow.invokeImageReady('data:sized');
-  await expect(sizedCapture).resolves.toBe('data:sized');
+  await expect(sizedCapture).rejects.toThrow(/manageCanvas=true/);
 
   const scaledCapture = glWindow.captureNextImage('image/png', { scale: 2 });
-  glWindow.invokeImageReady('data:scaled');
-  await expect(scaledCapture).resolves.toBe('data:scaled');
+  await expect(scaledCapture).rejects.toThrow(/manageCanvas=true/);
 });
