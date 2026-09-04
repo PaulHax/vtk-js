@@ -361,9 +361,9 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    * size.  If no `size` or `scale` are provided, the current renderwindow
    * size is assumed.  The default format is "image/png". Returns a promise
    * that resolves to the captured screenshot. When an explicit `size` or
-   * `scale` is given while `manageCanvas` is false, it is ignored with a
-   * warning and the capture happens at the current size, since honoring it
-   * would resize the canvas.
+   * `scale` is given while `manageCanvas` is false, the returned promise
+   * rejects because honoring the request would resize an externally owned
+   * canvas.
    * @param {String} format
    * @param {ICaptureOptions} options
    */
