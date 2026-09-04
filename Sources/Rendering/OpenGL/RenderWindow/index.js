@@ -12,7 +12,7 @@ import vtkRenderPass from 'vtk.js/Sources/Rendering/SceneGraph/RenderPass';
 import vtkRenderWindowViewNode from 'vtk.js/Sources/Rendering/SceneGraph/RenderWindowViewNode';
 import { createContextProxyHandler } from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow/ContextProxy';
 
-const { vtkDebugMacro, vtkErrorMacro, vtkWarningMacro } = macro;
+const { vtkDebugMacro, vtkErrorMacro } = macro;
 
 const SCREENSHOT_PLACEHOLDER = {
   position: 'absolute',
@@ -530,16 +530,17 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
     }
     // Captures with an explicit size or scale take the two-pass path below
     // (placeholder image + canvas resize), which needs vtk.js to own the
-    // canvas. Fall back to a current-size capture otherwise.
-    let screenshotSize =
+    // canvas.
+    const screenshotSize =
       !!size || scale !== 1
         ? size || model.size.map((val) => val * scale)
         : null;
     if (screenshotSize !== null && !model.manageCanvas) {
-      vtkWarningMacro(
-        'Ignoring the requested screenshot size/scale: resizing the canvas requires manageCanvas=true on vtkOpenGLRenderWindow. Capturing at the current size instead.'
+      return Promise.reject(
+        new Error(
+          'Capturing with an explicit size or scale requires manageCanvas=true on vtkOpenGLRenderWindow.'
+        )
       );
-      screenshotSize = null;
     }
 
     model.imageFormat = format;
