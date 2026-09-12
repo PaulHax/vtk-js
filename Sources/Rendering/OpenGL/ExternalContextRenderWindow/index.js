@@ -3,24 +3,22 @@ import { extend as extendOpenGLRenderWindow } from 'vtk.js/Sources/Rendering/Ope
 import { initializeFramebufferBinding } from 'vtk.js/Sources/Rendering/OpenGL/Framebuffer/BindingState';
 import vtkExternalContextRenderer from 'vtk.js/Sources/Rendering/OpenGL/ExternalContextRenderer';
 
+// Pixel-store parameter name paired with its GL default. A string default
+// names another GL enum to read off the context.
 const PIXEL_STORE_STATE = [
-  ['packAlignment', 'PACK_ALIGNMENT', 4],
-  ['unpackAlignment', 'UNPACK_ALIGNMENT', 4],
-  ['unpackFlipY', 'UNPACK_FLIP_Y_WEBGL', false],
-  ['unpackPremultiplyAlpha', 'UNPACK_PREMULTIPLY_ALPHA_WEBGL', false],
-  [
-    'unpackColorspaceConversion',
-    'UNPACK_COLORSPACE_CONVERSION_WEBGL',
-    'BROWSER_DEFAULT_WEBGL',
-  ],
-  ['packRowLength', 'PACK_ROW_LENGTH', 0],
-  ['packSkipRows', 'PACK_SKIP_ROWS', 0],
-  ['packSkipPixels', 'PACK_SKIP_PIXELS', 0],
-  ['unpackRowLength', 'UNPACK_ROW_LENGTH', 0],
-  ['unpackImageHeight', 'UNPACK_IMAGE_HEIGHT', 0],
-  ['unpackSkipRows', 'UNPACK_SKIP_ROWS', 0],
-  ['unpackSkipPixels', 'UNPACK_SKIP_PIXELS', 0],
-  ['unpackSkipImages', 'UNPACK_SKIP_IMAGES', 0],
+  ['PACK_ALIGNMENT', 4],
+  ['UNPACK_ALIGNMENT', 4],
+  ['UNPACK_FLIP_Y_WEBGL', false],
+  ['UNPACK_PREMULTIPLY_ALPHA_WEBGL', false],
+  ['UNPACK_COLORSPACE_CONVERSION_WEBGL', 'BROWSER_DEFAULT_WEBGL'],
+  ['PACK_ROW_LENGTH', 0],
+  ['PACK_SKIP_ROWS', 0],
+  ['PACK_SKIP_PIXELS', 0],
+  ['UNPACK_ROW_LENGTH', 0],
+  ['UNPACK_IMAGE_HEIGHT', 0],
+  ['UNPACK_SKIP_ROWS', 0],
+  ['UNPACK_SKIP_PIXELS', 0],
+  ['UNPACK_SKIP_IMAGES', 0],
 ];
 
 // Supported pixel-store params and MAX_DRAW_BUFFERS never change for a given
@@ -32,7 +30,7 @@ function getContextConstants(gl) {
   if (!constants) {
     constants = {
       pixelStoreState: PIXEL_STORE_STATE.filter(
-        ([, valueName]) => gl[valueName] !== undefined
+        ([paramName]) => gl[paramName] !== undefined
       ),
       maxDrawBuffers: gl.drawBuffers ? gl.getParameter(gl.MAX_DRAW_BUFFERS) : 0,
     };
@@ -131,7 +129,7 @@ function resetGLState(gl, framebufferState, shaderCache, hostState) {
 
   gl.activeTexture(gl.TEXTURE0);
 
-  pixelStoreState.forEach(([, paramName, defaultValue]) => {
+  pixelStoreState.forEach(([paramName, defaultValue]) => {
     const value =
       typeof defaultValue === 'string' ? gl[defaultValue] : defaultValue;
     gl.pixelStorei(gl[paramName], value);
