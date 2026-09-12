@@ -57,7 +57,9 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     const polyData = gc.registerResource(
       makePolyDataFromPoints([10000000, 0, 0, 10000001, 0, 0])
     );
-    const mapper = gc.registerResource(vtkPointGaussianMapper.newInstance());
+    const mapper = gc.registerResource(
+      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
+    );
     const actor = gc.registerResource(vtkActor.newInstance());
 
     mapper.setInputData(polyData);
@@ -112,7 +114,9 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       makePolyDataFromPoints([0, 0, 0, 1, 0, 0])
     );
     const rgb = gc.registerResource(addRGB(polyData, [255, 0, 0, 0, 255, 0]));
-    const mapper = gc.registerResource(vtkPointGaussianMapper.newInstance());
+    const mapper = gc.registerResource(
+      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
+    );
     const actor = gc.registerResource(vtkActor.newInstance());
     mapper.setInputData(polyData);
     mapper.setColorModeToDirectScalars();
@@ -144,7 +148,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       actor.setUserMatrix([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 0, 0, 1])
     );
     renderWithoutUpload(() => actor.getProperty().setOpacity(0.5));
-    renderWithoutUpload(() => mapper.setScaleFactor(2));
+    renderWithoutUpload(() => mapper.setPointSizeScale(2));
     renderWithoutUpload(() => mapper.setCircle(true));
 
     updatePoints(polyData, [0, 0, 0, 2, 0, 0]);

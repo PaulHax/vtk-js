@@ -51,7 +51,7 @@ function imageDataFromDataURI(dataURI) {
 }
 
 it('vtkPointGaussianMapper normalizes its progressive draw count', () => {
-  const mapper = vtkPointGaussianMapper.newInstance();
+  const mapper = vtkPointGaussianMapper.newInstance({ scaleFactor: 0 });
   expect(mapper.getMaximumPointCount()).toBe(-1);
   expect(mapper.setMaximumPointCount(3.8)).toBe(true);
   expect(mapper.getMaximumPointCount()).toBe(3);
@@ -84,7 +84,9 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
         [255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 255, 0, 255]
       )
     );
-    const mapper = gc.registerResource(vtkPointGaussianMapper.newInstance());
+    const mapper = gc.registerResource(
+      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
+    );
     const actor = gc.registerResource(vtkActor.newInstance());
 
     mapper.setInputData(polyData);
@@ -164,7 +166,9 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
         [255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 255, 0, 255]
       )
     );
-    const mapper = gc.registerResource(vtkPointGaussianMapper.newInstance());
+    const mapper = gc.registerResource(
+      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
+    );
     const actor = gc.registerResource(vtkActor.newInstance());
     mapper.setInputData(polyData);
     mapper.setColorModeToDirectScalars();
@@ -231,7 +235,9 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     const polyData = gc.registerResource(
       makePointCloud([0, 0, 0], [10, 200, 250])
     );
-    const mapper = gc.registerResource(vtkPointGaussianMapper.newInstance());
+    const mapper = gc.registerResource(
+      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
+    );
     const actor = gc.registerResource(vtkActor.newInstance());
 
     mapper.setInputData(polyData);
@@ -276,3 +282,18 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     return promise;
   }
 );
+
+it('rejects Gaussian mode instead of rendering it as simple points', () => {
+  expect(() => vtkPointGaussianMapper.newInstance({ scaleFactor: 1 })).toThrow(
+    'supports only simple points'
+  );
+  const mapper = vtkPointGaussianMapper.newInstance({ scaleFactor: 0 });
+  for (const value of [1, -1, NaN, Infinity]) {
+    expect(() => mapper.setScaleFactor(value)).toThrow(
+      'supports only simple points'
+    );
+  }
+  mapper.setPointSizeScale(2);
+  expect(mapper.getScaleFactor()).toBe(0);
+  mapper.delete();
+});

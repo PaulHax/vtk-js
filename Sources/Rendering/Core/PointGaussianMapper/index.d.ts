@@ -1,23 +1,34 @@
 import vtkMapper, { IMapperInitialValues } from '../Mapper';
 
-export interface IPointGaussianMapperInitialValues extends IMapperInitialValues {
+export type IPointGaussianMapperInitialValues = IMapperInitialValues & {
   scaleFactor?: number;
+  pointSizeScale?: number;
   circle?: boolean;
   worldSize?: number;
   maximumPointCount?: number;
-}
+};
 
-export interface vtkPointGaussianMapper extends vtkMapper {
+export type vtkPointGaussianMapper = vtkMapper & {
   /**
-   * Get the screen-space point-size multiplier.
+   * Get the Gaussian scale selector. Only 0 (simple points) is supported.
    */
   getScaleFactor(): number;
 
   /**
-   * Multiplier applied on top of the actor point size (screen-space pixels).
-   * @param scaleFactor 1 by default.
+   * Select VTK simple-point mode. Nonzero values throw because Gaussian
+   * splats are unsupported. Defaults to 0, unlike VTK C++ (1).
+   * @param scaleFactor Must be 0.
    */
   setScaleFactor(scaleFactor: number): boolean;
+
+  /** vtk.js extension: get the display-size multiplier. */
+  getPointSizeScale(): number;
+
+  /**
+   * vtk.js extension: multiply pixel diameter, or world diameter when worldSize
+   * is enabled. This does not select Gaussian rendering. Defaults to 1.
+   */
+  setPointSizeScale(pointSizeScale: number): boolean;
 
   /**
    * Whether points render as round splats (a gl_PointCoord edge discard)
@@ -38,8 +49,8 @@ export interface vtkPointGaussianMapper extends vtkMapper {
   /**
    * Point diameter in model units. When > 0, each point's pixel size is
    * derived from its distance to the camera (perspective) or the parallel
-   * scale (orthographic), multiplied by scaleFactor and the actor
-   * transform's scale (assumed isotropic — anisotropic actor scaling uses
+   * scale (orthographic), multiplied by pointSizeScale and the actor
+   * transform's scale (assumed isotropic; anisotropic actor scaling uses
    * the x-axis norm). The screen-space actor point size acts as the pixel
    * floor (sub-pixel splats keep the classic fixed-size look) and the
    * implementation's gl_PointSize range caps the ceiling.
@@ -62,7 +73,7 @@ export interface vtkPointGaussianMapper extends vtkMapper {
    * @param maximumPointCount -1 by default.
    */
   setMaximumPointCount(maximumPointCount: number): boolean;
-}
+};
 
 /**
  * Method use to decorate a given object (publicAPI+model) with

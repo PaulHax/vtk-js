@@ -53,7 +53,9 @@ function buildScene(gc) {
 
   const polyData = gc.registerResource(vtkPolyData.newInstance());
   polyData.getPoints().setData(Float32Array.from([0, 0, 0]), 3);
-  const mapper = gc.registerResource(vtkPointGaussianMapper.newInstance());
+  const mapper = gc.registerResource(
+    vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
+  );
   const actor = gc.registerResource(vtkActor.newInstance());
   mapper.setInputData(polyData);
   mapper.setScalarVisibility(false);
