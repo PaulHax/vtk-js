@@ -15,9 +15,10 @@ function vtkPointGaussianMapper(publicAPI, model) {
 // ----------------------------------------------------------------------------
 
 const DEFAULT_VALUES = {
-  // Screen-space point-size multiplier applied on top of the actor point size.
-  // With worldSize > 0 it multiplies the world-space size instead.
-  scaleFactor: 1.0,
+  // Only the VTK simple-point mode is implemented.
+  scaleFactor: 0,
+  // vtk.js extension: display-size multiplier, independent of Gaussian scale.
+  pointSizeScale: 1.0,
   // false: opaque square points. true: round splat via a gl_PointCoord edge.
   circle: false,
   // > 0: point diameter in model units, perspective-scaled per point through
@@ -40,7 +41,20 @@ export function extend(publicAPI, model, initialValues = {}) {
   // Inheritance
   vtkMapper.extend(publicAPI, model, initialValues);
 
-  macro.setGet(publicAPI, model, ['scaleFactor', 'circle', 'worldSize']);
+  const requireSimplePoints = (value) => {
+    if (value !== 0) {
+      throw new Error(
+        'vtkPointGaussianMapper supports only simple points (scaleFactor = 0); Gaussian splats are not implemented.'
+      );
+    }
+  };
+  requireSimplePoints(model.scaleFactor);
+  macro.get(publicAPI, model, ['scaleFactor']);
+  publicAPI.setScaleFactor = (value) => {
+    requireSimplePoints(value);
+    return false;
+  };
+  macro.setGet(publicAPI, model, ['pointSizeScale', 'circle', 'worldSize']);
   macro.get(publicAPI, model, ['maximumPointCount']);
   publicAPI.setMaximumPointCount = (value) => {
     if (!Number.isFinite(value)) return false;

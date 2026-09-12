@@ -21,7 +21,9 @@ function makeScene(gc, polyData) {
   const renderer = gc.registerResource(vtkRenderer.newInstance());
   renderWindow.addRenderer(renderer);
 
-  const mapper = gc.registerResource(vtkPointGaussianMapper.newInstance());
+  const mapper = gc.registerResource(
+    vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
+  );
   mapper.setInputData(polyData);
   const actor = gc.registerResource(vtkActor.newInstance());
   actor.setMapper(mapper);

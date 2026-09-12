@@ -24,8 +24,8 @@ const { FieldAssociations } = vtkDataSet;
 // vtkOpenGLPolyDataMapper machinery: the Points primitive's Helper already
 // emits gl.POINTS, injects `gl_PointSize = pointSize` (valued from the actor's
 // point size, in screen pixels), and folds the VBO coord shift/scale back out
-// through MCPCMatrix — so this class only overrides buffer construction plus a
-// scaleFactor multiplier, an optional round-splat fragment discard, and an
+// through MCPCMatrix, so this class only overrides buffer construction plus a
+// pointSizeScale multiplier, an optional round-splat fragment discard, and an
 // optional world-space size mode (worldSize > 0) that rewrites the assembled
 // gl_PointSize line to perspective-scale a world-unit diameter per point.
 // ----------------------------------------------------------------------------
@@ -259,7 +259,8 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     if (program.isUniformUsed('pointSize')) {
       program.setUniformf(
         'pointSize',
-        actor.getProperty().getPointSize() * model.renderable.getScaleFactor()
+        actor.getProperty().getPointSize() *
+          model.renderable.getPointSizeScale()
       );
     }
 
@@ -294,7 +295,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       program.setUniformf(
         'worldPointSizeFactor',
         model.renderable.getWorldSize() *
-          model.renderable.getScaleFactor() *
+          model.renderable.getPointSizeScale() *
           actorScale *
           pixelsPerUnit
       );
