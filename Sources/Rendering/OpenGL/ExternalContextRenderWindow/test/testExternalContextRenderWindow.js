@@ -12,7 +12,10 @@ import vtkSphereSource from 'vtk.js/Sources/Filters/Sources/SphereSource';
 import vtkCubeSource from 'vtk.js/Sources/Filters/Sources/CubeSource';
 import vtkExternalContextRenderWindow from 'vtk.js/Sources/Rendering/OpenGL/ExternalContextRenderWindow';
 import { GET_UNDERLYING_CONTEXT } from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow/ContextProxy';
-import createExternalContextWindow from './helpers';
+import createExternalContextWindow, {
+  attachExternalWindow,
+  createHostContext,
+} from './helpers';
 
 import baseline from '../../../Core/RenderWindow/test/testMultipleRenderers.png';
 import baseline2 from '../../../Core/RenderWindow/test/testMultipleRenderers2.png';
@@ -122,66 +125,21 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'Test external context render window keeps vtkExternalContextRenderer local to its factory',
   () => {
     const gc = testUtils.createGarbageCollector();
-    const container = document.querySelector('body');
 
-    const sourceContainer = gc.registerDOMElement(
-      document.createElement('div')
-    );
-    container.appendChild(sourceContainer);
+    const source = createHostContext(gc, { width: 200, height: 200 });
+    const externalWindow = attachExternalWindow(gc, source);
+    source.renderWindow.render();
 
-    const sourceRenderWindow = gc.registerResource(
-      vtkRenderWindow.newInstance()
-    );
-    const sourceRenderer = gc.registerResource(vtkRenderer.newInstance());
-    sourceRenderWindow.addRenderer(sourceRenderer);
-
-    const sourceGlWindow = gc.registerResource(
-      sourceRenderWindow.newAPISpecificView()
-    );
-    sourceGlWindow.setContainer(sourceContainer);
-    sourceRenderWindow.addView(sourceGlWindow);
-    sourceGlWindow.setSize(200, 200);
-
-    const sourceGlProxy = sourceGlWindow.get3DContext();
-    const sourceGl = sourceGlProxy?.[GET_UNDERLYING_CONTEXT]?.();
-    expect(sourceGl, 'Source window context created').toBeTruthy();
-
-    const externalWindow = gc.registerResource(
-      vtkExternalContextRenderWindow.createFromContext(
-        sourceGlWindow.getCanvas(),
-        sourceGl
-      )
-    );
-    sourceRenderWindow.removeView(sourceGlWindow);
-    sourceRenderWindow.addView(externalWindow);
-    sourceRenderWindow.render();
-
-    const sourceRendererNode = externalWindow.getViewNodeFor(sourceRenderer);
+    const sourceRendererNode = externalWindow.getViewNodeFor(source.renderer);
     expect(
       sourceRendererNode?.isA('vtkExternalContextRenderer'),
       'Shared window uses vtkExternalContextRenderer'
     ).toBeTruthy();
 
-    const normalContainer = gc.registerDOMElement(
-      document.createElement('div')
-    );
-    container.appendChild(normalContainer);
+    const normal = createHostContext(gc, { width: 200, height: 200 });
+    normal.renderWindow.render();
 
-    const normalRenderWindow = gc.registerResource(
-      vtkRenderWindow.newInstance()
-    );
-    const normalRenderer = gc.registerResource(vtkRenderer.newInstance());
-    normalRenderWindow.addRenderer(normalRenderer);
-
-    const normalGlWindow = gc.registerResource(
-      normalRenderWindow.newAPISpecificView()
-    );
-    normalGlWindow.setContainer(normalContainer);
-    normalRenderWindow.addView(normalGlWindow);
-    normalGlWindow.setSize(200, 200);
-    normalRenderWindow.render();
-
-    const normalRendererNode = normalGlWindow.getViewNodeFor(normalRenderer);
+    const normalRendererNode = normal.glWindow.getViewNodeFor(normal.renderer);
     expect(
       normalRendererNode?.isA('vtkOpenGLRenderer'),
       'Normal window keeps vtkOpenGLRenderer'
@@ -294,37 +252,15 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'Test external context render window does not manage external canvas DOM state',
   () => {
     const gc = testUtils.createGarbageCollector();
-    const container = document.querySelector('body');
-    const renderWindowContainer = gc.registerDOMElement(
-      document.createElement('div')
-    );
-    container.appendChild(renderWindowContainer);
+    const host = createHostContext(gc, { width: 200, height: 200 });
 
-    const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
-    const renderer = gc.registerResource(vtkRenderer.newInstance());
-    renderWindow.addRenderer(renderer);
-
-    const glWindow = gc.registerResource(renderWindow.newAPISpecificView());
-    glWindow.setContainer(renderWindowContainer);
-    renderWindow.addView(glWindow);
-    glWindow.setSize(200, 200);
-
-    const glProxy = glWindow.get3DContext();
-    const gl = glProxy?.[GET_UNDERLYING_CONTEXT]?.();
-    expect(gl, 'Shared WebGL context created').toBeTruthy();
-
-    const canvas = glWindow.getCanvas();
+    const canvas = host.glWindow.getCanvas();
     canvas.style.display = 'inline-block';
     const originalWidth = canvas.width;
     const originalHeight = canvas.height;
     const originalDisplay = canvas.style.display;
 
-    const externalWindow = gc.registerResource(
-      vtkExternalContextRenderWindow.createFromContext(canvas, gl)
-    );
-    renderWindow.removeView(glWindow);
-    renderWindow.addView(externalWindow);
-
+    const externalWindow = attachExternalWindow(gc, host);
     externalWindow.setSize(123, 77);
     externalWindow.setUseOffScreen(true);
 
@@ -351,30 +287,9 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'Test external context render window redirects vtk render requests to the host',
   () => {
     const gc = testUtils.createGarbageCollector();
-    const container = document.querySelector('body');
-    const renderWindowContainer = gc.registerDOMElement(
-      document.createElement('div')
-    );
-    container.appendChild(renderWindowContainer);
-
-    const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
-    const renderer = gc.registerResource(vtkRenderer.newInstance());
-    renderWindow.addRenderer(renderer);
-
-    const glWindow = gc.registerResource(renderWindow.newAPISpecificView());
-    glWindow.setContainer(renderWindowContainer);
-    renderWindow.addView(glWindow);
-    glWindow.setSize(200, 200);
-
-    const glProxy = glWindow.get3DContext();
-    const gl = glProxy?.[GET_UNDERLYING_CONTEXT]?.();
-    expect(gl, 'Shared WebGL context created').toBeTruthy();
-
-    const externalWindow = gc.registerResource(
-      vtkExternalContextRenderWindow.createFromContext(glWindow.getCanvas(), gl)
-    );
-    renderWindow.removeView(glWindow);
-    renderWindow.addView(externalWindow);
+    const host = createHostContext(gc, { width: 200, height: 200 });
+    const { renderWindow } = host;
+    const externalWindow = attachExternalWindow(gc, host);
 
     let hostRenderRequests = 0;
     externalWindow.setRenderCallback(() => {
