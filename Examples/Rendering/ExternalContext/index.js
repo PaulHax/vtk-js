@@ -37,14 +37,13 @@ const SPHERE_CENTER_HEIGHT_RATIO = 1.05;
 
 function createRouteActor() {
   const points = vtkPoints.newInstance({ dataType: 'Float64Array' });
-  const pointValues = new Float64Array(cities.length * 3);
+  points.setData(new Float64Array(cities.length * 3), 3);
 
-  points.setData(pointValues, 3);
   const polyData = vtkPolyData.newInstance();
   polyData.setPoints(points);
   polyData.setLines(
     vtkCellArray.newInstance({
-      values: Uint16Array.from([cities.length, 0, 1, 2]),
+      values: Uint16Array.from([cities.length, ...cities.keys()]),
     })
   );
 
