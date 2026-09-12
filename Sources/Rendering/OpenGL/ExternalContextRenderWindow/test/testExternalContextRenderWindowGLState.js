@@ -250,3 +250,50 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     gc.releaseResources();
   }
 );
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'Test renderExternal leaves scissor state at the GL default',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const { gl, externalWindow, renderer } = createExternalContextWindow(gc);
+
+    // The host owns the buffer contents and the vtk renderer covers only part
+    // of it, so the scissor rect the renderer clear establishes is a strict
+    // subset of the drawing buffer.
+    externalWindow.setAutoClear(false);
+    renderer.setViewport(0, 0, 0.5, 1);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.disable(gl.SCISSOR_TEST);
+    gl.colorMask(true, true, true, true);
+    gl.clearColor(1, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    externalWindow.renderExternal({ framebuffer: null });
+
+    expect(
+      gl.isEnabled(gl.SCISSOR_TEST),
+      'SCISSOR_TEST is disabled when renderExternal returns'
+    ).toBe(false);
+    expect(
+      Array.from(gl.getParameter(gl.SCISSOR_BOX)),
+      'Scissor box covers the drawing buffer when renderExternal returns'
+    ).toEqual([0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]);
+
+    // A host that tracks no scissor state of its own — MapLibre's Context has
+    // no scissor value, so its post-custom-layer setDirty() cannot restore one
+    // — clears the whole buffer for its next frame.
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.clearColor(0, 0, 1, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    const outside = new Uint8Array(4);
+    gl.readPixels(300, 200, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, outside);
+    expect(
+      outside[2] > 200 && outside[0] < 30,
+      `Host clear reaches outside the vtk viewport, got rgba(${outside.join(',')})`
+    ).toBeTruthy();
+
+    gc.releaseResources();
+  }
+);
