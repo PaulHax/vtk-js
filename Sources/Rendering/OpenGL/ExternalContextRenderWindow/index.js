@@ -61,6 +61,19 @@ function getDefaultDrawBuffers(gl, framebuffer, max) {
   return buffers[0] === gl.NONE ? [gl.COLOR_ATTACHMENT0] : buffers;
 }
 
+// Renderer clears enable SCISSOR_TEST and narrow the box to the renderer's
+// tiled rect, and nothing in the render path turns it back off. Scissor is the
+// one piece of state whose leak silently clips the *host*: a host that does not
+// track scissor (MapLibre's Context has no scissor value, so the setDirty() it
+// runs after a custom layer cannot restore one) then draws and clears through
+// vtk's rect. Restore the GL default rather than the host's prior value —
+// reading it back would cost an isEnabled plus a SCISSOR_BOX getParameter, the
+// synchronous CPU/GPU syncs this module exists to avoid.
+function resetScissorToGLDefault(gl) {
+  gl.disable(gl.SCISSOR_TEST);
+  gl.scissor(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+}
+
 // The blend enable, blend function and depth function vtk.js draws with. They
 // are the only pieces of GL state resetGLState leaves at a non-GL default, so
 // this is where all three are set.
@@ -93,7 +106,6 @@ function resetGLState(gl, framebufferState, shaderCache, hostState) {
   gl.disable(gl.CULL_FACE);
   gl.disable(gl.DEPTH_TEST);
   gl.disable(gl.POLYGON_OFFSET_FILL);
-  gl.disable(gl.SCISSOR_TEST);
   gl.disable(gl.STENCIL_TEST);
   if (gl.SAMPLE_ALPHA_TO_COVERAGE) {
     gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
@@ -151,10 +163,8 @@ function resetGLState(gl, framebufferState, shaderCache, hostState) {
 
   gl.lineWidth(1);
 
-  const width = gl.drawingBufferWidth;
-  const height = gl.drawingBufferHeight;
-  gl.scissor(0, 0, width, height);
-  gl.viewport(0, 0, width, height);
+  resetScissorToGLDefault(gl);
+  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
   if (gl.bindVertexArray) {
     gl.bindVertexArray(null);
@@ -224,6 +234,9 @@ function vtkExternalContextRenderWindow(publicAPI, model, framebufferState) {
       }
     } finally {
       inExternalRender = false;
+      if (model.context) {
+        resetScissorToGLDefault(model.context);
+      }
       const shaderCache = publicAPI.getShaderCache();
       if (shaderCache) {
         shaderCache.setLastShaderProgramBound(null);
