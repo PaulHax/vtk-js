@@ -12,8 +12,3 @@ export function initializeFramebufferBinding(renderWindow) {
 export function getFramebufferBindingState(renderWindow) {
   return renderWindow[FRAMEBUFFER_BINDING_STATE];
 }
-
-export default {
-  initializeFramebufferBinding,
-  getFramebufferBindingState,
-};
