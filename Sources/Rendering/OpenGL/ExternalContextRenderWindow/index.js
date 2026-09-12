@@ -61,6 +61,9 @@ function getDefaultDrawBuffers(gl, framebuffer, max) {
   return buffers[0] === gl.NONE ? [gl.COLOR_ATTACHMENT0] : buffers;
 }
 
+// The blend enable, blend function and depth function vtk.js draws with. They
+// are the only pieces of GL state resetGLState leaves at a non-GL default, so
+// this is where all three are set.
 function applyVTKRenderDefaults(gl) {
   gl.blendFuncSeparate(
     gl.SRC_ALPHA,
@@ -87,7 +90,6 @@ function resetGLState(gl, framebufferState, shaderCache, hostState) {
   framebufferState.binding = framebuffer;
   framebufferState.known = true;
 
-  gl.disable(gl.BLEND);
   gl.disable(gl.CULL_FACE);
   gl.disable(gl.DEPTH_TEST);
   gl.disable(gl.POLYGON_OFFSET_FILL);
@@ -105,15 +107,12 @@ function resetGLState(gl, framebufferState, shaderCache, hostState) {
   gl.sampleCoverage(1, false);
 
   gl.blendEquation(gl.FUNC_ADD);
-  gl.blendFunc(gl.ONE, gl.ZERO);
-  gl.blendFuncSeparate(gl.ONE, gl.ZERO, gl.ONE, gl.ZERO);
   gl.blendColor(0, 0, 0, 0);
 
   gl.colorMask(true, true, true, true);
   gl.clearColor(0, 0, 0, 0);
 
   gl.depthMask(true);
-  gl.depthFunc(gl.LESS);
   gl.clearDepth(1);
   gl.depthRange(0, 1);
 
