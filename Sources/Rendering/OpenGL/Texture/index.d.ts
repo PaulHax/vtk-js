@@ -4,6 +4,7 @@ import { Extent, Nullable } from '../../../types';
 import { VtkDataTypes } from '../../../Common/Core/DataArray';
 import { vtkViewNode } from '../../../Rendering/SceneGraph/ViewNode';
 import { vtkObject, vtkRange } from '../../../interfaces';
+import { CompressedTextureData } from '../../Core/Texture';
 
 /**
  * Initial values for creating a new instance of vtkOpenGLTexture.
@@ -217,6 +218,12 @@ export interface vtkOpenGLTexture extends vtkViewNode {
     data: any;
     flip?: boolean;
   }): boolean;
+
+  /**
+   * Uploads an already-transcoded compressed 2D texture mip prefix. The
+   * canonical format is resolved against the current live WebGL context.
+   */
+  create2DFromCompressed(data: CompressedTextureData): boolean;
 
   /**
    * Creates a cube texture from raw data.
