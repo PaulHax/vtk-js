@@ -44,13 +44,20 @@ export interface vtkExternalContextRenderWindow extends vtkOpenGLRenderWindow {
    *   its own state before its next draw. State-tracking hosts already do:
    *   MapLibre/Mapbox invalidate their tracker after every custom-layer
    *   render, three.js exposes resetState() for the same purpose.
+   * - Scissor is the one exception: SCISSOR_TEST is disabled and the box
+   *   restored to the full drawing buffer, the same GL defaults entry sets.
+   *   Renderer clears narrow the box to the renderer's viewport rect, and a
+   *   leaked scissor clips the host rather than the host's tracker (MapLibre
+   *   tracks no scissor value, so invalidating cannot restore one).
    */
   renderExternal(hostState?: IHostGLState): void;
 
   /**
    * Reset vtk.js GL state and sync size before an external-context render.
    * Called by renderExternal(); exposed for hosts that drive the render pass
-   * themselves.
+   * themselves. Such a host owns the exit side of renderExternal's contract
+   * too, scissor included: renderer clears narrow SCISSOR_TEST to the
+   * renderer's rect, and nothing disables it again on this path.
    */
   prepareExternalRender(hostState?: IHostGLState): void;
 
