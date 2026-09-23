@@ -1,9 +1,12 @@
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
+import renderTestUtils from 'vtk.js/Sources/Testing/renderTestUtils';
 import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
 import vtkGenericRenderWindow from 'vtk.js/Sources/Rendering/Misc/GenericRenderWindow';
 import vtkPolyLineWidget from 'vtk.js/Sources/Widgets/Widgets3D/PolyLineWidget';
+import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
 import vtkWidgetManager from 'vtk.js/Sources/Widgets/Core/WidgetManager';
+import { CaptureOn } from 'vtk.js/Sources/Widgets/Core/WidgetManager/Constants';
 
 import noScaleInPixelsWithPerspectiveBaseline from './testNoScaleInPixelsWithPerspectiveBaseline.png';
 import noScaleInPixelsWithParallelBaseline from './testNoScaleInPixelsWithParallelBaseline.png';
@@ -151,3 +154,116 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)('Test getPixelWorldHeightAtCoord', () => {
     .reduce((current, next) => current.then(next), Promise.resolve())
     .finally(gc.releaseResources);
 });
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'cleans up an in-flight selection and its view widgets when deleted',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    const {
+      tracker,
+      renderer,
+      renderWindow,
+      emptySceneObjects: emptyViewObjects,
+    } = renderTestUtils.createTrackedRenderView(gc);
+
+    const widgetManager = vtkWidgetManager.newInstance();
+    widgetManager.setRenderer(renderer);
+    const widget = gc.registerResource(vtkPolyLineWidget.newInstance());
+    const viewWidget = widgetManager.addWidget(widget);
+    renderWindow.render();
+
+    const selection = widgetManager.getSelectedDataForXY(0, 0);
+    expect(tracker.count()).toBeGreaterThan(emptyViewObjects);
+
+    // application teardown order: manager first, with a selection in flight
+    widgetManager.delete();
+    await expect(selection).resolves.toEqual({});
+
+    expect(renderer.getActors()).not.toContain(viewWidget);
+    expect(widget.getViewIds()).toEqual([]);
+
+    // the view tree frees removed actors on the next render
+    renderWindow.render();
+    expect(tracker.count()).toBe(emptyViewObjects);
+    gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'releases the selector owned for a previous renderer',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    const {
+      tracker,
+      renderer,
+      renderWindow,
+      emptySceneObjects: emptyViewObjects,
+    } = renderTestUtils.createTrackedRenderView(gc);
+
+    const widgetManager = vtkWidgetManager.newInstance();
+    widgetManager.setRenderer(renderer);
+    await widgetManager.getSelectedDataForXY(0, 0);
+    const selectorObjects = tracker.count();
+    expect(selectorObjects).toBeGreaterThan(emptyViewObjects);
+
+    // same-renderer setRenderer is still a full re-wire and releases the
+    // selector built for the previous wiring
+    widgetManager.setRenderer(renderer);
+    expect(tracker.count()).toBe(emptyViewObjects);
+    expect(widgetManager.get('_camera')._camera).toBe(
+      renderer.getActiveCamera()
+    );
+
+    const otherRenderer = gc.registerResource(vtkRenderer.newInstance());
+    renderWindow.addRenderer(otherRenderer);
+    // create the view node the selector will pick against
+    renderWindow.render();
+    widgetManager.setRenderer(otherRenderer);
+    expect(tracker.count()).toBe(emptyViewObjects);
+
+    await widgetManager.getSelectedDataForXY(0, 0);
+    expect(tracker.count()).toBeGreaterThan(emptyViewObjects);
+    widgetManager.delete();
+    expect(tracker.count()).toBe(emptyViewObjects);
+
+    renderWindow.removeRenderer(otherRenderer);
+    gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'does not start a picking capture while deleting a focused widget',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    const {
+      tracker,
+      renderer,
+      renderWindow,
+      emptySceneObjects: emptyViewObjects,
+    } = renderTestUtils.createTrackedRenderView(gc);
+
+    const widgetManager = vtkWidgetManager.newInstance({
+      captureOn: CaptureOn.MOUSE_RELEASE,
+    });
+    widgetManager.setRenderer(renderer);
+    const widget = gc.registerResource(vtkPolyLineWidget.newInstance());
+    widgetManager.addWidget(widget);
+    renderWindow.render();
+
+    // settle the initial capture so nothing in flight defers selector deletion
+    await widgetManager.getSelectedDataForXY(0, 0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // deleting while focused would otherwise start a MOUSE_RELEASE capture
+    // and defer freeing the selector behind it
+    widgetManager.grabFocus(widget);
+    const beforeDelete = tracker.count();
+
+    widgetManager.delete();
+    expect(tracker.count()).toBeLessThan(beforeDelete);
+
+    renderWindow.render();
+    expect(tracker.count()).toBe(emptyViewObjects);
+    gc.releaseResources();
+  }
+);
