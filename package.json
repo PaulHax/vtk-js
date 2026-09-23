@@ -30,7 +30,9 @@
   "main": "./dist/umd/vtk.js",
   "module": "./dist/esm/index.js",
   "dependencies": {
+    "@webgpu/types": "0.1.72",
     "@types/webxr": "0.5.5",
+    "@webgpu/types": "0.1.72",
     "commander": "9.2.0",
     "d3-scale": "4.0.2",
     "fast-deep-equal": "3.1.3",

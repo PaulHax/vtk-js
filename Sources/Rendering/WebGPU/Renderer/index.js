@@ -48,6 +48,7 @@ function vtkWebGPURenderer(publicAPI, model) {
 
       model.camera = model.renderable.getActiveCamera();
 
+      model.renderable.updateLightGeometry();
       publicAPI.updateLights();
       publicAPI.prepareNodes();
       publicAPI.addMissingNode(model.camera);
@@ -159,6 +160,10 @@ function vtkWebGPURenderer(publicAPI, model) {
 
       const tsize = publicAPI.getYInvertedTiledSizeAndOrigin();
       model.UBO.setArray('viewportSize', [tsize.usize, tsize.vsize]);
+      model.UBO.setArray('viewportOrigin', [
+        tsize.lowerLeftU,
+        tsize.lowerLeftV,
+      ]);
       model.UBO.setValue(
         'cameraParallel',
         model.camera.getParallelProjection()
@@ -334,7 +339,14 @@ function vtkWebGPURenderer(publicAPI, model) {
     if (prepass) {
       model.renderEncoder.begin(model._parent.getCommandEncoder());
     } else {
-      publicAPI.scissorAndViewport(model.renderEncoder);
+      // The ray cast uses a normalized full canvas target before compositing into
+      // the renderer viewport, so its depth bounds must use the same coordinates.
+      // The bounds shader maps opaque depth reads back into the renderer viewport.
+      const size = model._parent.getSizeByReference();
+      model.renderEncoder
+        .getHandle()
+        .setViewport(0, 0, size[0], size[1], 0.0, 1.0);
+      model.renderEncoder.getHandle().setScissorRect(0, 0, size[0], size[1]);
       model.renderEncoder.end();
     }
   };
@@ -431,6 +443,17 @@ const DEFAULT_VALUES = {
   bindGroup: null,
   selector: null,
   renderEncoder: null,
+  // The view on the color texture that the opaque pass writes.
+  // The translucent pass sets this view before it processes this renderer.
+  // The view then stays available for the remainder of the frame.
+  // Transmissive actors read this view to get the color behind them.
+  // Refraction needs the color that is already on the screen.
+  // A fragment cannot read the attachment that it writes to.
+  // The value is null while the opaque pass runs.
+  // Thus a value that is not null also tells a mapper two things.
+  // The background is available, and the mapper can build the transmission
+  // code path.
+  opaqueColorTextureView: null,
   recenterThreshold: 20.0,
   suppressClear: false,
   stabilizedCenter: [0.0, 0.0, 0.0],
@@ -453,6 +476,7 @@ export function extend(publicAPI, model, initialValues = {}) {
   model.UBO.addEntry('VCPCMatrix', 'mat4x4<f32>');
   model.UBO.addEntry('WCVCNormals', 'mat4x4<f32>');
   model.UBO.addEntry('viewportSize', 'vec2<f32>');
+  model.UBO.addEntry('viewportOrigin', 'vec2<f32>');
   model.UBO.addEntry('LightCount', 'i32');
   model.UBO.addEntry('MaxEnvironmentMipLevel', 'f32');
   model.UBO.addEntry('BackgroundDiffuseStrength', 'f32');
@@ -479,6 +503,7 @@ export function extend(publicAPI, model, initialValues = {}) {
   macro.getArray(publicAPI, model, ['stabilizedCenter']);
   macro.setGet(publicAPI, model, [
     'renderEncoder',
+    'opaqueColorTextureView',
     'selector',
     'suppressClear',
     'UBO',

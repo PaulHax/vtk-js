@@ -1398,15 +1398,14 @@ fn traverseAverage(vTex: texture_3d<f32>, vNum: i32, rowIdx: i32, rayLengthSC: f
   let raySpan = rayBounds.y - rayBounds.x;
   let tfunRows: f32 = f32(textureDimensions(tfunTexture).y);
   let firstValue = getTextureValue(vTex, tpos, vNum);
-  if (raySpan <= 1.0)
+  if (raySpan <= 1.0 && valueWithinIPRange(firstValue, vNum))
   {
     // Match the OpenGL mapper's effective coverage for a subsample projection
     // ray. Its rasterized entry/exit interval is 5/4 of the analytic interval
     // used by this fullscreen WebGPU pass.
-    let thinRayWeight = raySpan * 1.25;
     traverseVals[vNum] = processVolumeSample(
       vTex, fragPos, vNum, rowIdx,
-      minPosSC + rayStepSC * rayBounds.x, tpos, firstValue * thinRayWeight, tfunRows, false);
+      minPosSC + rayStepSC * rayBounds.x, tpos, firstValue, tfunRows, false);
     return;
   }
 
@@ -1438,7 +1437,7 @@ fn traverseAverage(vTex: texture_3d<f32>, vNum: i32, rowIdx: i32, rayLengthSC: f
   let endValue = getTextureValue(vTex, endTpos, vNum);
   if (valueWithinIPRange(endValue, vNum))
   {
-    sum = sum + endValue;
+    sum = sum + endValue * (rayBounds.y - curDist);
     totalWeight = totalWeight + rayBounds.y - curDist;
   }
 
@@ -1486,7 +1485,7 @@ fn traverseAdditive(vTex: texture_3d<f32>, vNum: i32, rowIdx: i32, rayLengthSC: 
   {
     traverseVals[vNum] = processVolumeSample(
       vTex, fragPos, vNum, rowIdx,
-      minPosSC + rayStepSC * rayBounds.x, tpos, firstValue * raySpan, tfunRows, false);
+      minPosSC + rayStepSC * rayBounds.x, tpos, firstValue, tfunRows, false);
     return;
   }
 
@@ -1514,7 +1513,7 @@ fn traverseAdditive(vTex: texture_3d<f32>, vNum: i32, rowIdx: i32, rayLengthSC: 
   let endValue = getTextureValue(vTex, endTpos, vNum);
   if (valueWithinIPRange(endValue, vNum))
   {
-    sum = sum + endValue;
+    sum = sum + endValue * (rayBounds.y - curDist);
   }
   traverseVals[vNum] = processVolumeSample(
     vTex, fragPos, vNum, rowIdx,

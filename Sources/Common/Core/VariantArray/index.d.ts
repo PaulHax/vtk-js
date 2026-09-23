@@ -1,4 +1,5 @@
 import { vtkObject } from '../../../interfaces';
+import { NonNegativeInteger } from '../../../types';
 
 /**
  *
@@ -6,7 +7,7 @@ import { vtkObject } from '../../../interfaces';
 export interface IVariantArrayInitialValues {
   name?: string;
   numberOfComponents?: number;
-  size: number;
+  size?: number;
   dataType?: string;
 }
 
@@ -16,7 +17,12 @@ export interface vtkVariantArray extends vtkObject {
    * @param {Number} tupleIdx
    * @param {Number} [compIdx]
    */
-  getComponent(tupleIdx: number, compIdx?: number): void;
+  getComponent(tupleIdx: NonNegativeInteger, compIdx?: NonNegativeInteger): any;
+
+  /**
+   * Get the value at a flat array index.
+   */
+  getValue(valueIdx: NonNegativeInteger): any;
 
   /**
    *
@@ -64,7 +70,7 @@ export interface vtkVariantArray extends vtkObject {
   /**
    *
    */
-  newClone(): void;
+  newClone(): vtkVariantArray;
 
   /**
    * Set the data component at the location specified by tupleIdx and compIdx
@@ -74,16 +80,25 @@ export interface vtkVariantArray extends vtkObject {
    * (use SetNumberOfTuples() and SetNumberOfComponents()).
    * @param {Number} tupleIdx
    * @param {Number} compIdx
-   * @param {String} value
+   * @param value
    */
-  setComponent(tupleIdx: number, compIdx: number, value: string): void;
+  setComponent(
+    tupleIdx: NonNegativeInteger,
+    compIdx: NonNegativeInteger,
+    value: any
+  ): void;
+
+  /**
+   * Set the value at a flat array index.
+   */
+  setValue(valueIdx: NonNegativeInteger, value: any): void;
 
   /**
    *
    * @param {Array<any>} array
-   * @param {Number} numberOfComponents
+   * @param {Number} [numberOfComponents]
    */
-  setData(array: Array<any>, numberOfComponents: number): void;
+  setData(array: Array<any>, numberOfComponents?: number): void;
 
   /**
    *
