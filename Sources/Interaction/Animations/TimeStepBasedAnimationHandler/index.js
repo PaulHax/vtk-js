@@ -129,7 +129,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     'applySettings',
     'currentTimeStep',
     'data',
-    'originalMetada',
+    'originalMetadata',
     'scene',
     'timeRange',
     'timeSteps',

@@ -1,4 +1,4 @@
-var preProcessing = require('../chemistry/post-process.js');
+var preProcessing = require('../chemistry/post-process.cjs');
 
 const valueToExtract = ['atomicNumber'];
 

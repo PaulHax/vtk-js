@@ -12,7 +12,7 @@ function vtkSurfaceLICInterface(publicAPI, model) {
 
 const DEFAULT_VALUES = {
   enableLIC: false,
-  nuberOfSteps: 40,
+  numberOfSteps: 40,
   stepSize: 0.25,
   transformVectors: true,
   normalizeVectors: true,
