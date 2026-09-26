@@ -142,6 +142,19 @@ export function copyEsmAssetsPlugin({ esmOutputDir }) {
         );
       }
 
+      // The bundled elements.json modules land under XMLConverter and are ESM,
+      // so those directories opt back in; the CommonJS helpers beside them are
+      // named .cjs.
+      for (const dir of [
+        'Utilities/XMLConverter/chemistry',
+        'Utilities/XMLConverter/chemistry-mapper',
+      ]) {
+        fs.writeFileSync(
+          `${esmOutputDir}/${dir}/package.json`,
+          `${JSON.stringify({ type: 'module' }, null, 2)}\n`
+        );
+      }
+
       fs.copyFileSync(
         'Utilities/build/macro-shim.d.ts',
         `${esmOutputDir}/macro.d.ts`
