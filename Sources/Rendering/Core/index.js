@@ -29,6 +29,7 @@ import vtkMapper from './Mapper';
 import vtkMapper2D from './Mapper2D';
 import vtkPicker from './Picker';
 import vtkPixelSpaceCallbackMapper from './PixelSpaceCallbackMapper';
+import vtkPointGaussianMapper from './PointGaussianMapper';
 import vtkPointPicker from './PointPicker';
 import vtkProp from './Prop';
 import vtkProp3D from './Prop3D';
@@ -78,6 +79,7 @@ export default {
   vtkMapper2D,
   vtkPicker,
   vtkPixelSpaceCallbackMapper,
+  vtkPointGaussianMapper,
   vtkPointPicker,
   vtkProp,
   vtkProp3D,
