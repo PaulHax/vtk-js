@@ -131,3 +131,28 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     framebuffer.delete();
   }
 );
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'releases owned attachments after the render window is deleted',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const { view } = createTrackedRenderView(gc);
+    const gl = view.getContext();
+    const borrowed = createTexture(view);
+    const borrowedHandle = borrowed.getHandle();
+    const framebuffer = vtkOpenGLFramebuffer.newInstance();
+    framebuffer.setOpenGLRenderWindow(view);
+    framebuffer.create(32, 32);
+    framebuffer.populateFramebuffer();
+    const ownedHandle = framebuffer.getColorBuffers()[0].getHandle();
+    framebuffer.setColorBuffer(borrowed, 1);
+
+    gc.releaseResources();
+    framebuffer.delete();
+    expect(gl.isTexture(ownedHandle)).toBe(false);
+    expect(gl.isTexture(borrowedHandle)).toBe(true);
+    borrowed.delete();
+    expect(gl.isTexture(borrowedHandle)).toBe(false);
+    expect(gl.getError()).toBe(gl.NO_ERROR);
+  }
+);

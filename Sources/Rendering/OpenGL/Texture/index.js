@@ -291,7 +291,6 @@ function vtkOpenGLTexture(publicAPI, model) {
     if (rwin && model.handle) {
       // the GL context can outlive a deleted render window
       if (!rwin.isDeleted()) {
-        rwin.activateTexture(publicAPI);
         rwin.deactivateTexture(publicAPI);
       }
       model.context.deleteTexture(model.handle);
@@ -299,7 +298,6 @@ function vtkOpenGLTexture(publicAPI, model) {
       model.handle = 0;
       model.numberOfDimensions = 0;
       model.target = 0;
-      model.internalFormat = 0;
       model.format = 0;
       model.openGLDataType = 0;
       model.components = 0;

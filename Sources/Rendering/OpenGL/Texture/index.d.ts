@@ -78,6 +78,7 @@ export interface vtkOpenGLTexture extends vtkViewNode {
   /**
    * Releases the graphics resources used by the texture within the given render window.
    * Deleting the texture releases them too.
+   * Explicit internal formats are preserved for subsequent uploads.
    * @param [renWin] The render window whose resources should be released.
    * Defaults to the render window the texture was last used with.
    */
