@@ -182,7 +182,9 @@ function vtkOpenGLImageCPRMapper(publicAPI, model) {
       vmtime < actor.getMTime() ||
       vmtime < model.currentImageDataInput.getMTime() ||
       vmtime < model.currentCenterlineInput.getMTime() ||
-      !model.volumeTexture?.getHandle()
+      !model.volumeTexture?.getHandle() ||
+      !model.colorTexture?.getHandle() ||
+      !model.pwfTexture?.getHandle()
     );
   };
 
@@ -603,8 +605,8 @@ function vtkOpenGLImageCPRMapper(publicAPI, model) {
         // (non indexed) vertex layout where elementCount matches the vertices.
         forceFlatten: true,
       });
-      model.VBOBuildTime.modified();
     }
+    model.VBOBuildTime.modified();
   };
 
   publicAPI.getNeedToRebuildShaders = (cellBO, ren, actor) => {
@@ -626,7 +628,7 @@ function vtkOpenGLImageCPRMapper(publicAPI, model) {
       model.renderable.getProjectionMode();
 
     if (
-      cellBO.getProgram() === 0 ||
+      cellBO.getProgram()?.getHandle() === 0 ||
       model.lastUseCenterPoint !== useCenterPoint ||
       model.lastUseUniformOrientation !== useUniformOrientation ||
       model.lastProjectionMode !== projectionMode ||
