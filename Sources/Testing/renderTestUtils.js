@@ -1,10 +1,16 @@
 import { expect } from 'vitest';
 import macro from 'vtk.js/Sources/macros';
 import vtkActor from 'vtk.js/Sources/Rendering/Core/Actor';
+import vtkColorTransferFunction from 'vtk.js/Sources/Rendering/Core/ColorTransferFunction';
 import vtkConeSource from 'vtk.js/Sources/Filters/Sources/ConeSource';
+import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
 import vtkForwardPass from 'vtk.js/Sources/Rendering/OpenGL/ForwardPass';
 import vtkGenericRenderWindow from 'vtk.js/Sources/Rendering/Misc/GenericRenderWindow';
+import vtkImageData from 'vtk.js/Sources/Common/DataModel/ImageData';
 import vtkMapper from 'vtk.js/Sources/Rendering/Core/Mapper';
+import vtkPiecewiseFunction from 'vtk.js/Sources/Common/DataModel/PiecewiseFunction';
+import vtkVolume from 'vtk.js/Sources/Rendering/Core/Volume';
+import vtkVolumeMapper from 'vtk.js/Sources/Rendering/Core/VolumeMapper';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
 // A pass-through filter that throws while failing, the way a pipeline stage
@@ -43,6 +49,38 @@ export function createConeActor(
   actor.setMapper(mapper);
   actor.getProperty().setOpacity(opacity);
   return actor;
+}
+
+export function createVolume(gc) {
+  const sideLen = 16;
+  const imageData = vtkImageData.newInstance();
+  imageData.setExtent(0, sideLen - 1, 0, sideLen - 1, 0, sideLen - 1);
+  const scalars = vtkDataArray.newInstance({
+    name: 'scalars',
+    numberOfComponents: 1,
+    values: Float32Array.from(
+      { length: sideLen ** 3 },
+      (_, i) => (i % sideLen) / sideLen
+    ),
+  });
+  imageData.getPointData().setScalars(scalars);
+
+  const mapper = gc.registerResource(vtkVolumeMapper.newInstance());
+  mapper.setInputData(imageData);
+
+  const volume = gc.registerResource(vtkVolume.newInstance());
+  volume.setMapper(mapper);
+
+  const color = gc.registerResource(vtkColorTransferFunction.newInstance());
+  color.addRGBPoint(0.0, 0.0, 0.0, 0.0);
+  color.addRGBPoint(1.0, 1.0, 0.5, 0.3);
+  const opacity = gc.registerResource(vtkPiecewiseFunction.newInstance());
+  opacity.addPoint(0.0, 0.0);
+  opacity.addPoint(1.0, 1.0);
+  volume.getProperty().setRGBTransferFunction(0, color);
+  volume.getProperty().setScalarOpacity(0, opacity);
+
+  return volume;
 }
 
 // The image the next render draws, or null when that render draws nothing.
@@ -187,4 +225,21 @@ export async function expectSameImageAfterPassRelease(createPass) {
   expect(await afterRelease).toBe(await beforeRelease);
 
   gc.releaseResources();
+}
+
+// A prop that throws while the forward pass draws it into the depth buffer
+// must draw its colors again once the renders after it capture no depth.
+export async function expectColorsAfterDepthPassThrows(createProp) {
+  const gc = testUtils.createGarbageCollector();
+  const scene = createFailingScene(gc, createProp);
+  // a volume makes the forward pass capture depth, only on the failing render
+  const volume = createVolume(gc);
+  await expectSameImageAfterRenderThrows(scene, (failing) => {
+    if (failing) {
+      scene.renderer.addVolume(volume);
+    } else {
+      scene.renderer.removeVolume(volume);
+    }
+    scene.filter.setFailing(failing);
+  });
 }
