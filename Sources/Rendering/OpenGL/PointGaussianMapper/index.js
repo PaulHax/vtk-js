@@ -456,13 +456,18 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   // Drawing
   // --------------------------------------------------------------------------
 
+  // Number of points or splats each draw submits. Subclasses may submit a
+  // prefix of the uploaded points.
+  publicAPI.getNumberOfDrawnPoints = () =>
+    getPointsPrimitive().getCABO().getElementCount();
+
   publicAPI.renderPieceDraw = (ren, actor) => {
-    const primitive = getPointsPrimitive();
-    const count = primitive.getCABO().getElementCount();
+    const count = publicAPI.getNumberOfDrawnPoints();
     if (!count) {
       return;
     }
     const gl = model.context;
+    const primitive = getPointsPrimitive();
     model.lastBoundBO = primitive;
     primitive.updateShaders(ren, actor, publicAPI);
     if (isSplatting()) {
@@ -479,10 +484,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   publicAPI.updateMaximumPointCellIds = () => {
     const selector = model._openGLRenderer.getSelector();
     if (selector) {
-      const largestId = Math.max(
-        0,
-        getPointsPrimitive().getCABO().getElementCount() - 1
-      );
+      const largestId = Math.max(0, publicAPI.getNumberOfDrawnPoints() - 1);
       selector.setMaximumPointId(largestId);
       selector.setMaximumCellId(largestId);
     }

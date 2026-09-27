@@ -20,3 +20,8 @@ which uploads every buffer again.
 A vertex shader template set through `ViewSpecificProperties` must match the
 mode: splats need the tags and outputs of `glsl/vtkPointGaussianVS.glsl`,
 simple points those of the polydata vertex shader.
+
+### getNumberOfDrawnPoints()
+
+Number of points or splats each draw submits: all the uploaded ones.
+Subclasses may return fewer to draw a prefix of the uploaded points.
