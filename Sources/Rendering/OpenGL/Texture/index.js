@@ -30,6 +30,7 @@ function vtkOpenGLTexture(publicAPI, model) {
       openGLDataType: model.openGLDataType,
       width: model.width,
       height: model.height,
+      depth: model.depth,
     };
   }
 
@@ -1563,15 +1564,21 @@ function vtkOpenGLTexture(publicAPI, model) {
     model.depth = depth;
     model.numberOfDimensions = 3;
     model._openGLRenderWindow.activateTexture(publicAPI);
-    publicAPI.createTexture();
-    publicAPI.bind();
 
     const hasUpdatedExtents = updatedExtents.length > 0;
 
     // It's possible for the texture parameters to change while
     // streaming, so check for such a change.
-    const rebuildEntireTexture =
-      !hasUpdatedExtents || !deepEqual(model._prevTexParams, getTexParams());
+    const allocate = !deepEqual(model._prevTexParams, getTexParams());
+    const rebuildEntireTexture = !hasUpdatedExtents || allocate;
+    const texStorage = useTexStorage(textureDataType);
+    // Immutable storage cannot be specified twice
+    if (allocate && texStorage && model.handle) {
+      model.context.deleteTexture(model.handle);
+      model.handle = 0;
+    }
+    publicAPI.createTexture();
+    publicAPI.bind();
 
     let dataTypeToUse = dataType;
     let dataToUse = data;
@@ -1619,15 +1626,17 @@ function vtkOpenGLTexture(publicAPI, model) {
     model.context.pixelStorei(model.context.UNPACK_ALIGNMENT, 1);
 
     if (rebuildEntireTexture) {
-      if (useTexStorage(textureDataType)) {
-        model.context.texStorage3D(
-          model.target,
-          1,
-          model.internalFormat,
-          model.width,
-          model.height,
-          model.depth
-        );
+      if (texStorage) {
+        if (allocate) {
+          model.context.texStorage3D(
+            model.target,
+            1,
+            model.internalFormat,
+            model.width,
+            model.height,
+            model.depth
+          );
+        }
         if (pixData[0] != null) {
           model.context.texSubImage3D(
             model.target,
