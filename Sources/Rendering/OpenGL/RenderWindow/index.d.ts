@@ -466,6 +466,9 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    * This provides mappers with a convenient API to re-use allocated GPU resources
    * without duplication.
    *
+   * A different resource replaces and releases the cached one. Passing the
+   * cached resource again only updates its hash.
+   *
    * @param {Object} vtkObj VTK data object / array with resources on the GPU
    * @param {Object} gObj Container object that maintains a handle to the graphics resource on the GPU
    * @param {String} hash String hash that can be used by mappers to decide whether to discard or re-allocate

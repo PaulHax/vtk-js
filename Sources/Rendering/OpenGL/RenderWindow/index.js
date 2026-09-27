@@ -1247,8 +1247,10 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
       return;
     }
     const sharedResource = model._graphicsResources.get(coreObject);
-    // Release the old resource
-    sharedResource?.oglObject?.releaseGraphicsResources(publicAPI);
+    // Release a replaced resource; setting the same one only updates its hash
+    if (sharedResource?.oglObject !== oglObject) {
+      sharedResource?.oglObject?.releaseGraphicsResources(publicAPI);
+    }
     // Keep the same users that have registered for this coreObject
     model._graphicsResources.set(coreObject, {
       coreObject,

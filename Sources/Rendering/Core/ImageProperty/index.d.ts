@@ -251,7 +251,8 @@ export interface vtkImageProperty extends vtkObject {
    * If there are zero extents, the mapper updates the entire volume texture.
    * Otherwise, the mapper will only update the texture by the specified extents
    * during the next render call. If no texture is allocated, the mapper uploads
-   * the entire image.
+   * the entire image. The extents must cover every changed voxel, because
+   * mappers that share the scalar texture reuse the updated texture.
    *
    * This array is cleared after a successful render.
    * @param extents

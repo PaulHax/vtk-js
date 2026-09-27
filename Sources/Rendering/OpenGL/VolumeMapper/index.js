@@ -1779,11 +1779,6 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
           dataArray: scalars,
           preferSizeOverAccuracy: volumeProperty.getPreferSizeOverAccuracy(),
         });
-        model._openGLRenderWindow.setGraphicsResourceForObject(
-          scalars,
-          newScalarTexture,
-          scalarsHash
-        );
         model.scalarTextures[component] = newScalarTexture;
       } else {
         model.scalarTextures[component] = tex.oglObject;
@@ -1799,6 +1794,12 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
           updatedExtents,
         });
       }
+      // A patched texture also matches the current scalars for every user.
+      model._openGLRenderWindow.setGraphicsResourceForObject(
+        scalars,
+        model.scalarTextures[component],
+        scalarsHash
+      );
 
       replaceGraphicsResource(
         model._openGLRenderWindow,
