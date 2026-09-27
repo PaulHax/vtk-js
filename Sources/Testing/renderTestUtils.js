@@ -29,8 +29,11 @@ export function createFailingFilter(gc) {
 // An opacity below one routes the actor through the translucent pass, which
 // owns a framebuffer and its attachments. A filter, when given, sits between
 // the cone and the mapper.
-export function createConeActor(gc, { opacity = 1, filter = null } = {}) {
-  const cone = gc.registerResource(vtkConeSource.newInstance());
+export function createConeActor(
+  gc,
+  { opacity = 1, center = [0, 0, 0], filter = null } = {}
+) {
+  const cone = gc.registerResource(vtkConeSource.newInstance({ center }));
   const mapper = gc.registerResource(vtkMapper.newInstance());
   if (filter) {
     filter.setInputConnection(cone.getOutputPort());
