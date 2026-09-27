@@ -51,6 +51,11 @@ function vtkOpenGLSkybox(publicAPI, model) {
     if (prepass && !model._openGLRenderer.getSelector()) {
       publicAPI.updateBufferObjects();
 
+      // Nothing to draw with until a shader build succeeds
+      if (model.tris.getProgram().getHandle() === 0) {
+        return;
+      }
+
       model.context.depthMask(true);
 
       model._openGLRenderWindow
@@ -127,8 +132,11 @@ function vtkOpenGLSkybox(publicAPI, model) {
       });
     }
 
-    // update the program?
-    if (model.renderable.getFormat() !== model.lastFormat) {
+    // update the program, or build it again after a failed build
+    if (
+      model.renderable.getFormat() !== model.lastFormat ||
+      model.tris.getProgram().getHandle() === 0
+    ) {
       model.lastFormat = model.renderable.getFormat();
 
       if (model.lastFormat === 'box') {
@@ -205,8 +213,14 @@ function vtkOpenGLSkybox(publicAPI, model) {
         );
       }
 
+      if (model.tris.getProgram().getHandle() === 0) {
+        return;
+      }
+
       model.tris.getShaderSourceTime().modified();
 
+      // The vertex array holds the attribute layout of the previous program
+      model.tris.getVAO().shaderProgramChanged();
       model.tris.getVAO().bind();
 
       if (

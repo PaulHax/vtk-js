@@ -42,7 +42,11 @@ function vtkShader(publicAPI, model) {
         break;
     }
 
-    model.handle = model.context.createShader(stype);
+    // Some browsers answer null once the context is lost
+    model.handle = model.context.createShader(stype) ?? 0;
+    if (model.handle === 0) {
+      return false;
+    }
     model.context.shaderSource(model.handle, model.source);
     model.context.compileShader(model.handle);
     const isCompiled = model.context.getShaderParameter(

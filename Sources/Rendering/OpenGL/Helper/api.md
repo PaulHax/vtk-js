@@ -6,7 +6,8 @@ a convenience class.
 
 ### program
 
-The shader program
+The shader program. Setting it to null, as a mapper does when a shader build
+fails, stores an unbuilt program instead, which the next render rebuilds.
 
 ### VAO
 

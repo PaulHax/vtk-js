@@ -463,7 +463,8 @@ function vtkShaderProgram(publicAPI, model) {
 
     if (model.handle === 0) {
       const thandle = model.context.createProgram();
-      if (thandle === 0) {
+      // Some browsers answer null once the context is lost
+      if (!thandle) {
         model.error = 'Could not create shader program.';
         return false;
       }
