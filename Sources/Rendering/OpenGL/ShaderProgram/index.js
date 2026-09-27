@@ -90,6 +90,10 @@ function vtkShaderProgram(publicAPI, model) {
     }
     model.context.deleteProgram(model.handle);
     model.handle = 0;
+    // The next build compiles the shaders again
+    model.vertexShader.cleanup();
+    model.fragmentShader.cleanup();
+    model.geometryShader.cleanup();
     publicAPI.setCompiled(false);
   };
 
