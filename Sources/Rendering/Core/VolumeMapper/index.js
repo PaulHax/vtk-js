@@ -82,7 +82,11 @@ function vtkVolumeMapper(publicAPI, model) {
   const superClass = { ...publicAPI };
 
   publicAPI.computeBounds = () => {
-    const input = publicAPI.getInputData();
+    // The first valid input defines the geometry, as it does when rendering
+    const input = Array.from(
+      { length: publicAPI.getNumberOfInputPorts() },
+      (_, port) => publicAPI.getInputData(port)
+    ).find((image) => image && !image.isDeleted());
     if (!input) {
       vtkBoundingBox.reset(model.bounds);
       return;
