@@ -623,16 +623,25 @@ function vtkOpenGLTexture(publicAPI, model) {
   /**
    * Reads a flattened extent from the image data and writes to the given output array.
    *
-   * Assumes X varies the fastest and Z varies the slowest.
+   * Assumes components are interleaved, X varies the fastest and Z varies the
+   * slowest.
    *
    * @param {*} data
    * @param {*} dataDims
+   * @param {number} numComps
    * @param {Extent} extent
    * @param {TypedArray} outArray
    * @param {number} outOffset
    * @returns
    */
-  function readExtentIntoArray(data, dataDims, extent, outArray, outOffset) {
+  function readExtentIntoArray(
+    data,
+    dataDims,
+    numComps,
+    extent,
+    outArray,
+    outOffset
+  ) {
     const [xmin, xmax, ymin, ymax, zmin, zmax] = extent;
     const [dx, dy] = dataDims;
     const sxy = dx * dy;
@@ -645,8 +654,9 @@ function vtkOpenGLTexture(publicAPI, model) {
         // explicit alternative to data.subarray,
         // due to potential perf issues on v8
         for (
-          let readOffset = zyOffset + xmin, end = zyOffset + xmax;
-          readOffset <= end;
+          let readOffset = (zyOffset + xmin) * numComps,
+            end = (zyOffset + xmax + 1) * numComps;
+          readOffset < end;
           readOffset++, writeOffset++
         ) {
           outArray[writeOffset] = data[readOffset];
@@ -667,17 +677,25 @@ function vtkOpenGLTexture(publicAPI, model) {
    */
   function readExtents(data, extents, typedArrayConstructor = null) {
     const constructor = typedArrayConstructor || data.constructor;
+    const numComps = model.components;
     const numPixels = extents.reduce(
       (count, extent) => count + getExtentPixelCount(extent),
       0
     );
-    const extentPixels = new constructor(numPixels);
+    const extentPixels = new constructor(numPixels * numComps);
     const dataDims = [model.width, model.height, model.depth];
 
     let writeOffset = 0;
     extents.forEach((extent) => {
-      readExtentIntoArray(data, dataDims, extent, extentPixels, writeOffset);
-      writeOffset += getExtentPixelCount(extent);
+      readExtentIntoArray(
+        data,
+        dataDims,
+        numComps,
+        extent,
+        extentPixels,
+        writeOffset
+      );
+      writeOffset += getExtentPixelCount(extent) * numComps;
     });
 
     return extentPixels;
@@ -1643,7 +1661,7 @@ function vtkOpenGLTexture(publicAPI, model) {
         const textureData = new extentPixels.constructor(
           extentPixels.buffer,
           readOffset,
-          extentPixelCount
+          extentPixelCount * model.components
         );
         readOffset += textureData.byteLength;
 
