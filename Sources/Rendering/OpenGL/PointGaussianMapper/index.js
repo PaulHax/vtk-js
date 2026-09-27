@@ -87,7 +87,9 @@ function packPositions(points, { pointIds, count }, coordShift, coordScale) {
   return packed;
 }
 
-// Tuples of a data array for the drawn points, as an ArrayType array.
+// Tuples of a data array for the drawn points, as an ArrayType array: the
+// array itself when it already has that layout (bufferData copies it), a
+// gathered copy otherwise.
 function gatherTuples(
   dataArray,
   { pointIds, count },
@@ -95,6 +97,13 @@ function gatherTuples(
 ) {
   const data = dataArray.getData();
   const numberOfComponents = dataArray.getNumberOfComponents();
+  if (
+    !pointIds &&
+    data instanceof ArrayType &&
+    data.length === count * numberOfComponents
+  ) {
+    return data;
+  }
   const packed = new ArrayType(count * numberOfComponents);
   for (let i = 0; i < count; i++) {
     const source = (pointIds ? pointIds[i] : i) * numberOfComponents;
@@ -107,7 +116,11 @@ function gatherTuples(
 
 // One value per drawn point from the selected component, mapped through the
 // optional table.
-function gatherValues(dataArray, component, table, { pointIds, count }) {
+function gatherValues(dataArray, component, table, selection) {
+  if (!table && dataArray.getNumberOfComponents() === 1) {
+    return gatherTuples(dataArray, selection);
+  }
+  const { pointIds, count } = selection;
   const read = createComponentReader(dataArray, component);
   const packed = new Float32Array(count);
   for (let i = 0; i < count; i++) {
@@ -591,12 +604,15 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     );
     // The buffer keeps its shift and scale when the new ones are nearly
     // equal, so positions are packed with the ones it kept.
-    const packed = packPositions(
-      points,
-      selection,
-      useShiftAndScale ? cabo.getCoordShift() : coordShift,
-      useShiftAndScale ? cabo.getCoordScale() : coordScale
-    );
+    const packed =
+      useShiftAndScale || points.getNumberOfComponents() !== 3
+        ? packPositions(
+            points,
+            selection,
+            useShiftAndScale ? cabo.getCoordShift() : coordShift,
+            useShiftAndScale ? cabo.getCoordScale() : coordScale
+          )
+        : gatherTuples(points, selection);
     cabo.setStride(12);
     cabo.setVertexOffset(0);
     cabo.upload(packed, ObjectType.ARRAY_BUFFER);
