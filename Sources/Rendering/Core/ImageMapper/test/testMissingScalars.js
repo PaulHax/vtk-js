@@ -6,6 +6,7 @@ import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
 import vtkColorTransferFunction from 'vtk.js/Sources/Rendering/Core/ColorTransferFunction';
 import vtkPiecewiseFunction from 'vtk.js/Sources/Common/DataModel/PiecewiseFunction';
 import vtkPlane from 'vtk.js/Sources/Common/DataModel/Plane';
+import vtkBoundingBox from 'vtk.js/Sources/Common/DataModel/BoundingBox';
 import vtkImageMapper from 'vtk.js/Sources/Rendering/Core/ImageMapper';
 import vtkImageResliceMapper from 'vtk.js/Sources/Rendering/Core/ImageResliceMapper';
 import vtkImageSlice from 'vtk.js/Sources/Rendering/Core/ImageSlice';
@@ -100,10 +101,12 @@ it
     renderer.resetCamera();
     expect(await capture()).toBe(empty);
     image.getPointData().setScalars(scalars);
+    renderer.resetCamera();
     expect(await capture()).not.toBe(empty);
     image.getPointData().setScalars(null);
     expect(await capture()).toBe(empty);
     image.getPointData().setScalars(scalars);
+    renderer.resetCamera();
     expect(await capture()).not.toBe(empty);
     if (!webGPU) expect(view.getContext().getError()).toBe(0);
   }
@@ -135,5 +138,60 @@ it.skipIf(__VTK_TEST_NO_WEBGL__ || webGPU).each(['reslice', 'volume'])(
       images[index].getPointData().setScalars(arrays[index]);
       expect(await capture()).not.toBe(empty);
     }
+  }
+);
+
+it.each([
+  ['reslice', vtkImageResliceMapper],
+  ['volume', vtkVolumeMapper],
+])('%s bounds follow the first image with point scalars', (_, Mapper) => {
+  const gc = testUtils.createGarbageCollector();
+  const pending = gc.registerResource(
+    testUtils.createImage([8, 8, 8], [1, 1, 1])
+  );
+  pending.setOrigin(1000, 1000, 1000);
+  const pendingScalars = pending.getPointData().getScalars();
+  pending.getPointData().setScalars(null);
+  const ready = gc.registerResource(
+    testUtils.createImage([8, 8, 8], [1, 1, 1])
+  );
+  const readyScalars = ready.getPointData().getScalars();
+  const mapper = gc.registerResource(Mapper.newInstance());
+  mapper.setInputData(pending, 0);
+  mapper.addInputData(ready);
+  expect(mapper.getBounds()).toEqual(ready.getBounds());
+
+  ready.getPointData().setScalars(null);
+  expect(mapper.getBounds()).toEqual(vtkBoundingBox.INIT_BOUNDS);
+  pending.getPointData().setScalars(pendingScalars);
+  expect(mapper.getBounds()).toEqual(pending.getBounds());
+  pending.getPointData().setScalars(null);
+  ready.getPointData().setScalars(readyScalars);
+  expect(mapper.getBounds()).toEqual(ready.getBounds());
+});
+
+it.skipIf(__VTK_TEST_NO_WEBGL__ || webGPU).each(['reslice', 'volume'])(
+  '%s resets the camera to the scalar-bearing input',
+  async (kind) => {
+    const gc = testUtils.createGarbageCollector();
+    const { renderer, renderWindow, view } = await createScene(gc);
+    const capture = () => {
+      const image = view.captureNextImage();
+      renderWindow.render();
+      return image;
+    };
+    const empty = await capture();
+    const pending = gc.registerResource(
+      testUtils.createImage([8, 8, 8], [1, 1, 1])
+    );
+    pending.setOrigin(1000, 1000, 1000);
+    pending.getPointData().setScalars(null);
+    const ready = gc.registerResource(
+      testUtils.createImage([8, 8, 8], [1, 1, 1])
+    );
+    renderer.addViewProp(createProp(gc, kind, [pending, ready]));
+    renderer.resetCamera();
+    expect(await capture()).not.toBe(empty);
+    expect(view.getContext().getError()).toBe(0);
   }
 );

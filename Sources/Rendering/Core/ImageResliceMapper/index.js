@@ -17,7 +17,13 @@ function vtkImageResliceMapper(publicAPI, model) {
   model.classHierarchy.push('vtkImageResliceMapper');
 
   publicAPI.computeBounds = () => {
-    const image = publicAPI.getInputData();
+    const image = Array.from(
+      { length: publicAPI.getNumberOfInputPorts() },
+      (_, port) => publicAPI.getInputData(port)
+    ).find(
+      (input) =>
+        input && !input.isDeleted() && input.getPointData().getScalars()
+    );
     if (publicAPI.getSlicePolyData()) {
       vtkBoundingBox.setBounds(
         model.bounds,
