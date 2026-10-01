@@ -76,21 +76,23 @@ function vtkShaderProgram(publicAPI, model) {
   };
 
   publicAPI.cleanup = () => {
-    if (model.shaderType === 'Unknown' || model.handle === 0) {
+    if (model.shaderType === 'Unknown') {
       return;
     }
-    publicAPI.release();
-    if (model.vertexShaderHandle !== 0) {
-      model.context.detachShader(model.handle, model.vertexShaderHandle);
-      model.vertexShaderHandle = 0;
+    if (model.handle !== 0) {
+      publicAPI.release();
+      if (model.vertexShaderHandle !== 0) {
+        model.context.detachShader(model.handle, model.vertexShaderHandle);
+        model.vertexShaderHandle = 0;
+      }
+      if (model.fragmentShaderHandle !== 0) {
+        model.context.detachShader(model.handle, model.fragmentShaderHandle);
+        model.fragmentShaderHandle = 0;
+      }
+      model.context.deleteProgram(model.handle);
+      model.handle = 0;
     }
-    if (model.fragmentShaderHandle !== 0) {
-      model.context.detachShader(model.handle, model.fragmentShaderHandle);
-      model.fragmentShaderHandle = 0;
-    }
-    model.context.deleteProgram(model.handle);
-    model.handle = 0;
-    // The next build compiles the shaders again
+    // Failed builds can leave shaders alive without a linked program.
     model.vertexShader.cleanup();
     model.fragmentShader.cleanup();
     model.geometryShader.cleanup();
