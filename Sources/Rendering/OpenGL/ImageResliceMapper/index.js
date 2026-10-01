@@ -386,11 +386,6 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
           depth: dims[2],
           dataArray: scalars,
         });
-        model._openGLRenderWindow.setGraphicsResourceForObject(
-          scalars,
-          newScalarTexture,
-          scalarsHash
-        );
         model.scalarTextures[component] = newScalarTexture;
       } else {
         model.scalarTextures[component] = tex.oglObject;
@@ -406,6 +401,12 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
           updatedExtents,
         });
       }
+      // A patched texture also matches the current scalars for every user.
+      model._openGLRenderWindow.setGraphicsResourceForObject(
+        scalars,
+        model.scalarTextures[component],
+        scalarsHash
+      );
     });
     holdScalarTextures(
       model.currentValidInputs.map(({ imageData }) =>
