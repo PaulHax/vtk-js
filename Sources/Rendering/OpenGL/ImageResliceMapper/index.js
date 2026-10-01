@@ -1996,7 +1996,7 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
     model[hashKey] = hash;
 
     if (model[textureKey]) {
-      model[textureKey].releaseGraphicsResources();
+      model[textureKey].releaseGraphicsResources(model._openGLRenderWindow);
     }
     model[textureKey] = buildLabelOutline2DTexture(
       dataArrays,

@@ -137,3 +137,25 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     expect(tracker.count()).toBe(aloneObjects);
   }
 );
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'releases replaced label outline textures before deleting the slice',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const { tracker, renderer, renderWindow, actor, emptySceneObjects } =
+      renderResliceActor(gc, { labelOutline: true });
+    const objectsInUse = tracker.count();
+
+    actor.getProperty().setLabelOutlineThickness([2]);
+    renderWindow.render();
+    expect(tracker.count()).toBe(objectsInUse);
+
+    actor.getProperty().setLabelOutlineOpacity([0.5]);
+    renderWindow.render();
+    expect(tracker.count()).toBe(objectsInUse);
+
+    renderer.removeActor(actor);
+    renderWindow.render();
+    expect(tracker.count()).toBe(emptySceneObjects);
+  }
+);
