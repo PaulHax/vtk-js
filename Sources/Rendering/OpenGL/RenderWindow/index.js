@@ -1022,7 +1022,9 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
   };
 
   publicAPI.traverseAllPasses = () => {
-    if (model.renderPasses) {
+    // A lost context draws nothing and fails every shader build, so wait for
+    // the browser to restore it
+    if (model.renderPasses && !publicAPI.getContext()?.isContextLost()) {
       for (let index = 0; index < model.renderPasses.length; ++index) {
         model.renderPasses[index].traverse(publicAPI, null);
       }

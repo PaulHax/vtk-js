@@ -24,6 +24,12 @@ function vtkOpenGLHelper(publicAPI, model) {
   // Set our className
   model.classHierarchy.push('vtkOpenGLHelper');
 
+  // A failed shader build sets a null program. Keep an unbuilt one (handle 0)
+  // instead: the helper stays usable and the next render rebuilds it.
+  const superSetProgram = publicAPI.setProgram;
+  publicAPI.setProgram = (program) =>
+    superSetProgram(program ?? vtkShaderProgram.newInstance());
+
   publicAPI.setOpenGLRenderWindow = (win) => {
     model.context = win.getContext();
     model.program.setContext(model.context);
@@ -44,6 +50,18 @@ function vtkOpenGLHelper(publicAPI, model) {
       const mode = publicAPI.getOpenGLMode(rep);
       const wideLines = publicAPI.haveWideLines(ren, actor);
       const gl = model.context;
+      let stride = 3;
+      if (mode === gl.POINTS) {
+        stride = 1;
+      } else if (mode === gl.LINES) {
+        stride = 2;
+      }
+      const primitiveCount = model.CABO.getElementCount() / stride;
+      // Later primitives still number their cells after this one when a
+      // failed shader build skips its draw
+      if (!publicAPI.updateShaders(ren, actor, oglMapper)) {
+        return primitiveCount;
+      }
       // Point picking temporarily disables depth writes. Save and restore the
       // depth mask only for that case because gl.getParameter synchronizes the
       // CPU and GPU, and that synchronization is slow.
@@ -54,7 +72,6 @@ function vtkOpenGLHelper(publicAPI, model) {
       }
       const drawingLines = mode === gl.LINES;
       if (drawingLines && wideLines) {
-        publicAPI.updateShaders(ren, actor, oglMapper);
         if (model.CABO.getIndexed()) {
           model.CABO.getIndexBO().bind();
           gl.drawElementsInstanced(
@@ -74,7 +91,6 @@ function vtkOpenGLHelper(publicAPI, model) {
         }
       } else {
         gl.lineWidth(actor.getProperty().getLineWidth());
-        publicAPI.updateShaders(ren, actor, oglMapper);
         if (model.CABO.getIndexed()) {
           model.CABO.getIndexBO().bind();
           gl.drawElements(
@@ -89,16 +105,10 @@ function vtkOpenGLHelper(publicAPI, model) {
         // reset the line width
         gl.lineWidth(1);
       }
-      let stride = 3;
-      if (mode === gl.POINTS) {
-        stride = 1;
-      } else if (mode === gl.LINES) {
-        stride = 2;
-      }
       if (model.pointPicking) {
         gl.depthMask(depthMask);
       }
-      return model.CABO.getElementCount() / stride;
+      return primitiveCount;
     }
     return 0;
   };
@@ -148,7 +158,7 @@ function vtkOpenGLHelper(publicAPI, model) {
     // mapper modified (lighting complexity)
     if (
       oglMapper.getNeedToRebuildShaders(publicAPI, ren, actor) ||
-      publicAPI.getProgram() === 0 ||
+      publicAPI.getProgram().getHandle() === 0 ||
       publicAPI.getShaderSourceTime().getMTime() < oglMapper.getMTime() ||
       publicAPI.getShaderSourceTime().getMTime() < actor.getMTime()
     ) {
@@ -172,6 +182,11 @@ function vtkOpenGLHelper(publicAPI, model) {
           shaders.Geometry
         );
 
+      if (!newShader) {
+        publicAPI.setProgram(null);
+        return false;
+      }
+
       // if the shader changed reinitialize the VAO
       if (newShader !== publicAPI.getProgram()) {
         publicAPI.setProgram(newShader);
@@ -194,6 +209,7 @@ function vtkOpenGLHelper(publicAPI, model) {
     oglMapper.setLightingShaderParameters(publicAPI, ren, actor);
 
     oglMapper.invokeShaderCallbacks(publicAPI, ren, actor);
+    return true;
   };
 
   publicAPI.setMapperShaderParameters = (ren, actor, size) => {

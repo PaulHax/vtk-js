@@ -392,7 +392,7 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
   getGLInformations(): object;
 
   /**
-   *
+   * Render all passes. Nothing is drawn while the WebGL context is lost.
    */
   traverseAllPasses(): void;
 

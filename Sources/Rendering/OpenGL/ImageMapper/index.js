@@ -590,6 +590,11 @@ function vtkOpenGLImageMapper(publicAPI, model) {
           shaders.Geometry
         );
 
+      if (!newShader) {
+        cellBO.setProgram(null);
+        return false;
+      }
+
       // if the shader changed reinitialize the VAO
       if (newShader !== cellBO.getProgram()) {
         cellBO.setProgram(newShader);
@@ -608,6 +613,7 @@ function vtkOpenGLImageMapper(publicAPI, model) {
     publicAPI.setMapperShaderParameters(cellBO, ren, actor);
     publicAPI.setCameraShaderParameters(cellBO, ren, actor);
     publicAPI.setPropertyShaderParameters(cellBO, ren, actor);
+    return true;
   };
 
   publicAPI.setMapperShaderParameters = (cellBO, ren, actor) => {
@@ -884,9 +890,10 @@ function vtkOpenGLImageMapper(publicAPI, model) {
     // draw polygons
     if (model.tris.getCABO().getElementCount()) {
       // First we do the triangles, update the shader, set uniforms, etc.
-      publicAPI.updateShaders(model.tris, ren, actor);
-      gl.drawArrays(gl.TRIANGLES, 0, model.tris.getCABO().getElementCount());
-      model.tris.getVAO().release();
+      if (publicAPI.updateShaders(model.tris, ren, actor)) {
+        gl.drawArrays(gl.TRIANGLES, 0, model.tris.getCABO().getElementCount());
+        model.tris.getVAO().release();
+      }
     }
 
     model.openGLTexture.deactivate();

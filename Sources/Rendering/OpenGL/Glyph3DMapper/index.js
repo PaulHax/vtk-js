@@ -325,7 +325,9 @@ function vtkOpenGLGlyph3DMapper(publicAPI, model) {
           (i === model.primTypes.TrisEdges ||
             i === model.primTypes.TriStripsEdges);
         model.lastBoundBO = model.primitives[i];
-        model.primitives[i].updateShaders(ren, actor, publicAPI);
+        if (!model.primitives[i].updateShaders(ren, actor, publicAPI)) {
+          continue;
+        }
 
         const mode = model.primitives[i].getOpenGLMode(representation);
 

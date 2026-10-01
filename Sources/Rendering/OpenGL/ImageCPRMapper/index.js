@@ -136,9 +136,10 @@ function vtkOpenGLImageCPRMapper(publicAPI, model) {
     // draw polygons
     if (model.tris.getCABO().getElementCount()) {
       // First we do the triangles, update the shader, set uniforms, etc.
-      publicAPI.updateShaders(model.tris, ren, actor);
-      gl.drawArrays(gl.TRIANGLES, 0, model.tris.getCABO().getElementCount());
-      model.tris.getVAO().release();
+      if (publicAPI.updateShaders(model.tris, ren, actor)) {
+        gl.drawArrays(gl.TRIANGLES, 0, model.tris.getCABO().getElementCount());
+        model.tris.getVAO().release();
+      }
     }
 
     model.volumeTexture.deactivate();
@@ -626,7 +627,7 @@ function vtkOpenGLImageCPRMapper(publicAPI, model) {
       model.renderable.getProjectionMode();
 
     if (
-      cellBO.getProgram() === 0 ||
+      cellBO.getProgram()?.getHandle() === 0 ||
       model.lastUseCenterPoint !== useCenterPoint ||
       model.lastUseUniformOrientation !== useUniformOrientation ||
       model.lastProjectionMode !== projectionMode ||
@@ -1390,6 +1391,11 @@ function vtkOpenGLImageCPRMapper(publicAPI, model) {
           shaders.Geometry
         );
 
+      if (!newShader) {
+        cellBO.setProgram(null);
+        return false;
+      }
+
       // if the shader changed reinitialize the VAO
       if (newShader !== cellBO.getProgram()) {
         cellBO.setProgram(newShader);
@@ -1408,6 +1414,7 @@ function vtkOpenGLImageCPRMapper(publicAPI, model) {
     publicAPI.setMapperShaderParameters(cellBO, ren, actor);
     publicAPI.setCameraShaderParameters(cellBO, ren, actor);
     publicAPI.setPropertyShaderParameters(cellBO, ren, actor);
+    return true;
   };
 
   publicAPI.delete = macro.chain(() => {

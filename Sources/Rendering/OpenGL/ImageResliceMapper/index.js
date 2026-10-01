@@ -295,11 +295,11 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
     allTextures.forEach((texture) => texture.activate());
 
     // update shaders if required
-    publicAPI.updateShaders(model.tris, ren, actor);
-
-    // Finally draw
-    gl.drawArrays(gl.TRIANGLES, 0, model.tris.getCABO().getElementCount());
-    model.tris.getVAO().release();
+    if (publicAPI.updateShaders(model.tris, ren, actor)) {
+      // Finally draw
+      gl.drawArrays(gl.TRIANGLES, 0, model.tris.getCABO().getElementCount());
+      model.tris.getVAO().release();
+    }
 
     allTextures.forEach((texture) => texture.deactivate());
   };
@@ -674,6 +674,11 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
           shaders.Geometry
         );
 
+      if (!newShader) {
+        cellBO.setProgram(null);
+        return false;
+      }
+
       // if the shader changed reinitialize the VAO
       if (newShader !== cellBO.getProgram()) {
         cellBO.setProgram(newShader);
@@ -692,6 +697,7 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
     publicAPI.setMapperShaderParameters(cellBO, ren, actor);
     publicAPI.setCameraShaderParameters(cellBO, ren, actor);
     publicAPI.setPropertyShaderParameters(cellBO, ren, actor);
+    return true;
   };
 
   publicAPI.setMapperShaderParameters = (cellBO, ren, actor) => {

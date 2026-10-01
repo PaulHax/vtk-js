@@ -138,7 +138,11 @@ function vtkShaderProgram(publicAPI, model) {
     if (!isCompiled) {
       const lastError = model.context.getProgramInfoLog(model.handle);
       vtkErrorMacro(`Error linking shader ${lastError}`);
+      // Deleting the program detaches its shaders
+      model.context.deleteProgram(model.handle);
       model.handle = 0;
+      model.vertexShaderHandle = 0;
+      model.fragmentShaderHandle = 0;
       return false;
     }
 
@@ -463,7 +467,8 @@ function vtkShaderProgram(publicAPI, model) {
 
     if (model.handle === 0) {
       const thandle = model.context.createProgram();
-      if (thandle === 0) {
+      // Some browsers answer null once the context is lost
+      if (!thandle) {
         model.error = 'Could not create shader program.';
         return false;
       }
