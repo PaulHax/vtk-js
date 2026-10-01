@@ -86,7 +86,10 @@ function vtkVolumeMapper(publicAPI, model) {
     const input = Array.from(
       { length: publicAPI.getNumberOfInputPorts() },
       (_, port) => publicAPI.getInputData(port)
-    ).find((image) => image && !image.isDeleted());
+    ).find(
+      (image) =>
+        image && !image.isDeleted() && image.getPointData().getScalars()
+    );
     if (!input) {
       vtkBoundingBox.reset(model.bounds);
       return;

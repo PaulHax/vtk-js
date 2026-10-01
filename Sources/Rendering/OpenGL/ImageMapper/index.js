@@ -915,6 +915,9 @@ function vtkOpenGLImageMapper(publicAPI, model) {
       vtkErrorMacro('No input!');
       return;
     }
+    if (!model.currentInput.getPointData().getScalars()) {
+      return;
+    }
 
     publicAPI.renderPieceStart(ren, actor);
     publicAPI.renderPieceDraw(ren, actor);

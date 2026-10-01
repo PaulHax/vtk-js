@@ -83,7 +83,11 @@ function collectValidInputs(actor, renderable) {
 
   for (let inputIndex = 0; inputIndex < numberOfInputs; ++inputIndex) {
     const imageData = renderable.getInputData(inputIndex);
-    if (imageData && !imageData.isDeleted()) {
+    if (
+      imageData &&
+      !imageData.isDeleted() &&
+      imageData.getPointData().getScalars()
+    ) {
       const arrayIndex = currentValidInputs.length;
       currentValidInputs.push({ imageData, inputIndex });
 

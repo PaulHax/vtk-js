@@ -187,6 +187,9 @@ function vtkWebGPUImageMapper(publicAPI, model) {
       vtkErrorMacro('No input!');
       return;
     }
+    if (!model.currentInput.getPointData().getScalars()) {
+      return;
+    }
 
     publicAPI.prepareToDraw(model.WebGPURenderer.getRenderEncoder());
     model.renderEncoder.registerDrawCallback(model.pipeline, publicAPI.draw);

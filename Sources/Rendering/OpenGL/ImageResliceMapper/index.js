@@ -205,7 +205,11 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
     model.currentValidInputs = [];
     for (let inputIndex = 0; inputIndex < numberOfInputs; ++inputIndex) {
       const imageData = model.renderable.getInputData(inputIndex);
-      if (imageData && !imageData.isDeleted()) {
+      if (
+        imageData &&
+        !imageData.isDeleted() &&
+        imageData.getPointData().getScalars()
+      ) {
         model.currentValidInputs.push({ imageData, inputIndex });
       }
     }
