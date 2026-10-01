@@ -471,11 +471,12 @@ function vtkOpenGLGlyph3DMapper(publicAPI, model) {
   };
 
   publicAPI.buildBufferObjects = (ren, actor) => {
-    const garray = model.renderable.getMatrixArray();
-
     const pts = model.renderable.getInputData(0).getPoints();
     const { useShiftAndScale, coordShift, coordScale } =
       computeCoordShiftAndScale(pts);
+    const matrices = model.renderable.getMatrixArray();
+    // Keep the renderable's world-space matrices intact for future uploads.
+    const garray = useShiftAndScale ? matrices.slice() : matrices;
 
     // update the buffer objects if needed
     const narray = model.renderable.getNormalArray();
