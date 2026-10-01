@@ -108,6 +108,18 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
     increaseGraphicsResourceCount(openGLRenderWindow, newResourceCoreObject);
   }
 
+  // Register current inputs first so reordered inputs retain their textures.
+  function holdScalarTextures(scalarsInUse) {
+    scalarsInUse.forEach((scalars) =>
+      increaseGraphicsResourceCount(model._openGLRenderWindow, scalars)
+    );
+    model._scalarTexturesCore.forEach((scalars) =>
+      decreaseGraphicsResourceCount(model._openGLRenderWindow, scalars)
+    );
+    model._scalarTexturesCore = scalarsInUse;
+    model.scalarTextures.splice(scalarsInUse.length);
+  }
+
   function unregisterGraphicsResources(renderWindow) {
     // Convert to an array using the spread operator as Firefox doesn't support Iterator.forEach()
     [...graphicsResourceReferenceCount.keys()].forEach((coreObject) =>
@@ -1344,10 +1356,10 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
 
     // set interpolation on the texture based on property setting
     const volumeProperties = actor.getProperties();
-    model.currentValidInputs.forEach(({ inputIndex }) => {
+    model.currentValidInputs.forEach(({ inputIndex }, component) => {
       const volumeProperty = volumeProperties[inputIndex];
       const interpolationType = volumeProperty.getInterpolationType();
-      const scalarTexture = model.scalarTextures[inputIndex];
+      const scalarTexture = model.scalarTextures[component];
       if (interpolationType === InterpolationType.NEAREST) {
         scalarTexture.setMinificationFilter(Filter.NEAREST);
         scalarTexture.setMagnificationFilter(Filter.NEAREST);
@@ -1531,6 +1543,7 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
     publicAPI.invokeEvent({ type: 'EndEvent' });
 
     if (model.currentValidInputs.length === 0) {
+      holdScalarTextures([]);
       return;
     }
 
@@ -1800,14 +1813,12 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
         model.scalarTextures[component],
         scalarsHash
       );
-
-      replaceGraphicsResource(
-        model._openGLRenderWindow,
-        model._scalarTexturesCore[component],
-        scalars
-      );
-      model._scalarTexturesCore[component] = scalars;
     });
+    holdScalarTextures(
+      model.currentValidInputs.map(({ imageData }) =>
+        imageData.getPointData().getScalars()
+      )
+    );
 
     // rebuild label outline thickness texture?
     const labelOutlineThicknessArray =
