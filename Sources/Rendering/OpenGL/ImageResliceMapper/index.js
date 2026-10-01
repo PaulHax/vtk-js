@@ -119,12 +119,45 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
     increaseGraphicsResourceCount(openGLRenderWindow, newResourceCoreObject);
   }
 
-  function unregisterGraphicsResources(renderWindow) {
-    // Convert to an array using the spread operator as Firefox doesn't support Iterator.forEach()
-    [...graphicsResourceReferenceCount.keys()].forEach((coreObject) =>
-      renderWindow.unregisterGraphicsResourceUser(coreObject, publicAPI)
-    );
+  // The render window owns shared lookup textures; the mapper owns defaults.
+  function replaceLookupTexture(
+    renderWindow,
+    textureName,
+    coreObjectName,
+    texture,
+    coreObject
+  ) {
+    if (!model[coreObjectName]) {
+      model[textureName]?.releaseGraphicsResources(renderWindow);
+    }
+    replaceGraphicsResource(renderWindow, model[coreObjectName], coreObject);
+    model[textureName] = texture;
+    model[coreObjectName] = coreObject;
   }
+
+  publicAPI.releaseGraphicsResources = (
+    renderWindow = model._openGLRenderWindow
+  ) => {
+    model._scalarTexturesCore.forEach((scalars) =>
+      decreaseGraphicsResourceCount(renderWindow, scalars)
+    );
+    model._scalarTexturesCore = [];
+    [
+      ['colorTexture', '_colorTextureCore'],
+      ['pwfTexture', '_pwfTextureCore'],
+    ].forEach(([textureName, coreObjectName]) =>
+      replaceLookupTexture(
+        renderWindow,
+        textureName,
+        coreObjectName,
+        null,
+        null
+      )
+    );
+    model.labelOutlineThicknessTexture?.releaseGraphicsResources(renderWindow);
+    model.labelOutlineOpacityTexture?.releaseGraphicsResources(renderWindow);
+    model.tris.releaseGraphicsResources(renderWindow);
+  };
 
   publicAPI.buildPass = (prepass) => {
     if (prepass) {
@@ -148,8 +181,7 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
         !oldOglRenderWindow.isDeleted() &&
         oldOglRenderWindow !== model._openGLRenderWindow
       ) {
-        // Unregister the mapper when the render window changes
-        unregisterGraphicsResources(oldOglRenderWindow);
+        publicAPI.releaseGraphicsResources(oldOglRenderWindow);
       }
       model.context = model._openGLRenderWindow.getContext();
       model.tris.setOpenGLRenderWindow(model._openGLRenderWindow);
@@ -436,6 +468,13 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
     );
     const reBuildC =
       !cTex?.oglObject?.getHandle() || cTex?.hash !== colorFuncHash;
+    replaceLookupTexture(
+      model._openGLRenderWindow,
+      'colorTexture',
+      '_colorTextureCore',
+      reBuildC ? vtkOpenGLTexture.newInstance() : cTex.oglObject,
+      firstColorTransferFunc
+    );
     if (reBuildC) {
       let cWidth = model.renderable.getColorTextureWidth();
       if (cWidth <= 0) {
@@ -443,7 +482,7 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
       }
       const cSize = cWidth * textureHeight * 3;
       const cTable = new Uint8ClampedArray(cSize);
-      const newColorTexture = vtkOpenGLTexture.newInstance();
+      const newColorTexture = model.colorTexture;
       newColorTexture.setOpenGLRenderWindow(model._openGLRenderWindow);
       if (firstColorTransferFunc) {
         const tmpTable = new Float32Array(cWidth * 3);
@@ -501,16 +540,7 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
           colorFuncHash
         );
       }
-      model.colorTexture = newColorTexture;
-    } else {
-      model.colorTexture = cTex.oglObject;
     }
-    replaceGraphicsResource(
-      model._openGLRenderWindow,
-      model._colorTextureCore,
-      firstColorTransferFunc
-    );
-    model._colorTextureCore = firstColorTransferFunc;
 
     // Build piecewise function buffer.  This buffer is used either
     // for component weighting or opacity, depending on whether we're
@@ -538,6 +568,13 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
       model._openGLRenderWindow.getGraphicsResourceForObject(firstPwFunc);
     const reBuildPwf =
       !pwfTex?.oglObject?.getHandle() || pwfTex?.hash !== opacityFuncHash;
+    replaceLookupTexture(
+      model._openGLRenderWindow,
+      'pwfTexture',
+      '_pwfTextureCore',
+      reBuildPwf ? vtkOpenGLTexture.newInstance() : pwfTex.oglObject,
+      firstPwFunc
+    );
     if (reBuildPwf) {
       let pwfWidth = model.renderable.getOpacityTextureWidth();
       if (pwfWidth <= 0) {
@@ -545,7 +582,7 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
       }
       const pwfSize = pwfWidth * textureHeight;
       const pwfTable = new Uint8ClampedArray(pwfSize);
-      const newOpacityTexture = vtkOpenGLTexture.newInstance();
+      const newOpacityTexture = model.pwfTexture;
       newOpacityTexture.setOpenGLRenderWindow(model._openGLRenderWindow);
       if (firstPwFunc) {
         const pwfFloatTable = new Float32Array(pwfSize);
@@ -600,16 +637,7 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
           opacityFuncHash
         );
       }
-      model.pwfTexture = newOpacityTexture;
-    } else {
-      model.pwfTexture = pwfTex.oglObject;
     }
-    replaceGraphicsResource(
-      model._openGLRenderWindow,
-      model._pwfTextureCore,
-      firstPwFunc
-    );
-    model._pwfTextureCore = firstPwFunc;
 
     // Build label outline textures if needed (2D textures for per-labelmap settings)
     if (model.labelOutlineProperties.length > 0) {
@@ -1962,13 +1990,13 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
       dataArrays.map((dataArray) => ({ property: dataArray })),
       (property) => property
     );
-    if (hash === model[hashKey]) {
+    if (hash === model[hashKey] && model[textureKey]?.getHandle()) {
       return;
     }
     model[hashKey] = hash;
 
     if (model[textureKey]) {
-      model[textureKey].releaseGraphicsResources();
+      model[textureKey].releaseGraphicsResources(model._openGLRenderWindow);
     }
     model[textureKey] = buildLabelOutline2DTexture(
       dataArrays,
@@ -2012,19 +2040,10 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
     model._externalOpenGLTexture = true;
   };
 
-  publicAPI.delete = macro.chain(() => {
-    if (model._openGLRenderWindow) {
-      unregisterGraphicsResources(model._openGLRenderWindow);
-    }
-    if (model.labelOutlineThicknessTexture) {
-      model.labelOutlineThicknessTexture.releaseGraphicsResources();
-      model.labelOutlineThicknessTexture = null;
-    }
-    if (model.labelOutlineOpacityTexture) {
-      model.labelOutlineOpacityTexture.releaseGraphicsResources();
-      model.labelOutlineOpacityTexture = null;
-    }
-  }, publicAPI.delete);
+  publicAPI.delete = macro.chain(
+    () => publicAPI.releaseGraphicsResources(),
+    publicAPI.delete
+  );
 }
 
 // ----------------------------------------------------------------------------
