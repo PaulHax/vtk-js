@@ -1813,7 +1813,6 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
         model.scalarTextures[component],
         scalarsHash
       );
-
     });
     holdScalarTextures(
       model.currentValidInputs.map(({ imageData }) =>

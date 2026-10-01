@@ -43,7 +43,8 @@ function createScene(gc, images) {
 
 const createImage = () => testUtils.createImage([8, 8, 8], [1, 1, 1]);
 const textureOf = (view, image) =>
-  view.getGraphicsResourceForObject(image.getPointData().getScalars())
+  view
+    .getGraphicsResourceForObject(image.getPointData().getScalars())
     ?.oglObject.getHandle();
 
 // Images are compared within one view: each view jitters its rays randomly.
