@@ -1756,7 +1756,11 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
         !tex?.oglObject?.getHandle() || tex?.hash !== scalarsHash;
 
       const updatedExtents = volumeProperty.getUpdatedExtents();
-      const hasUpdatedExtents = !!updatedExtents.length;
+      if (updatedExtents.length) {
+        volumeProperty.setUpdatedExtents([]);
+      }
+      const hasUpdatedExtents =
+        !!updatedExtents.length && !!tex?.oglObject?.getHandle();
 
       if (reBuildTex && !hasUpdatedExtents) {
         const newScalarTexture = vtkOpenGLTexture.newInstance();
@@ -1786,10 +1790,6 @@ function vtkOpenGLVolumeMapper(publicAPI, model) {
       }
 
       if (hasUpdatedExtents) {
-        // If hasUpdatedExtents, then the texture is partially updated.
-        // clear the array to acknowledge the update.
-        volumeProperty.setUpdatedExtents([]);
-
         const dims = imageData.getDimensions();
         model.scalarTextures[component].create3DFilterableFromDataArray({
           width: dims[0],

@@ -212,6 +212,7 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
 
     const numberOfValidInputs = model.currentValidInputs.length;
     if (numberOfValidInputs <= 0) {
+      holdScalarTextures([]);
       vtkErrorMacro('No input!');
       return;
     }
@@ -337,6 +338,18 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
     );
   };
 
+  // Register current inputs first so reordered inputs retain their textures.
+  function holdScalarTextures(scalarsInUse) {
+    scalarsInUse.forEach((scalars) =>
+      increaseGraphicsResourceCount(model._openGLRenderWindow, scalars)
+    );
+    model._scalarTexturesCore.forEach((scalars) =>
+      decreaseGraphicsResourceCount(model._openGLRenderWindow, scalars)
+    );
+    model._scalarTexturesCore = scalarsInUse;
+    model.scalarTextures.splice(scalarsInUse.length);
+  }
+
   publicAPI.buildBufferObjects = (ren, actor) => {
     const actorProperties = actor.getProperties();
 
@@ -351,7 +364,11 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
 
       const actorProperty = actorProperties[inputIndex];
       const updatedExtents = actorProperty?.getUpdatedExtents() ?? [];
-      const hasUpdatedExtents = !!updatedExtents.length;
+      if (updatedExtents.length) {
+        actorProperty.setUpdatedExtents([]);
+      }
+      const hasUpdatedExtents =
+        !!updatedExtents.length && !!tex?.oglObject?.getHandle();
 
       if (reBuildTex && !hasUpdatedExtents) {
         const newScalarTexture = vtkOpenGLTexture.newInstance();
@@ -380,10 +397,6 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
       }
 
       if (hasUpdatedExtents) {
-        // If hasUpdatedExtents, then the texture is partially updated.
-        // clear the array to acknowledge the update.
-        actorProperty.setUpdatedExtents([]);
-
         const dims = imageData.getDimensions();
         model.scalarTextures[component].create3DFilterableFromDataArray({
           width: dims[0],
@@ -393,14 +406,12 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
           updatedExtents,
         });
       }
-
-      replaceGraphicsResource(
-        model._openGLRenderWindow,
-        model._scalarTexturesCore[component],
-        scalars
-      );
-      model._scalarTexturesCore[component] = scalars;
     });
+    holdScalarTextures(
+      model.currentValidInputs.map(({ imageData }) =>
+        imageData.getPointData().getScalars()
+      )
+    );
 
     const firstValidInput = model.currentValidInputs[0];
     const firstActorProperty = actorProperties[firstValidInput.inputIndex];
