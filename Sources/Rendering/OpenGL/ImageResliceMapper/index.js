@@ -782,8 +782,10 @@ function vtkOpenGLImageResliceMapper(publicAPI, model) {
         if (program.isUniformUsed(uniformName)) {
           const imageData = model.currentValidInputs[i].imageData;
           const dim = imageData.getDimensions();
+          // The texture starts at the extent's first voxel, not at index 0
+          const [x0, , y0, , z0] = imageData.getSpatialExtent();
           mat4.copy(model.tmpMat4, imageData.getIndexToWorld());
-          mat4.translate(model.tmpMat4, model.tmpMat4, [-0.5, -0.5, -0.5]);
+          mat4.translate(model.tmpMat4, model.tmpMat4, [x0, y0, z0]);
           mat4.scale(model.tmpMat4, model.tmpMat4, dim);
           mat4.invert(model.tmpMat4, model.tmpMat4);
           if (inverseShiftScaleMatrix) {
