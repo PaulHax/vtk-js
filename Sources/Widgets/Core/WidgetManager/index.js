@@ -513,6 +513,16 @@ function vtkWidgetManager(publicAPI, model) {
 
   publicAPI.releaseFocus = () => publicAPI.grabFocus(null);
 
+  function cancelWidgetAnimation(viewWidget) {
+    const interactor = viewWidget.getInteractor() || model._interactor;
+    try {
+      interactor?.cancelAnimation(viewWidget, true);
+    } catch {
+      // cancelAnimation removes the request before rendering, which can fail
+      // when the view has already been deleted.
+    }
+  }
+
   const superDelete = publicAPI.delete;
   publicAPI.delete = () => {
     if (tearingDown || publicAPI.isDeleted()) {
@@ -536,9 +546,11 @@ function vtkWidgetManager(publicAPI, model) {
       } catch {
         // the view this widget rendered into is already torn down
       }
-      model._interactor?.cancelAnimation(focused, true);
+      cancelWidgetAnimation(focused);
     }
     try {
+      // Dragging widgets also hold animation requests without owning focus.
+      model.widgets.forEach(cancelWidgetAnimation);
       removeAllWidgetsInternal();
     } finally {
       // the selector owns GPU objects, so it is freed even when a widget

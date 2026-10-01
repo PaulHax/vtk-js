@@ -325,3 +325,66 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     expect(tracker.count()).toBe(emptySceneObjects);
   }
 );
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'cancels the animation request of a dragging widget without focus',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const { renderer, renderWindow } = createTrackedRenderView(gc);
+    const widgetManager = vtkWidgetManager.newInstance();
+    widgetManager.setRenderer(renderer);
+    const widget = gc.registerResource(vtkPolyLineWidget.newInstance());
+    const handle = widget.getWidgetState().addHandle();
+    handle.setOrigin([0, 0, 0]);
+    const viewWidget = widgetManager.addWidget(widget);
+    renderWindow.render();
+    const interactor = renderWindow.getInteractor();
+
+    viewWidget.activateHandle({ selectedState: handle });
+    viewWidget.handleLeftButtonPress({
+      position: { x: 10, y: 10 },
+      pokedRenderer: renderer,
+    });
+    expect(viewWidget.hasFocus()).toBe(false);
+    expect(interactor.isAnimating()).toBe(true);
+
+    widgetManager.delete();
+
+    expect(viewWidget.isDeleted()).toBe(true);
+    expect(interactor.isAnimating()).toBe(false);
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'completes teardown after both a focused widget and its view were deleted',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const tracker = testUtils.trackWebGLObjects();
+    const genericRenderWindow = vtkGenericRenderWindow.newInstance({
+      listenWindowResize: false,
+    });
+    genericRenderWindow.setContainer(testUtils.createRenderContainer(gc));
+    genericRenderWindow.resize();
+    const renderer = genericRenderWindow.getRenderer();
+    const renderWindow = genericRenderWindow.getRenderWindow();
+    renderWindow.render();
+    const emptySceneObjects = tracker.count();
+
+    const widgetManager = vtkWidgetManager.newInstance();
+    widgetManager.setRenderer(renderer);
+    const widget = gc.registerResource(vtkPolyLineWidget.newInstance());
+    const viewWidget = widgetManager.addWidget(widget);
+    renderWindow.render();
+    const interactor = renderWindow.getInteractor();
+    widgetManager.grabFocus(widget);
+    expect(interactor.isAnimating()).toBe(true);
+
+    viewWidget.delete();
+    genericRenderWindow.delete();
+    expect(() => widgetManager.delete()).not.toThrow();
+
+    expect(widgetManager.isDeleted()).toBe(true);
+    expect(interactor.isAnimating()).toBe(false);
+    expect(tracker.count()).toBe(emptySceneObjects);
+  }
+);
