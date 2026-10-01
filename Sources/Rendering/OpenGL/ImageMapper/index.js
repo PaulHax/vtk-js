@@ -1414,9 +1414,9 @@ function vtkOpenGLImageMapper(publicAPI, model) {
         // (non indexed) vertex layout where elementCount matches the vertices.
         forceFlatten: true,
       });
-      model.VBOBuildTime.modified();
       model.VBOBuildString = toString;
     }
+    model.VBOBuildTime.modified();
   };
 
   publicAPI.updateLabelOutlineOpacityTexture = (image) => {
