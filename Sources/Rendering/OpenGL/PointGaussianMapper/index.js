@@ -1,3 +1,7 @@
+import {
+  ColorMode,
+  ScalarMode,
+} from 'vtk.js/Sources/Rendering/Core/Mapper/Constants';
 import { ObjectType } from 'vtk.js/Sources/Rendering/OpenGL/BufferObject/Constants';
 
 import * as macro from 'vtk.js/Sources/macros';
@@ -78,7 +82,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     };
   }
 
-  function isSameColorState(a, b) {
+  function isSameColorState(a, b, ignoreData = false) {
     return (
       a &&
       b &&
@@ -92,7 +96,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       a.useLookupTableScalarRange === b.useLookupTableScalarRange &&
       a.scalarRange === b.scalarRange &&
       a.scalars === b.scalars &&
-      a.scalarsMTime === b.scalarsMTime &&
+      (ignoreData || a.scalarsMTime === b.scalarsMTime) &&
       a.lookupTable === b.lookupTable &&
       a.lookupTableMTime === b.lookupTableMTime
     );
@@ -319,96 +323,198 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     }
 
     const vboState = getVBOState();
-    if (!isSameColorState(model.pointGaussianColorState, vboState.color)) {
-      model.renderable.mapScalars(poly, 1.0);
-      model.pointGaussianColorState = getColorState(poly);
-    }
-    const c = model.renderable.getColorMapColors();
-
-    // One vertex per point, drawn as gl.POINTS from the Points primitive.
-    const vbo = model.primitives[model.primTypes.Points].getCABO();
-
+    const previous = model.pointGaussianUploadState;
     const points = poly.getPoints();
     const numPoints = points.getNumberOfPoints();
     const pointArray = points.getData();
+    const vbo = model.primitives[model.primTypes.Points].getCABO();
+    const colorState = vboState.color;
+    const scalars = colorState.scalars;
+    const rawColors = scalars?.getData();
+    const rawComponents = scalars?.getNumberOfComponents();
+    const directColors =
+      colorState.scalarVisibility &&
+      [ScalarMode.DEFAULT, ScalarMode.USE_POINT_DATA].includes(
+        colorState.scalarMode
+      ) &&
+      [ColorMode.DEFAULT, ColorMode.DIRECT_SCALARS].includes(
+        colorState.colorMode
+      ) &&
+      (rawColors instanceof Uint8Array ||
+        rawColors instanceof Uint8ClampedArray) &&
+      (rawComponents === 3 || rawComponents === 4) &&
+      rawColors.length === numPoints * rawComponents;
 
-    const blockSize = 3; // x, y, z — no impostor offset, no expansion
+    let colors = null;
+    if (directColors) {
+      colors = scalars;
+    } else {
+      if (!isSameColorState(model.pointGaussianColorState, colorState)) {
+        model.renderable.mapScalars(poly, 1.0);
+      }
+      colors = model.renderable.getColorMapColors();
+    }
+    model.pointGaussianColorState = colorState;
+    const colorData = colors?.getData();
+    const colorComponents = colors?.getNumberOfComponents() ?? 0;
 
-    let colorData = null;
-    let colorComponents = 0;
-    let packedUCVBO = null;
-    if (c) {
-      colorComponents = c.getNumberOfComponents();
-      vbo.setColorOffset(0);
-      vbo.setColorBOStride(4);
-      colorData = c.getData();
-      // Cell scalars produce one tuple per cell, not per point, so the array
-      // being RGBA bytes is not enough to know it covers every drawn point.
-      packedUCVBO =
+    const { useShiftAndScale, coordShift, coordScale } =
+      computeCoordShiftAndScale(points);
+    const sameTransform =
+      previous &&
+      previous.shift.every((value, i) => value === coordShift[i]) &&
+      previous.scale.every((value, i) => value === coordScale[i]);
+    const samePoints =
+      previous &&
+      previous.poly === poly &&
+      previous.points === points &&
+      previous.context === model.context &&
+      previous.pointBuffer === pointArray.buffer &&
+      previous.pointOffset === pointArray.byteOffset &&
+      previous.pointType === pointArray.constructor &&
+      sameTransform &&
+      previous.pointComponents === points.getNumberOfComponents() &&
+      vbo.isReady();
+    const sameColors =
+      previous &&
+      previous.poly === poly &&
+      previous.context === model.context &&
+      previous.colors === colors &&
+      previous.directColors === directColors &&
+      previous.colorBuffer === colorData?.buffer &&
+      previous.colorOffset === colorData?.byteOffset &&
+      previous.colorComponents === colorComponents &&
+      isSameColorState(previous.colorState, colorState, true) &&
+      vbo.getColorBO()?.isReady();
+
+    const pointChange = samePoints
+      ? points.getDataChangeSince(previous.pointsMTime)
+      : null;
+    const colorChange =
+      sameColors && directColors
+        ? scalars.getDataChangeSince(previous.colorMTime)
+        : null;
+    const interval = (change, components, count, oldCount) => {
+      if (!change || count < oldCount) return null;
+      const start = Math.floor(change.startValue / components);
+      const end = Math.ceil(change.endValue / components);
+      // A size increase must include the entire newly exposed tail.
+      if (count > oldCount && (start > oldCount || end < count)) return null;
+      // One conservative envelope, with a full-upload crossover at 50%.
+      return end <= count && end - start <= count * 0.5 ? [start, end] : null;
+    };
+    const pointRange = interval(pointChange, 3, numPoints, previous?.numPoints);
+    const colorRange = interval(
+      colorChange,
+      colorComponents,
+      numPoints,
+      previous?.numPoints
+    );
+
+    const packPoints = (start, end) => {
+      if (
+        !useShiftAndScale &&
+        pointArray instanceof Float32Array &&
+        points.getNumberOfComponents() === 3 &&
+        pointArray.length === numPoints * 3
+      ) {
+        return start === 0 && end === numPoints
+          ? pointArray
+          : pointArray.subarray(start * 3, end * 3);
+      }
+      const packed = new Float32Array((end - start) * 3);
+      for (let i = start; i < end; i++) {
+        for (let c = 0; c < 3; c++) {
+          packed[(i - start) * 3 + c] =
+            (pointArray[i * 3 + c] - coordShift[c]) * coordScale[c];
+        }
+      }
+      return packed;
+    };
+    const packColors = (start, end) => {
+      if (
         colorComponents === 4 &&
         colorData.length === numPoints * 4 &&
         (colorData instanceof Uint8Array ||
           colorData instanceof Uint8ClampedArray)
+      ) {
+        return start === 0 && end === numPoints
           ? colorData
-          : new Uint8Array(numPoints * 4);
-      if (!vbo.getColorBO()) {
-        vbo.setColorBO(vtkBufferObject.newInstance());
+          : colorData.subarray(start * 4, end * 4);
       }
-      vbo.getColorBO().setOpenGLRenderWindow(model._openGLRenderWindow);
-    } else if (vbo.getColorBO()) {
-      vbo.setColorBO(null);
-    }
-    vbo.setColorComponents(colorComponents);
-
-    vbo.setStride(blockSize * 4);
-
-    const { useShiftAndScale, coordShift, coordScale } =
-      computeCoordShiftAndScale(points);
+      const packed = new Uint8Array((end - start) * 4);
+      for (let i = start; i < end; i++) {
+        const src = i * colorComponents;
+        const dst = (i - start) * 4;
+        packed[dst] = colorData[src];
+        packed[dst + 1] = colorData[src + 1];
+        packed[dst + 2] = colorData[src + 2];
+        packed[dst + 3] = colorComponents === 4 ? colorData[src + 3] : 255;
+      }
+      return packed;
+    };
+    const upload = (buffer, range, pack, stride, capacityBytes) => {
+      if (
+        range &&
+        buffer.getAllocatedGPUMemoryInBytes() >= numPoints * stride
+      ) {
+        if (range[1] > range[0]) {
+          buffer.uploadRange(
+            pack(...range),
+            ObjectType.ARRAY_BUFFER,
+            range[0] * stride
+          );
+        }
+      } else if (capacityBytes > numPoints * stride) {
+        buffer.allocate(capacityBytes, ObjectType.ARRAY_BUFFER);
+        buffer.uploadRange(pack(0, numPoints), ObjectType.ARRAY_BUFFER);
+      } else {
+        buffer.upload(pack(0, numPoints), ObjectType.ARRAY_BUFFER);
+      }
+    };
+    vbo.setStride(12);
     vbo.setCoordShiftAndScale(
       useShiftAndScale ? coordShift : null,
       useShiftAndScale ? coordScale : null
     );
-
-    // WebGL copies ArrayBufferView contents during bufferData(). When the
-    // input is already tightly packed Float32 XYZ data, upload it directly
-    // instead of allocating and filling an identical staging array.
-    const packedVBO =
-      !useShiftAndScale &&
-      pointArray instanceof Float32Array &&
-      points.getNumberOfComponents() === 3 &&
-      pointArray.length === numPoints * blockSize
-        ? pointArray
-        : new Float32Array(blockSize * numPoints);
-    const copyPoints = packedVBO !== pointArray;
-    const copyColors = colorData && packedUCVBO !== colorData;
-
-    let vboIdx = 0;
-    let ucIdx = 0;
-    for (let i = 0; (copyPoints || copyColors) && i < numPoints; ++i) {
-      const pointIdx = i * 3;
-      if (copyPoints) {
-        packedVBO[vboIdx++] =
-          (pointArray[pointIdx] - coordShift[0]) * coordScale[0];
-        packedVBO[vboIdx++] =
-          (pointArray[pointIdx + 1] - coordShift[1]) * coordScale[1];
-        packedVBO[vboIdx++] =
-          (pointArray[pointIdx + 2] - coordShift[2]) * coordScale[2];
-      }
-      if (copyColors) {
-        const colorIdx = i * colorComponents;
-        packedUCVBO[ucIdx++] = colorData[colorIdx];
-        packedUCVBO[ucIdx++] = colorData[colorIdx + 1];
-        packedUCVBO[ucIdx++] = colorData[colorIdx + 2];
-        packedUCVBO[ucIdx++] =
-          colorComponents === 4 ? colorData[colorIdx + 3] : 255;
-      }
+    upload(vbo, pointRange, packPoints, 12, points.getCapacity() * 4);
+    if (colors) {
+      if (!vbo.getColorBO()) vbo.setColorBO(vtkBufferObject.newInstance());
+      const colorBO = vbo.getColorBO();
+      colorBO.setOpenGLRenderWindow(model._openGLRenderWindow);
+      vbo.setColorOffset(0);
+      vbo.setColorBOStride(4);
+      upload(
+        colorBO,
+        colorRange,
+        packColors,
+        4,
+        directColors
+          ? Math.floor(scalars.getCapacity() / colorComponents) * 4
+          : numPoints * 4
+      );
+    } else if (vbo.getColorBO()) {
+      vbo.setColorBO(null);
     }
-
+    vbo.setColorComponents(colorComponents);
     vbo.setElementCount(numPoints);
-    vbo.upload(packedVBO, ObjectType.ARRAY_BUFFER);
-    if (c) {
-      vbo.getColorBO().upload(packedUCVBO, ObjectType.ARRAY_BUFFER);
-    }
+    model.pointGaussianUploadState = {
+      ...vboState,
+      numPoints,
+      pointBuffer: pointArray.buffer,
+      pointOffset: pointArray.byteOffset,
+      pointType: pointArray.constructor,
+      pointComponents: points.getNumberOfComponents(),
+      colors,
+      directColors,
+      colorBuffer: colorData?.buffer,
+      colorOffset: colorData?.byteOffset,
+      colorComponents,
+      colorMTime: colors?.getMTime(),
+      colorState,
+      shift: Array.from(coordShift),
+      scale: Array.from(coordScale),
+    };
 
     model.pointGaussianVBOState = getVBOState();
     model.VBOBuildTime.modified();
@@ -427,6 +533,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
 
 const DEFAULT_VALUES = {
   pointGaussianColorState: null,
+  pointGaussianUploadState: null,
   pointGaussianVBOState: null,
   pointSizeRangeContext: null,
   aliasedPointSizeRange: null,

@@ -164,10 +164,56 @@ function vtkDataArray(publicAPI, model) {
     }
   }
 
-  publicAPI.dataChange = () => {
+  // A bounded, non-consuming journal: each mapper owns its own revision.
+  // Keep this outside model so it cannot leak into serialized datasets.
+  const changes = [];
+  publicAPI.dataChange = (startValue, endValue) => {
     model.ranges = null;
+    const previousMTime = publicAPI.getMTime();
+    const expectedMTime = macro.getCurrentGlobalMTime() + 1;
     publicAPI.modified();
+    // Synchronous observers may mutate this array again while modified fires.
+    // Never claim that the outer interval covers such nested mutations.
+    if (publicAPI.getMTime() !== expectedMTime) model.ranges = null;
+    if (
+      publicAPI.getMTime() !== expectedMTime ||
+      !Number.isInteger(startValue) ||
+      !Number.isInteger(endValue) ||
+      startValue < 0 ||
+      endValue <= startValue ||
+      endValue > model.size
+    ) {
+      changes.length = 0;
+      return;
+    }
+    changes.push({
+      previousMTime,
+      mtime: publicAPI.getMTime(),
+      startValue,
+      endValue,
+    });
+    if (changes.length > 32) changes.shift();
   };
+
+  // Scalar-value offsets, exclusive end. null means full/unknown dirtiness.
+  // Coalesce to one envelope: avoids many tiny driver calls, with a mapper-side
+  // byte threshold deciding whether the envelope is still worth uploading.
+  publicAPI.getDataChangeSince = (previousMTime) => {
+    if (previousMTime === publicAPI.getMTime())
+      return { startValue: 0, endValue: 0 };
+    let revision = previousMTime;
+    let startValue = Infinity;
+    let endValue = 0;
+    for (const change of changes) {
+      if (change.previousMTime !== revision) continue;
+      revision = change.mtime;
+      startValue = Math.min(startValue, change.startValue);
+      endValue = Math.max(endValue, change.endValue);
+    }
+    return revision === publicAPI.getMTime() ? { startValue, endValue } : null;
+  };
+
+  publicAPI.getCapacity = () => model.values.length;
 
   publicAPI.allocate = (extraNumTuples) => {
     if (!Number.isInteger(extraNumTuples) || extraNumTuples < 0) {
@@ -180,11 +226,17 @@ function vtkDataArray(publicAPI, model) {
     if (!Number.isInteger(requestedNumTuples) || requestedNumTuples < 0) {
       return false;
     }
+    const previousValues = model.values;
+    const previousSize = model.size;
     resize(requestedNumTuples);
     const newSize = requestedNumTuples * publicAPI.getNumberOfComponents();
     if (model.size !== newSize) {
       model.size = newSize;
-      publicAPI.dataChange();
+      if (model.values === previousValues && newSize > previousSize) {
+        publicAPI.dataChange(previousSize, newSize);
+      } else {
+        publicAPI.dataChange();
+      }
       return true;
     }
     return false;

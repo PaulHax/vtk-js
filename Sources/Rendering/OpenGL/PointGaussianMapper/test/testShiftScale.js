@@ -153,12 +153,12 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 
     updatePoints(polyData, [0, 0, 0, 2, 0, 0]);
     renderWindow.render();
-    expect(pointOrColorUploads()).toHaveLength(2);
+    expect(pointOrColorUploads()).toHaveLength(1);
     bufferData.mockClear();
 
     rgb.setData(Uint8Array.from([0, 0, 255, 255, 255, 0]), 3);
     renderWindow.render();
-    expect(pointOrColorUploads()).toHaveLength(2);
+    expect(pointOrColorUploads()).toHaveLength(1);
 
     const pointCABO = getActivePrimitiveCABOs(openGLRenderWindow, mapper)[0];
     const colorHandle = pointCABO.getColorBO().getHandle();

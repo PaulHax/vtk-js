@@ -95,7 +95,14 @@ export interface vtkDataArray extends vtkObject {
    * to get the underlying array with `getData()`, modify it, and then call
    * `dataChange()`.
    */
-  dataChange(): void;
+  /** Declare a truthful scalar-value interval [startValue, endValue). */
+  dataChange(startValue?: number, endValue?: number): void;
+  /** Coalesced changes since this consumer's revision; null requires full upload. */
+  getDataChangeSince(
+    previousMTime: number
+  ): { startValue: number; endValue: number } | null;
+  /** Allocated scalar-value capacity, including unused tuples. */
+  getCapacity(): number;
 
   /**
    * Get the range of the given component.

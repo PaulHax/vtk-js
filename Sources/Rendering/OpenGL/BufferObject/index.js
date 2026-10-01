@@ -81,6 +81,38 @@ function vtkOpenGLBufferObject(publicAPI, model) {
     return true;
   };
 
+  publicAPI.allocate = (byteLength, type) => {
+    if (
+      !Number.isInteger(byteLength) ||
+      byteLength < 0 ||
+      !publicAPI.generateBuffer(type)
+    )
+      return false;
+    model.context.bindBuffer(convertType(internalType), internalHandle);
+    model.context.bufferData(
+      convertType(internalType),
+      byteLength,
+      model.context.DYNAMIC_DRAW
+    );
+    model.allocatedGPUMemoryInBytes = byteLength;
+    dirty = false;
+    return true;
+  };
+
+  publicAPI.uploadRange = (data, type, byteOffset = 0) => {
+    if (
+      dirty ||
+      !Number.isInteger(byteOffset) ||
+      byteOffset < 0 ||
+      byteOffset + data.byteLength > model.allocatedGPUMemoryInBytes ||
+      !publicAPI.generateBuffer(type)
+    )
+      return false;
+    model.context.bindBuffer(convertType(internalType), internalHandle);
+    model.context.bufferSubData(convertType(internalType), byteOffset, data);
+    return true;
+  };
+
   publicAPI.bind = () => {
     if (!internalHandle) {
       return false;
@@ -103,6 +135,7 @@ function vtkOpenGLBufferObject(publicAPI, model) {
       model.context.deleteBuffer(internalHandle);
       internalHandle = null;
       model.allocatedGPUMemoryInBytes = 0;
+      dirty = true;
     }
   };
 

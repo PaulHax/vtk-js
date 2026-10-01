@@ -38,6 +38,127 @@ function vtkPoints(publicAPI, model) {
 
   publicAPI.insertPoint = (ptId, point) => publicAPI.insertTuple(ptId, point);
 
+  // Cache extrema witnesses, not just extrema values. If an edit overwrites
+  // a witness, a full scan is required because its replacement may be anywhere.
+  // This cache is per Points instance and never serialized.
+  let xyzState = null;
+  const superGetRange = publicAPI.getRange;
+  const superSetRange = publicAPI.setRange;
+  publicAPI.setRange = (...args) => {
+    xyzState = null;
+    return superSetRange(...args);
+  };
+
+  function ensureXYZRanges() {
+    if (model.ranges || model.numberOfComponents !== 3) return;
+    const values = publicAPI.getData();
+    if (values.length % 3 !== 0) return;
+    const change =
+      xyzState &&
+      xyzState.buffer === values.buffer &&
+      xyzState.byteOffset === values.byteOffset &&
+      xyzState.type === values.constructor &&
+      values.length >= xyzState.length
+        ? publicAPI.getDataChangeSince(xyzState.mtime)
+        : null;
+    const canIncrement =
+      change &&
+      xyzState.indices.every(
+        (index) => index < change.startValue || index >= change.endValue
+      );
+    const ranges = canIncrement
+      ? [...xyzState.ranges]
+      : [
+          Number.MAX_VALUE,
+          -Number.MAX_VALUE,
+          Number.MAX_VALUE,
+          -Number.MAX_VALUE,
+          Number.MAX_VALUE,
+          -Number.MAX_VALUE,
+        ];
+    const indices = canIncrement
+      ? [...xyzState.indices]
+      : [-1, -1, -1, -1, -1, -1];
+    // Match DataArray's first-non-NaN seed, including infinities/signed zero.
+    if (!canIncrement) {
+      for (let c = 0; c < 3; c++) {
+        for (let i = c; i < values.length; i += 3) {
+          if (!Number.isNaN(values[i])) {
+            ranges[c * 2] = ranges[c * 2 + 1] = values[i];
+            indices[c * 2] = indices[c * 2 + 1] = i;
+            break;
+          }
+        }
+      }
+    }
+    if (!canIncrement) {
+      // Avoid per-value modulo/component dispatch on the hot full-scan path.
+      for (let i = 0; i < values.length; i += 3) {
+        const x = values[i];
+        const y = values[i + 1];
+        const z = values[i + 2];
+        if (x < ranges[0]) {
+          ranges[0] = x;
+          indices[0] = i;
+        } else if (x > ranges[1]) {
+          ranges[1] = x;
+          indices[1] = i;
+        }
+        if (y < ranges[2]) {
+          ranges[2] = y;
+          indices[2] = i + 1;
+        } else if (y > ranges[3]) {
+          ranges[3] = y;
+          indices[3] = i + 1;
+        }
+        if (z < ranges[4]) {
+          ranges[4] = z;
+          indices[4] = i + 2;
+        } else if (z > ranges[5]) {
+          ranges[5] = z;
+          indices[5] = i + 2;
+        }
+      }
+    } else {
+      const end = Math.min(change.endValue, values.length);
+      for (let i = change.startValue; i < end; i++) {
+        const value = values[i];
+        if (Number.isNaN(value)) continue;
+        const lo = (i % 3) * 2;
+        const hi = lo + 1;
+        if (indices[lo] < 0) {
+          ranges[lo] = ranges[hi] = value;
+          indices[lo] = indices[hi] = i;
+        }
+        if (value < ranges[lo] || (value === ranges[lo] && i < indices[lo])) {
+          ranges[lo] = value;
+          indices[lo] = i;
+        }
+        if (value > ranges[hi] || (value === ranges[hi] && i < indices[hi])) {
+          ranges[hi] = value;
+          indices[hi] = i;
+        }
+      }
+    }
+    for (let c = 0; c < 3; c++) {
+      superSetRange({ min: ranges[c * 2], max: ranges[c * 2 + 1] }, c);
+    }
+    xyzState = {
+      buffer: values.buffer,
+      byteOffset: values.byteOffset,
+      type: values.constructor,
+      length: values.length,
+      mtime: publicAPI.getMTime(),
+      ranges,
+      indices,
+    };
+  }
+
+  publicAPI.getRange = (component = -1) => {
+    if (component >= 0 && component < 3) ensureXYZRanges();
+    return superGetRange(component);
+  };
+
   const superGetBounds = publicAPI.getBounds;
   publicAPI.getBounds = () => {
     if (boundMTime < model.mtime) {
