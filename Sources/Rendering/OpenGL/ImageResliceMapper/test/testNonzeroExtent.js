@@ -14,9 +14,7 @@ const firstVoxel = [10, 20, 30];
 // The same voxels at the same world position, indexed from extentStart.
 function createImage(gc, extentStart) {
   const image = gc.registerResource(vtkImageData.newInstance());
-  image.setExtent(
-    ...extentStart.flatMap((start) => [start, start + size - 1])
-  );
+  image.setExtent(...extentStart.flatMap((start) => [start, start + size - 1]));
   image.setOrigin(firstVoxel.map((world, axis) => world - extentStart[axis]));
   image.getPointData().setScalars(
     gc.registerResource(
