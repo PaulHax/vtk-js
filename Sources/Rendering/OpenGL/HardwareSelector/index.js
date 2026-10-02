@@ -498,44 +498,47 @@ function vtkOpenGLHardwareSelector(publicAPI, model) {
     model._renderer.setBackground(0.0, 0.0, 0.0, 0.0);
     const rpasses = model._openGLRenderWindow.getRenderPasses();
 
-    publicAPI.beginSelection();
-    const pixelBufferSavedPasses = [];
-    for (
-      model.currentPass = PassTypes.MIN_KNOWN_PASS;
-      model.currentPass <= PassTypes.MAX_KNOWN_PASS;
-      model.currentPass++
-    ) {
-      if (publicAPI.passRequired(model.currentPass)) {
-        publicAPI.preCapturePass(model.currentPass);
-        if (
-          model.captureZValues &&
-          model.currentPass === PassTypes.ACTOR_PASS &&
-          typeof rpasses[0].requestDepth === 'function' &&
-          typeof rpasses[0].getFramebuffer === 'function'
-        ) {
-          rpasses[0].requestDepth();
-          model._openGLRenderWindow.traverseAllPasses();
-        } else {
-          model._openGLRenderWindow.traverseAllPasses();
+    // a pass that throws must not leave the renderer drawing the selection
+    try {
+      publicAPI.beginSelection();
+      const pixelBufferSavedPasses = [];
+      for (
+        model.currentPass = PassTypes.MIN_KNOWN_PASS;
+        model.currentPass <= PassTypes.MAX_KNOWN_PASS;
+        model.currentPass++
+      ) {
+        if (publicAPI.passRequired(model.currentPass)) {
+          publicAPI.preCapturePass(model.currentPass);
+          if (
+            model.captureZValues &&
+            model.currentPass === PassTypes.ACTOR_PASS &&
+            typeof rpasses[0].requestDepth === 'function' &&
+            typeof rpasses[0].getFramebuffer === 'function'
+          ) {
+            rpasses[0].requestDepth();
+            model._openGLRenderWindow.traverseAllPasses();
+          } else {
+            model._openGLRenderWindow.traverseAllPasses();
+          }
+          publicAPI.postCapturePass(model.currentPass);
+
+          publicAPI.savePixelBuffer(model.currentPass);
+          pixelBufferSavedPasses.push(model.currentPass);
         }
-        publicAPI.postCapturePass(model.currentPass);
-
-        publicAPI.savePixelBuffer(model.currentPass);
-        pixelBufferSavedPasses.push(model.currentPass);
       }
+
+      // Process pixel buffers
+      pixelBufferSavedPasses.forEach((pass) => {
+        model.currentPass = pass;
+        publicAPI.processPixelBuffers();
+      });
+      model.currentPass = PassTypes.MAX_KNOWN_PASS;
+    } finally {
+      publicAPI.endSelection();
+
+      // restore original background
+      model._renderer.setBackground(model.originalBackground);
     }
-
-    // Process pixel buffers
-    pixelBufferSavedPasses.forEach((pass) => {
-      model.currentPass = pass;
-      publicAPI.processPixelBuffers();
-    });
-    model.currentPass = PassTypes.MAX_KNOWN_PASS;
-
-    publicAPI.endSelection();
-
-    // restore original background
-    model._renderer.setBackground(model.originalBackground);
     publicAPI.invokeEvent({ type: 'EndEvent' });
 
     // restore image, not needed?

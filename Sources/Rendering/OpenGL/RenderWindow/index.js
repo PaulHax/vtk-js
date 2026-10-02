@@ -207,6 +207,19 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
     }
   };
 
+  // The state every pass starts from and restores after changing it.
+  function applyDefaultState(gl) {
+    gl.blendFuncSeparate(
+      gl.SRC_ALPHA,
+      gl.ONE_MINUS_SRC_ALPHA,
+      gl.ONE,
+      gl.ONE_MINUS_SRC_ALPHA
+    );
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
+    publicAPI.disableCullFace();
+  }
+
   publicAPI.initialize = () => {
     if (!model.initialized) {
       // Set root parent if there is one
@@ -228,16 +241,7 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
         model.textureUnitManager = vtkOpenGLTextureUnitManager.newInstance();
         model.textureUnitManager.setContext(model.context);
         model.shaderCache.setContext(model.context);
-        // initialize blending for transparency
-        const gl = model.context;
-        gl.blendFuncSeparate(
-          gl.SRC_ALPHA,
-          gl.ONE_MINUS_SRC_ALPHA,
-          gl.ONE,
-          gl.ONE_MINUS_SRC_ALPHA
-        );
-        gl.depthFunc(gl.LEQUAL);
-        gl.enable(gl.BLEND);
+        applyDefaultState(model.context);
       }
       model.initialized = true;
     }
@@ -1022,10 +1026,25 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
   };
 
   publicAPI.traverseAllPasses = () => {
-    if (model.renderPasses) {
-      for (let index = 0; index < model.renderPasses.length; ++index) {
-        model.renderPasses[index].traverse(publicAPI, null);
+    // null until the first render creates the context
+    const gl = publicAPI.getContext();
+    const framebuffer = gl?.getParameter(gl.FRAMEBUFFER_BINDING) ?? null;
+    const activeFramebuffer = publicAPI.getActiveFramebuffer();
+    try {
+      if (model.renderPasses) {
+        for (let index = 0; index < model.renderPasses.length; ++index) {
+          model.renderPasses[index].traverse(publicAPI, null);
+        }
       }
+    } catch (error) {
+      // a throw skips the passes' own restores, which later renders rely on
+      const context = publicAPI.getContext();
+      if (context) {
+        context.bindFramebuffer(context.FRAMEBUFFER, framebuffer);
+        applyDefaultState(context);
+      }
+      publicAPI.setActiveFramebuffer(activeFramebuffer);
+      throw error;
     }
     publicAPI.copyParentContent();
     if (model.notifyStartCaptureImage) {

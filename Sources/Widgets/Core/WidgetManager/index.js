@@ -257,15 +257,21 @@ function vtkWidgetManager(publicAPI, model) {
       y2
     );
     model._captureInProgress = captureInProgress;
-    const capturedBuffers = await captureInProgress;
     // deleted or re-targeted while awaiting: the buffers describe a stale scene
-    if (model._captureInProgress !== captureInProgress) {
-      return;
+    const isCurrent = () => model._captureInProgress === captureInProgress;
+    try {
+      const capturedBuffers = await captureInProgress;
+      if (isCurrent()) {
+        model._capturedBuffers = capturedBuffers;
+        model.previousSelectedData = null;
+      }
+    } finally {
+      // a capture that threw must not stay in flight: later picks await it
+      if (isCurrent()) {
+        model._captureInProgress = null;
+        renderFrontBuffer();
+      }
     }
-    model._capturedBuffers = capturedBuffers;
-    model._captureInProgress = null;
-    model.previousSelectedData = null;
-    renderFrontBuffer();
   }
 
   publicAPI.enablePicking = () => {
