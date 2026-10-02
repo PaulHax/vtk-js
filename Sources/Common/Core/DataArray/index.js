@@ -359,7 +359,7 @@ function vtkDataArray(publicAPI, model) {
     return ranges;
   };
 
-  publicAPI.setTuple = (idx, tuple) => {
+  const setTuple = (idx, tuple, previousSize = model.size) => {
     const offset = idx * model.numberOfComponents;
     let changed = false;
     for (let i = 0; i < model.numberOfComponents; i++) {
@@ -370,13 +370,18 @@ function vtkDataArray(publicAPI, model) {
         changed = true;
       }
     }
-    if (changed) {
-      publicAPI.dataChange(offset, offset + model.numberOfComponents);
+    if (changed || model.size > previousSize) {
+      publicAPI.dataChange(
+        Math.min(offset, previousSize),
+        offset + model.numberOfComponents
+      );
     }
     return changed;
   };
 
-  publicAPI.setTuples = (idx, tuples) => {
+  publicAPI.setTuple = (idx, tuple) => setTuple(idx, tuple);
+
+  const setTuples = (idx, tuples, previousSize = model.size) => {
     let i = idx * model.numberOfComponents;
     const last = Math.min(tuples.length, model.size - i);
     let changed = false;
@@ -389,12 +394,14 @@ function vtkDataArray(publicAPI, model) {
       i++;
       j++;
     }
-    if (changed) {
+    if (changed || model.size > previousSize) {
       const start = idx * model.numberOfComponents;
-      publicAPI.dataChange(start, start + last);
+      publicAPI.dataChange(Math.min(start, previousSize), start + last);
     }
     return changed;
   };
+
+  publicAPI.setTuples = (idx, tuples) => setTuples(idx, tuples);
 
   publicAPI.insertTuple = (idx, tuple) => {
     if (!Number.isInteger(idx) || idx < 0) {
@@ -406,10 +413,7 @@ function vtkDataArray(publicAPI, model) {
       resize(idx + 1);
       model.size = (idx + 1) * model.numberOfComponents;
     }
-    const changed = publicAPI.setTuple(idx, tuple);
-    if (sizeIncreased && !changed) {
-      publicAPI.dataChange(previousSize, model.size);
-    }
+    setTuple(idx, tuple, previousSize);
     return idx;
   };
 
@@ -429,10 +433,7 @@ function vtkDataArray(publicAPI, model) {
       resize(end);
       model.size = end * model.numberOfComponents;
     }
-    const changed = publicAPI.setTuples(idx, tuples);
-    if (sizeIncreased && !changed) {
-      publicAPI.dataChange(previousSize, model.size);
-    }
+    setTuples(idx, tuples, previousSize);
     return end;
   };
 

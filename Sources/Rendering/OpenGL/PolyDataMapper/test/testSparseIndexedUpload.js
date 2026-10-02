@@ -39,7 +39,7 @@ function scene(gc, reserve = false) {
   view.setSize(64, 64);
   renderer.resetCamera();
   rw.render();
-  return { rw, view, points, poly, actor, values };
+  return { rw, view, points, poly, actor, values, mapper };
 }
 
 function observe(gl) {
@@ -182,6 +182,46 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       ]);
       o.partial.mockRestore();
       o.full.mockRestore();
+    } finally {
+      gc.releaseResources();
+    }
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'reuses reserved vertex storage for unknown colored line edits',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    try {
+      const s = scene(gc, true);
+      const colors = gc.registerResource(
+        vtkDataArray.newInstance({
+          values: new Uint8Array(300).fill(200),
+          numberOfComponents: 3,
+        })
+      );
+      s.poly.getPointData().setScalars(colors);
+      s.mapper.setScalarVisibility(true);
+      s.mapper.setColorModeToDirectScalars();
+      s.rw.render();
+      const gl = s.view.getContext();
+      const o = observe(gl);
+      s.points.getData()[33] = 0.25;
+      s.points.modified();
+      s.rw.render();
+      expect(
+        o.full.mock.calls.filter(
+          ([target, data]) =>
+            target === gl.ARRAY_BUFFER && typeof data === 'number'
+        )
+      ).toHaveLength(0);
+      expect(o.uploads).toContainEqual({
+        target: gl.ARRAY_BUFFER,
+        offset: 0,
+        bytes: 1200,
+      });
+      o.full.mockRestore();
+      o.partial.mockRestore();
     } finally {
       gc.releaseResources();
     }

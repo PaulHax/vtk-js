@@ -81,6 +81,8 @@ function vtkOpenGLBufferObject(publicAPI, model) {
     return true;
   };
 
+  publicAPI.getBufferSizeInBytes = () => model.allocatedGPUMemoryInBytes;
+
   publicAPI.allocate = (byteLength, type) => {
     if (
       !Number.isInteger(byteLength) ||

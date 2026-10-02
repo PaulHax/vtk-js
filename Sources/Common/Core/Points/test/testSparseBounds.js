@@ -80,3 +80,27 @@ it('preserves NaNs, infinities, signed zero and explicitly supplied ranges', () 
   check(points);
   points.delete();
 });
+
+it('includes newly exposed gaps when inserting into reserved storage', () => {
+  for (const method of ['insertTuple', 'insertTuples']) {
+    const values = new Float32Array(30);
+    values.set([10, 10, 10, 20, 20, 20]);
+    const points = vtkPoints.newInstance({ values, size: 6 });
+    expect(points.getBounds()).toEqual([10, 20, 10, 20, 10, 20]);
+    const revision = points.getMTime();
+    let notifications = 0;
+    const subscription = points.onModified(() => {
+      notifications++;
+    });
+    points[method](5, [15, 15, 15]);
+    expect(notifications).toBe(1);
+    expect(points.getDataChangeSince(revision)).toEqual({
+      startValue: 6,
+      endValue: 18,
+    });
+    check(points);
+    expect(points.getBounds()).toEqual([0, 20, 0, 20, 0, 20]);
+    subscription.unsubscribe();
+    points.delete();
+  }
+});

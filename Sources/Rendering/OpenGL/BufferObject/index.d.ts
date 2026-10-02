@@ -21,6 +21,8 @@ export interface vtkOpenGLBufferObject extends vtkObject {
    * @returns {boolean} Whether the upload was successful.
    */
   upload(data: any, type: any): boolean;
+  /** Allocated bytes of this buffer, excluding any owned buffers. */
+  getBufferSizeInBytes(): number;
   allocate(byteLength: number, type: ObjectType): boolean;
   uploadRange(
     data: ArrayBufferView,

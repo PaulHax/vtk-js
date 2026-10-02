@@ -42,6 +42,9 @@ function vtkPoints(publicAPI, model) {
   // a witness, a full scan is required because its replacement may be anywhere.
   // This cache is per Points instance and never serialized.
   let xyzState = null;
+  publicAPI.delete = macro.chain(() => {
+    xyzState = null;
+  }, publicAPI.delete);
   const superGetRange = publicAPI.getRange;
   const superSetRange = publicAPI.setRange;
   publicAPI.setRange = (...args) => {

@@ -463,10 +463,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       return packed;
     };
     const upload = (buffer, range, pack, stride, capacityBytes) => {
-      if (
-        range &&
-        buffer.getAllocatedGPUMemoryInBytes() >= numPoints * stride
-      ) {
+      if (range && buffer.getBufferSizeInBytes() >= numPoints * stride) {
         if (range[1] > range[0]) {
           buffer.uploadRange(
             pack(...range),
@@ -477,7 +474,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       } else if (
         capacityBytes > numPoints * stride &&
         buffer.isReady() &&
-        buffer.getAllocatedGPUMemoryInBytes() === capacityBytes
+        buffer.getBufferSizeInBytes() === capacityBytes
       ) {
         buffer.uploadRange(pack(0, numPoints), ObjectType.ARRAY_BUFFER);
       } else if (capacityBytes > numPoints * stride) {

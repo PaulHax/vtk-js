@@ -281,3 +281,32 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     }
   }
 );
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'reuses reserved colored point storage for unknown edits',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    try {
+      const values = new Float32Array(600);
+      for (let i = 0; i < 100; i++) {
+        values[i * 3] = (i % 10) / 10;
+        values[i * 3 + 1] = Math.floor(i / 10) / 10;
+      }
+      const points = gc.registerResource(
+        vtkPoints.newInstance({ values, size: 300 })
+      );
+      const s = scene(gc, points);
+      const o = observe(s.view.getContext());
+      points.getData()[33] = 0.25;
+      points.modified();
+      s.rw.render();
+      expect(o.full).not.toHaveBeenCalled();
+      expect(o.uploaded).toHaveLength(1);
+      expect(o.uploaded[0]).toMatchObject({ offset: 0, bytes: 1200 });
+      o.full.mockRestore();
+      o.spy.mockRestore();
+    } finally {
+      gc.releaseResources();
+    }
+  }
+);

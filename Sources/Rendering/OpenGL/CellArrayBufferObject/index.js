@@ -467,7 +467,7 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
       }
 
       const upload = (buffer, data, start, range, capacity, stride) => {
-        const allocated = buffer.getAllocatedGPUMemoryInBytes();
+        const allocated = buffer.getBufferSizeInBytes();
         if (
           buffer.isReady() &&
           allocated >= numberOfPoints * stride &&
@@ -731,6 +731,7 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
 
   const parentReleaseGraphicsResources = publicAPI.releaseGraphicsResources;
   publicAPI.releaseGraphicsResources = () => {
+    indexedState = null;
     parentReleaseGraphicsResources();
     if (model.indexBO) {
       model.indexBO.releaseGraphicsResources();
@@ -745,8 +746,12 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
     publicAPI.getAllocatedGPUMemoryInBytes;
   publicAPI.getAllocatedGPUMemoryInBytes = () =>
     parentGetAllocatedGPUMemoryInBytes() +
-    (model.indexBO ? model.indexBO.getAllocatedGPUMemoryInBytes() : 0) +
-    (model.colorBO ? model.colorBO.getAllocatedGPUMemoryInBytes() : 0);
+    (model.indexBO ? model.indexBO.getAllocatedGPUMemoryInBytes() : 0);
+
+  publicAPI.delete = macro.chain(
+    publicAPI.releaseGraphicsResources,
+    publicAPI.delete
+  );
 }
 
 // ----------------------------------------------------------------------------
