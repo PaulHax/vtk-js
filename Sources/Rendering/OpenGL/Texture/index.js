@@ -1539,40 +1539,17 @@ function vtkOpenGLTexture(publicAPI, model) {
     data = requiredParam('data'),
     updatedExtents = [],
   } = {}) => {
-    let dataTypeToUse = dataType;
-    let dataToUse = data;
-
-    if (
-      !publicAPI.updateVolumeInfoForGL(dataTypeToUse, numComps) &&
-      dataToUse
-    ) {
-      const numPixelsIn = width * height * depth;
-      const scaleOffsetsCopy = structuredClone(model.volumeInfo);
-      // otherwise convert to float
-      const newArray = new Float32Array(numPixelsIn * numComps);
-      // use computed scale and offset
-      model.volumeInfo.offset = scaleOffsetsCopy.offset;
-      model.volumeInfo.scale = scaleOffsetsCopy.scale;
-      let count = 0;
-      const scaleInverse = scaleOffsetsCopy.scale.map((s) => 1 / s);
-      for (let i = 0; i < numPixelsIn; i++) {
-        for (let nc = 0; nc < numComps; nc++) {
-          newArray[count] =
-            (dataToUse[count] - scaleOffsetsCopy.offset[nc]) * scaleInverse[nc];
-          count++;
-        }
-      }
-
-      dataTypeToUse = VtkDataTypes.FLOAT;
-      dataToUse = newArray;
-    }
+    // Types with no texture format of their own are uploaded as floats.
+    const convertToFloat =
+      !publicAPI.updateVolumeInfoForGL(dataType, numComps) && !!data;
+    const textureDataType = convertToFloat ? VtkDataTypes.FLOAT : dataType;
 
     // Permit OpenGLDataType to be half float, if applicable, for 3D
-    publicAPI.getOpenGLDataType(dataTypeToUse);
+    publicAPI.getOpenGLDataType(textureDataType);
 
     // Now determine the texture parameters using the arguments.
-    publicAPI.getInternalFormat(dataTypeToUse, numComps);
-    publicAPI.getFormat(dataTypeToUse, numComps);
+    publicAPI.getInternalFormat(textureDataType, numComps);
+    publicAPI.getFormat(textureDataType, numComps);
 
     if (!model.internalFormat || !model.format || !model.openGLDataType) {
       vtkErrorMacro('Failed to determine texture parameters.');
@@ -1596,22 +1573,53 @@ function vtkOpenGLTexture(publicAPI, model) {
     const rebuildEntireTexture =
       !hasUpdatedExtents || !deepEqual(model._prevTexParams, getTexParams());
 
+    let dataTypeToUse = dataType;
+    let dataToUse = data;
+    // A scale of 1 and an offset of 0 make this a plain cast, which a partial
+    // upload leaves to updateArrayDataTypeForGL for just its extents.
+    if (convertToFloat && rebuildEntireTexture) {
+      const numPixelsIn = width * height * depth;
+      const scaleOffsetsCopy = structuredClone(model.volumeInfo);
+      const newArray = new Float32Array(numPixelsIn * numComps);
+      model.volumeInfo.offset = scaleOffsetsCopy.offset;
+      model.volumeInfo.scale = scaleOffsetsCopy.scale;
+      let count = 0;
+      const scaleInverse = scaleOffsetsCopy.scale.map((s) => 1 / s);
+      for (let i = 0; i < numPixelsIn; i++) {
+        for (let nc = 0; nc < numComps; nc++) {
+          newArray[count] =
+            (dataToUse[count] - scaleOffsetsCopy.offset[nc]) * scaleInverse[nc];
+          count++;
+        }
+      }
+
+      dataTypeToUse = VtkDataTypes.FLOAT;
+      dataToUse = newArray;
+    }
+
     // Create an array of texture with one texture
     const dataArray = [dataToUse];
     const is3DArray = true;
-    const pixData = publicAPI.updateArrayDataTypeForGL(
-      dataTypeToUse,
-      dataArray,
-      is3DArray,
-      rebuildEntireTexture ? [] : updatedExtents
-    );
+    // Forced byte uploads still need the Float32 rounding performed by a
+    // full upload, but only for the values in the changed extents.
+    const pixData =
+      convertToFloat &&
+      !rebuildEntireTexture &&
+      model.openGLDataType === model.context.UNSIGNED_BYTE
+        ? [new Uint8Array(readExtents(data, updatedExtents, Float32Array))]
+        : publicAPI.updateArrayDataTypeForGL(
+            dataTypeToUse,
+            dataArray,
+            is3DArray,
+            rebuildEntireTexture ? [] : updatedExtents
+          );
 
     // Source texture data from the PBO.
     // model.context.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     model.context.pixelStorei(model.context.UNPACK_ALIGNMENT, 1);
 
     if (rebuildEntireTexture) {
-      if (useTexStorage(dataTypeToUse)) {
+      if (useTexStorage(textureDataType)) {
         model.context.texStorage3D(
           model.target,
           1,
@@ -1691,7 +1699,7 @@ function vtkOpenGLTexture(publicAPI, model) {
       model.depth *
       model.components *
       model._openGLRenderWindow.getDefaultTextureByteSize(
-        dataTypeToUse,
+        textureDataType,
         getNorm16Ext(),
         publicAPI.useHalfFloat()
       );
