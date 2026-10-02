@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, onTestFinished } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 import { createTrackedRenderView } from 'vtk.js/Sources/Testing/renderTestUtils';
 
@@ -6,8 +6,15 @@ import { VtkDataTypes } from 'vtk.js/Sources/Common/Core/DataArray/Constants';
 import vtkOpenGLFramebuffer from 'vtk.js/Sources/Rendering/OpenGL/Framebuffer';
 import vtkOpenGLTexture from 'vtk.js/Sources/Rendering/OpenGL/Texture';
 
+function cleanup(resource) {
+  onTestFinished(() => {
+    if (!resource.isDeleted()) resource.delete();
+  });
+  return resource;
+}
+
 function createTexture(renderWindow) {
-  const texture = vtkOpenGLTexture.newInstance();
+  const texture = cleanup(vtkOpenGLTexture.newInstance());
   texture.setOpenGLRenderWindow(renderWindow);
   texture.create2DFromRaw({
     width: 32,
@@ -17,11 +24,6 @@ function createTexture(renderWindow) {
     data: null,
   });
   return texture;
-}
-
-function releaseTexture(texture, renderWindow) {
-  texture.releaseGraphicsResources(renderWindow);
-  texture.delete();
 }
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
@@ -34,7 +36,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     const borrowedTextureObjects = tracker.count();
     expect(borrowedTextureObjects).toBeGreaterThan(emptySceneObjects);
 
-    const framebuffer = vtkOpenGLFramebuffer.newInstance();
+    const framebuffer = cleanup(vtkOpenGLFramebuffer.newInstance());
     framebuffer.setOpenGLRenderWindow(view);
     framebuffer.saveCurrentBindingsAndBuffers();
     framebuffer.create(32, 32);
@@ -61,7 +63,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     framebuffer.delete();
     expect(tracker.count()).toBe(borrowedTextureObjects);
 
-    releaseTexture(borrowedTexture, view);
+    borrowedTexture.delete();
     expect(tracker.count()).toBe(emptySceneObjects);
     gc.releaseResources();
   }
@@ -78,7 +80,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 
     const texture0 = createTexture(view);
     const texture2 = createTexture(view);
-    const framebuffer = vtkOpenGLFramebuffer.newInstance();
+    const framebuffer = cleanup(vtkOpenGLFramebuffer.newInstance());
     framebuffer.setOpenGLRenderWindow(view);
     framebuffer.saveCurrentBindingsAndBuffers();
     framebuffer.create(32, 32);
@@ -99,8 +101,8 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 
     framebuffer.restorePreviousBindingsAndBuffers();
     framebuffer.delete();
-    releaseTexture(texture0, view);
-    releaseTexture(texture2, view);
+    texture0.delete();
+    texture2.delete();
     gc.releaseResources();
   }
 );
@@ -113,7 +115,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     renderWindow.render();
     const gl = view.getContext();
 
-    const framebuffer = vtkOpenGLFramebuffer.newInstance();
+    const framebuffer = cleanup(vtkOpenGLFramebuffer.newInstance());
     framebuffer.setOpenGLRenderWindow(view);
     framebuffer.create(32, 32);
     framebuffer.bind();
@@ -140,7 +142,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     const gl = view.getContext();
     const borrowed = createTexture(view);
     const borrowedHandle = borrowed.getHandle();
-    const framebuffer = vtkOpenGLFramebuffer.newInstance();
+    const framebuffer = cleanup(vtkOpenGLFramebuffer.newInstance());
     framebuffer.setOpenGLRenderWindow(view);
     framebuffer.create(32, 32);
     framebuffer.populateFramebuffer();
