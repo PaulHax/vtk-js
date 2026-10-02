@@ -90,12 +90,12 @@ export interface vtkDataArray extends vtkObject {
 
   /**
    * Call this method when the underlying data has changed
-   * This method calls `modified()`
+   * This method calls `modified()`. Optional scalar-value offsets declare
+   * the changed interval [startValue, endValue); omission means a full change.
    * For example, when you need to modify chunks of the array, it is faster
    * to get the underlying array with `getData()`, modify it, and then call
    * `dataChange()`.
    */
-  /** Declare a truthful scalar-value interval [startValue, endValue). */
   dataChange(startValue?: number, endValue?: number): void;
   /** Coalesced changes since this consumer's revision; null requires full upload. */
   getDataChangeSince(

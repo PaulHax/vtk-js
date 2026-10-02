@@ -266,7 +266,7 @@ function vtkDataArray(publicAPI, model) {
     const valueIdx = tupleIdx * model.numberOfComponents + compIdx;
     if (!Object.is(value, model.values[valueIdx])) {
       model.values[valueIdx] = value;
-      publicAPI.dataChange();
+      publicAPI.dataChange(valueIdx, valueIdx + 1);
     }
   };
 
@@ -275,7 +275,7 @@ function vtkDataArray(publicAPI, model) {
   publicAPI.setValue = (valueIdx, value) => {
     if (!Object.is(value, model.values[valueIdx])) {
       model.values[valueIdx] = value;
-      publicAPI.dataChange();
+      publicAPI.dataChange(valueIdx, valueIdx + 1);
     }
   };
 
@@ -371,7 +371,7 @@ function vtkDataArray(publicAPI, model) {
       }
     }
     if (changed) {
-      publicAPI.dataChange();
+      publicAPI.dataChange(offset, offset + model.numberOfComponents);
     }
     return changed;
   };
@@ -390,7 +390,8 @@ function vtkDataArray(publicAPI, model) {
       j++;
     }
     if (changed) {
-      publicAPI.dataChange();
+      const start = idx * model.numberOfComponents;
+      publicAPI.dataChange(start, start + last);
     }
     return changed;
   };
@@ -399,6 +400,7 @@ function vtkDataArray(publicAPI, model) {
     if (!Number.isInteger(idx) || idx < 0) {
       throw new RangeError('idx must be a nonnegative integer');
     }
+    const previousSize = model.size;
     const sizeIncreased = model.size <= idx * model.numberOfComponents;
     if (sizeIncreased) {
       resize(idx + 1);
@@ -406,7 +408,7 @@ function vtkDataArray(publicAPI, model) {
     }
     const changed = publicAPI.setTuple(idx, tuple);
     if (sizeIncreased && !changed) {
-      publicAPI.dataChange();
+      publicAPI.dataChange(previousSize, model.size);
     }
     return idx;
   };
@@ -421,6 +423,7 @@ function vtkDataArray(publicAPI, model) {
       );
     }
     const end = idx + tuples.length / model.numberOfComponents;
+    const previousSize = model.size;
     const sizeIncreased = model.size < end * model.numberOfComponents;
     if (sizeIncreased) {
       resize(end);
@@ -428,7 +431,7 @@ function vtkDataArray(publicAPI, model) {
     }
     const changed = publicAPI.setTuples(idx, tuples);
     if (sizeIncreased && !changed) {
-      publicAPI.dataChange();
+      publicAPI.dataChange(previousSize, model.size);
     }
     return end;
   };

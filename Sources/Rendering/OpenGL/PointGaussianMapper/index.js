@@ -49,6 +49,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     }
     const scalarMode = renderable.getScalarMode();
     const arrayAccessMode = renderable.getArrayAccessMode();
+    const arrayId = renderable.getReferenceByName('arrayId');
     const colorByArrayName = renderable.getColorByArrayName();
     const colorMode = renderable.getColorMode();
     const fieldDataTupleId = renderable.getFieldDataTupleId();
@@ -60,7 +61,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       poly,
       scalarMode,
       arrayAccessMode,
-      undefined,
+      arrayId,
       colorByArrayName
     );
     const lookupTable = scalars ? renderable.getLookupTable() : null;
@@ -69,6 +70,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       scalarVisibility,
       scalarMode,
       arrayAccessMode,
+      arrayId,
       colorByArrayName,
       colorMode,
       fieldDataTupleId,
@@ -89,6 +91,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       a.scalarVisibility === b.scalarVisibility &&
       a.scalarMode === b.scalarMode &&
       a.arrayAccessMode === b.arrayAccessMode &&
+      a.arrayId === b.arrayId &&
       a.colorByArrayName === b.colorByArrayName &&
       a.colorMode === b.colorMode &&
       a.fieldDataTupleId === b.fieldDataTupleId &&
@@ -129,8 +132,14 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     );
   }
 
-  publicAPI.getNeedToRebuildBufferObjects = () =>
-    !isSameVBOState(model.pointGaussianVBOState, getVBOState());
+  publicAPI.getNeedToRebuildBufferObjects = () => {
+    const vbo = model.primitives[model.primTypes.Points].getCABO();
+    return (
+      !vbo.isReady() ||
+      (vbo.getColorBO() && !vbo.getColorBO().isReady()) ||
+      !isSameVBOState(model.pointGaussianVBOState, getVBOState())
+    );
+  };
 
   publicAPI.renderPiece = (ren, actor) => {
     const selector = model._openGLRenderer?.getSelector();
@@ -465,6 +474,12 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
             range[0] * stride
           );
         }
+      } else if (
+        capacityBytes > numPoints * stride &&
+        buffer.isReady() &&
+        buffer.getAllocatedGPUMemoryInBytes() === capacityBytes
+      ) {
+        buffer.uploadRange(pack(0, numPoints), ObjectType.ARRAY_BUFFER);
       } else if (capacityBytes > numPoints * stride) {
         buffer.allocate(capacityBytes, ObjectType.ARRAY_BUFFER);
         buffer.uploadRange(pack(0, numPoints), ObjectType.ARRAY_BUFFER);

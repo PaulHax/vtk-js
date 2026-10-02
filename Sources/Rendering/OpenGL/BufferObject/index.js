@@ -92,7 +92,7 @@ function vtkOpenGLBufferObject(publicAPI, model) {
     model.context.bufferData(
       convertType(internalType),
       byteLength,
-      model.context.DYNAMIC_DRAW
+      model.context.STATIC_DRAW
     );
     model.allocatedGPUMemoryInBytes = byteLength;
     dirty = false;

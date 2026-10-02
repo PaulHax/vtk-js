@@ -63,3 +63,38 @@ it('falls back when a synchronous modification observer mutates the array again'
   subscription.unsubscribe();
   a.delete();
 });
+
+it('records scalar setters, tuple edits, and appended zero tuples', () => {
+  const a = vtkDataArray.newInstance({
+    values: new Float32Array(300),
+    numberOfComponents: 3,
+    size: 30,
+  });
+  let revision = a.getMTime();
+  a.setValue(2, 1);
+  a.setComponent(2, 1, 2);
+  expect(a.getDataChangeSince(revision)).toEqual({
+    startValue: 2,
+    endValue: 8,
+  });
+  revision = a.getMTime();
+  a.setTuple(3, [1, 2, 3]);
+  a.setTuples(4, [2, 3, 4, 3, 4, 5]);
+  expect(a.getDataChangeSince(revision)).toEqual({
+    startValue: 9,
+    endValue: 18,
+  });
+  revision = a.getMTime();
+  a.insertNextTuples(new Float32Array(6));
+  expect(a.getDataChangeSince(revision)).toEqual({
+    startValue: 30,
+    endValue: 36,
+  });
+  revision = a.getMTime();
+  a.insertNextTuple([0, 0, 0]);
+  expect(a.getDataChangeSince(revision)).toEqual({
+    startValue: 36,
+    endValue: 39,
+  });
+  a.delete();
+});

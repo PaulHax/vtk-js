@@ -176,6 +176,45 @@ function buildIndexArray(cellArray, inRep, outRep, options) {
   return { indices, cellCount };
 }
 
+function arrayState(array) {
+  const data = array.getData();
+  return {
+    array,
+    buffer: data.buffer,
+    offset: data.byteOffset,
+    type: data.constructor,
+    components: array.getNumberOfComponents(),
+    mtime: array.getMTime(),
+  };
+}
+
+function changedTuples(arrays, previous, count, oldCount) {
+  if (!previous || count < oldCount || arrays.length !== previous.length)
+    return null;
+  let start = count;
+  let end = 0;
+  for (let i = 0; i < arrays.length; i++) {
+    const next = arrays[i];
+    const old = previous[i];
+    if (
+      ['array', 'buffer', 'offset', 'type', 'components'].some(
+        (key) => next[key] !== old[key]
+      )
+    )
+      return null;
+    const change = next.array.getDataChangeSince(old.mtime);
+    if (!change) return null;
+    if (change.endValue > change.startValue) {
+      start = Math.min(start, Math.floor(change.startValue / next.components));
+      end = Math.max(end, Math.ceil(change.endValue / next.components));
+    }
+  }
+  if (count > oldCount && (start > oldCount || end < count)) return null;
+  return end <= count && end - start <= count * 0.5
+    ? [Math.min(start, end), end]
+    : null;
+}
+
 // ----------------------------------------------------------------------------
 // vtkOpenGLCellArrayBufferObject methods
 // ----------------------------------------------------------------------------
@@ -185,6 +224,7 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
   model.classHierarchy.push('vtkOpenGLCellArrayBufferObject');
 
   const superClass = { ...publicAPI };
+  let indexedState = null;
 
   publicAPI.setType(ObjectType.ARRAY_BUFFER);
 
@@ -294,7 +334,7 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
       }
       model.colorBO.setOpenGLRenderWindow(model._openGLRenderWindow);
     } else {
-      model.colorBO = null;
+      publicAPI.setColorBO(null);
     }
     model.stride = 4 * model.blockSize;
 
@@ -308,25 +348,57 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
     let custIdx = 0;
 
     if (canUseIndexedVBO(options)) {
-      const { indices: indexArray, cellCount } = buildIndexArray(
-        cellArray,
-        inRep,
-        outRep,
-        options
-      );
-      if (!model.indexBO) {
-        model.indexBO = vtkBufferObject.newInstance();
-      }
-      model.indexBO.setOpenGLRenderWindow(model._openGLRenderWindow);
-      model.indexBO.upload(indexArray, ObjectType.ELEMENT_ARRAY_BUFFER);
-      if (indexArray instanceof Uint16Array) {
-        model.indexElementType = model.context.UNSIGNED_SHORT;
-      } else {
-        model.indexElementType = model.context.UNSIGNED_INT;
+      const previous = indexedState;
+      const shortIndices = options.points.getNumberOfPoints() <= 0xffff;
+      const reuseIndices =
+        previous &&
+        model.indexBO?.isReady() &&
+        previous.context === model.context &&
+        previous.cells === cellArray &&
+        previous.cellsMTime === cellArray.getMTime() &&
+        previous.inRep === inRep &&
+        previous.outRep === outRep &&
+        previous.shortIndices === shortIndices;
+      let indexState = previous;
+      if (!reuseIndices) {
+        const { indices: indexArray, cellCount } = buildIndexArray(
+          cellArray,
+          inRep,
+          outRep,
+          options
+        );
+        if (!model.indexBO) {
+          model.indexBO = vtkBufferObject.newInstance();
+        }
+        model.indexBO.setOpenGLRenderWindow(model._openGLRenderWindow);
+        model.indexBO.upload(indexArray, ObjectType.ELEMENT_ARRAY_BUFFER);
+        if (indexArray instanceof Uint16Array) {
+          model.indexElementType = model.context.UNSIGNED_SHORT;
+        } else {
+          model.indexElementType = model.context.UNSIGNED_INT;
+        }
+
+        indexState = {
+          cells: cellArray,
+          cellsMTime: cellArray.getMTime(),
+          inRep,
+          outRep,
+          shortIndices,
+          elementCount: indexArray.length,
+          cellCount,
+        };
       }
 
       const numberOfPoints = options.points.getNumberOfPoints();
-      const packedVBO = new Float32Array(numberOfPoints * model.blockSize);
+      const arrays = [
+        options.points,
+        options.normals,
+        ...(options.customAttributes || []),
+        options.tcoords,
+      ]
+        .filter(Boolean)
+        .map(arrayState);
+      const colorState = options.colors ? [arrayState(options.colors)] : [];
       let vboidx = 0;
 
       const { useShiftAndScale, coordShift, coordScale } =
@@ -338,7 +410,26 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
         publicAPI.setCoordShiftAndScale(null, null);
       }
 
-      for (let pointId = 0; pointId < numberOfPoints; pointId++) {
+      const compatible =
+        previous &&
+        publicAPI.isReady() &&
+        previous.context === model.context &&
+        previous.blockSize === model.blockSize &&
+        previous.shift.every((value, i) => value === coordShift[i]) &&
+        previous.scale.every((value, i) => value === coordScale[i]);
+      const pointRange = compatible
+        ? changedTuples(
+            arrays,
+            previous.arrays,
+            numberOfPoints,
+            previous.numberOfPoints
+          )
+        : null;
+      const [pointStart, pointEnd] = pointRange || [0, numberOfPoints];
+      const packedVBO = new Float32Array(
+        (pointEnd - pointStart) * model.blockSize
+      );
+      for (let pointId = pointStart; pointId < pointEnd; pointId++) {
         pointIdx = pointId * 3;
         if (!model.coordShiftAndScaleEnabled) {
           packedVBO[vboidx++] = pointData[pointIdx++];
@@ -375,12 +466,51 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
         }
       }
 
-      publicAPI.upload(packedVBO, ObjectType.ARRAY_BUFFER);
+      const upload = (buffer, data, start, range, capacity, stride) => {
+        const allocated = buffer.getAllocatedGPUMemoryInBytes();
+        if (
+          buffer.isReady() &&
+          allocated >= numberOfPoints * stride &&
+          (range ||
+            (capacity > numberOfPoints * stride && allocated === capacity))
+        ) {
+          if (data.length)
+            buffer.uploadRange(data, ObjectType.ARRAY_BUFFER, start * stride);
+        } else if (capacity > numberOfPoints * stride) {
+          buffer.allocate(capacity, ObjectType.ARRAY_BUFFER);
+          if (data.length) buffer.uploadRange(data, ObjectType.ARRAY_BUFFER);
+        } else {
+          buffer.upload(data, ObjectType.ARRAY_BUFFER);
+        }
+      };
+      const capacity = Math.floor(
+        options.points.getCapacity() / options.points.getNumberOfComponents()
+      );
+      upload(
+        publicAPI,
+        packedVBO,
+        pointStart,
+        pointRange,
+        capacity * model.stride,
+        model.stride
+      );
 
       if (model.colorBO) {
-        const packedUCVBO = new Uint8Array(numberOfPoints * 4);
+        const colorRange =
+          previous &&
+          model.colorBO.isReady() &&
+          previous.context === model.context
+            ? changedTuples(
+                colorState,
+                previous.colorState,
+                numberOfPoints,
+                previous.numberOfPoints
+              )
+            : null;
+        const [colorStart, colorEnd] = colorRange || [0, numberOfPoints];
+        const packedUCVBO = new Uint8Array((colorEnd - colorStart) * 4);
         let ucidx = 0;
-        for (let pointId = 0; pointId < numberOfPoints; pointId++) {
+        for (let pointId = colorStart; pointId < colorEnd; pointId++) {
           colorIdx = pointId * colorComponents;
           packedUCVBO[ucidx++] = colorData[colorIdx++];
           packedUCVBO[ucidx++] = colorData[colorIdx++];
@@ -392,13 +522,31 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
           }
         }
         model.colorBOStride = 4;
-        model.colorBO.upload(packedUCVBO, ObjectType.ARRAY_BUFFER);
+        upload(
+          model.colorBO,
+          packedUCVBO,
+          colorStart,
+          colorRange,
+          Math.floor(options.colors.getCapacity() / colorComponents) * 4,
+          4
+        );
       }
 
-      model.elementCount = indexArray.length;
+      indexedState = {
+        ...indexState,
+        arrays,
+        colorState,
+        numberOfPoints,
+        context: model.context,
+        blockSize: model.blockSize,
+        shift: Array.from(coordShift),
+        scale: Array.from(coordScale),
+      };
+      model.elementCount = indexState.elementCount;
       model.indexed = true;
-      return cellCount;
+      return indexState.cellCount;
     }
+    indexedState = null;
 
     if (model.indexBO) {
       model.indexBO.releaseGraphicsResources();

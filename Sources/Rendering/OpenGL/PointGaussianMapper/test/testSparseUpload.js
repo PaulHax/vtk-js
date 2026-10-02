@@ -213,3 +213,71 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     }
   }
 );
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'restores released position and color buffers, then resumes sparse uploads',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    try {
+      const s = scene(gc);
+      const before = s.view.captureNextImage();
+      s.rw.render();
+      s.view.getViewNodeFor(s.mapper).releaseGraphicsResources(s.view);
+      const after = s.view.captureNextImage();
+      s.rw.render();
+      expect(await after).toBe(await before);
+      const o = observe(s.view.getContext());
+      s.points.setPoint(11, 0.25, 0.1, 0);
+      s.colors.setTuple(11, [10, 20, 30]);
+      s.rw.render();
+      expect(o.full).not.toHaveBeenCalled();
+      expect(
+        o.uploaded.map(({ offset, bytes }) => ({ offset, bytes }))
+      ).toEqual([
+        { offset: 132, bytes: 12 },
+        { offset: 44, bytes: 4 },
+      ]);
+      o.spy.mockRestore();
+      o.full.mockRestore();
+    } finally {
+      gc.releaseResources();
+    }
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'honors point-array selection by ID when using direct colors',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    try {
+      const s = scene(gc);
+      const selected = gc.registerResource(
+        vtkDataArray.newInstance({
+          name: 'selected',
+          values: new Uint8Array(400).fill(255),
+          numberOfComponents: 4,
+        })
+      );
+      s.mapper.getInputData().getPointData().addArray(selected);
+      s.mapper.setScalarModeToUsePointData();
+      s.mapper.setArrayAccessMode(0);
+      s.mapper.set({ arrayId: 1 }, true, true);
+      s.mapper.modified();
+      const full = vi.spyOn(s.view.getContext(), 'bufferData');
+      s.rw.render();
+      expect(full).toHaveBeenCalledTimes(1);
+      expect(full.mock.calls[0][1]).toEqual(selected.getData());
+      full.mockClear();
+      s.mapper.set({ arrayId: 0 }, true, true);
+      s.mapper.modified();
+      s.rw.render();
+      expect(full).toHaveBeenCalledTimes(1);
+      expect(Array.from(full.mock.calls[0][1].subarray(0, 4))).toEqual([
+        200, 200, 200, 255,
+      ]);
+      full.mockRestore();
+    } finally {
+      gc.releaseResources();
+    }
+  }
+);
