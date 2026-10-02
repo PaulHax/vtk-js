@@ -12,6 +12,10 @@ import vtkImageSlice from 'vtk.js/Sources/Rendering/Core/ImageSlice';
 import vtkVolume from 'vtk.js/Sources/Rendering/Core/Volume';
 import vtkVolumeMapper from 'vtk.js/Sources/Rendering/Core/VolumeMapper';
 
+import vtkOpenGLRenderWindow from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow';
+import vtkOpenGLTexture from 'vtk.js/Sources/Rendering/OpenGL/Texture';
+import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
+
 const size = 16;
 const wholeExtent = [0, size - 1, 0, size - 1, 0, size - 1];
 // Types the texture converts to floats on the CPU, the 16 bit ones only
@@ -123,3 +127,168 @@ describe.each([
     }
   );
 });
+
+function createTextureContext(gc) {
+  const view = gc.registerResource(vtkOpenGLRenderWindow.newInstance());
+  gc.registerResource(vtkRenderWindow.newInstance()).addView(view);
+  view.initialize();
+  return { view, gl: view.getContext() };
+}
+
+it
+  .skipIf(__VTK_TEST_NO_WEBGL__)
+  .each(
+    [Int32Array, Uint32Array, Float64Array].flatMap((ArrayType) =>
+      [1, 4].map((numComps) => ({ ArrayType, numComps }))
+    )
+  )(
+  'preserves full-upload rounding in forced-byte partial $ArrayType.name uploads with $numComps components',
+  ({ ArrayType, numComps }) => {
+    const gc = testUtils.createGarbageCollector();
+    const { view, gl } = createTextureContext(gc);
+    const texture = gc.registerResource(vtkOpenGLTexture.newInstance());
+    texture.setOpenGLRenderWindow(view);
+    texture.setOpenGLDataType(gl.UNSIGNED_BYTE);
+    texture.setInternalFormat(numComps === 1 ? gl.R8 : gl.RGBA8);
+    const data = ArrayType.from({ length: 4 * numComps }, (_, i) => 11 + i);
+    const upload = (updatedExtents = []) =>
+      texture.create3DFromRaw({
+        width: 4,
+        height: 1,
+        depth: 1,
+        numComps,
+        dataType: ArrayType.name,
+        data,
+        updatedExtents,
+      });
+    expect(upload()).toBe(true);
+    for (let x = 1; x <= 2; x++) {
+      for (let c = 0; c < numComps; c++) {
+        data[x * numComps + c] =
+          (ArrayType === Float64Array && x === 1 ? 255.999999 : 16777217) + c;
+      }
+    }
+    expect(upload([[1, 2, 0, 0, 0, 0]])).toBe(true);
+    // Full uploads first cast unsupported source types to Float32. The
+    // selected extents must keep that rounding before byte truncation.
+    const expected = new Uint8Array(new Float32Array(data));
+    const framebuffer = gl.createFramebuffer();
+    try {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      gl.framebufferTextureLayer(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        texture.getHandle(),
+        0,
+        0
+      );
+      expect(gl.checkFramebufferStatus(gl.FRAMEBUFFER)).toBe(
+        gl.FRAMEBUFFER_COMPLETE
+      );
+      const rgba = new Uint8Array(4 * 4);
+      gl.readPixels(0, 0, 4, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+      const actual = Array.from({ length: 4 }, (_, x) => [
+        ...rgba.subarray(x * 4, x * 4 + numComps),
+      ]).flat();
+      expect(actual).toEqual([...expected]);
+      expect(gl.getError()).toBe(gl.NO_ERROR);
+    } finally {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.deleteFramebuffer(framebuffer);
+    }
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'converts only disjoint changed values and preserves other Float64 texels',
+  ({ skip }) => {
+    const gc = testUtils.createGarbageCollector();
+    const { view, gl } = createTextureContext(gc);
+    if (!gl.getExtension('EXT_color_buffer_float')) {
+      skip('Floating-point framebuffer attachments are unavailable.');
+    }
+    const width = 9;
+    const height = 7;
+    const depth = 5;
+    const numComps = 4;
+    const values = Float64Array.from(
+      { length: width * height * depth * numComps },
+      (_, i) => 0.25 + (i % 131) / 4
+    );
+    const scalars = gc.registerResource(
+      vtkDataArray.newInstance({ numberOfComponents: numComps, values })
+    );
+    const texture = gc.registerResource(vtkOpenGLTexture.newInstance());
+    texture.setOpenGLRenderWindow(view);
+    const upload = (updatedExtents = []) =>
+      texture.create3DFilterableFromDataArray({
+        width,
+        height,
+        depth,
+        dataArray: scalars,
+        updatedExtents,
+      });
+    expect(upload()).toBe(true);
+    const extents = [
+      [1, 3, 2, 3, 1, 2],
+      [7, 8, 5, 5, 4, 4],
+    ];
+    const expected = new Float32Array(values);
+    for (const [x0, x1, y0, y1, z0, z1] of extents) {
+      for (let z = z0; z <= z1; z++) {
+        for (let y = y0; y <= y1; y++) {
+          for (let x = x0; x <= x1; x++) {
+            for (let c = 0; c < numComps; c++) {
+              const i = ((z * height + y) * width + x) * numComps + c;
+              values[i] = 200 + c + x / 4;
+              expected[i] = values[i];
+            }
+          }
+        }
+      }
+    }
+    scalars.dataChange();
+    // Observe public typed-array allocations during the upload. The two
+    // changed boxes contain 56 values; converting the volume would use 1260.
+    const NativeFloat32Array = globalThis.Float32Array;
+    const allocations = [];
+    globalThis.Float32Array = new Proxy(NativeFloat32Array, {
+      construct(target, args) {
+        const value = Reflect.construct(target, args, target);
+        allocations.push(value.length);
+        return value;
+      },
+    });
+    try {
+      expect(upload(extents)).toBe(true);
+    } finally {
+      globalThis.Float32Array = NativeFloat32Array;
+    }
+    expect(allocations.reduce((sum, length) => sum + length, 0)).toBe(56);
+    const framebuffer = gl.createFramebuffer();
+    try {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      for (let z = 0; z < depth; z++) {
+        gl.framebufferTextureLayer(
+          gl.FRAMEBUFFER,
+          gl.COLOR_ATTACHMENT0,
+          texture.getHandle(),
+          0,
+          z
+        );
+        expect(gl.checkFramebufferStatus(gl.FRAMEBUFFER)).toBe(
+          gl.FRAMEBUFFER_COMPLETE
+        );
+        const pixels = new Float32Array(width * height * 4);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, pixels);
+        expect(pixels).toEqual(
+          expected.slice(z * width * height * 4, (z + 1) * width * height * 4)
+        );
+      }
+      expect(gl.getError()).toBe(gl.NO_ERROR);
+    } finally {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.deleteFramebuffer(framebuffer);
+    }
+  }
+);

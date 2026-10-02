@@ -1600,12 +1600,19 @@ function vtkOpenGLTexture(publicAPI, model) {
     // Create an array of texture with one texture
     const dataArray = [dataToUse];
     const is3DArray = true;
-    const pixData = publicAPI.updateArrayDataTypeForGL(
-      dataTypeToUse,
-      dataArray,
-      is3DArray,
-      rebuildEntireTexture ? [] : updatedExtents
-    );
+    // Forced byte uploads still need the Float32 rounding performed by a
+    // full upload, but only for the values in the changed extents.
+    const pixData =
+      convertToFloat &&
+      !rebuildEntireTexture &&
+      model.openGLDataType === model.context.UNSIGNED_BYTE
+        ? [new Uint8Array(readExtents(data, updatedExtents, Float32Array))]
+        : publicAPI.updateArrayDataTypeForGL(
+            dataTypeToUse,
+            dataArray,
+            is3DArray,
+            rebuildEntireTexture ? [] : updatedExtents
+          );
 
     // Source texture data from the PBO.
     // model.context.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
