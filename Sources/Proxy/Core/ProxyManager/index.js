@@ -11,8 +11,8 @@ export function extend(publicAPI, model, initialValues = {}) {
   Object.assign(
     model,
     {
-      proxyIdMapping: {},
-      proxyByGroup: {},
+      _proxyIdMapping: {},
+      _proxyByGroup: {},
       proxyConfiguration: {}, // { definitions: {}, representations: { viewName: { sourceType: representationName } } }
       sv2rMapping: {}, // sv2rMapping[sourceId][viewId] = rep
       r2svMapping: {}, // r2svMapping[representationId] = { sourceId, viewId }
