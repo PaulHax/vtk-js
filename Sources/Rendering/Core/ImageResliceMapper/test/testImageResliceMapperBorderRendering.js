@@ -109,6 +109,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)('Test ImageResliceMapper', async () => {
   mapper.setInputData(imageData);
 
   renderer.getActiveCamera().elevation(90);
+  renderer.getActiveCamera().setViewUp(0, 0, 1);
   renderer.getActiveCamera().dolly(1.5);
   renderer.resetCamera();
   renderer.resetCameraClippingRange();

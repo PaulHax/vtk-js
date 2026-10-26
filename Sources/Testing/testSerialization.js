@@ -32,12 +32,13 @@ const classToTest = [
 const SERIALIZABLE_CLASSES = {
   vtkDataArray: {
     class: vtkDataArray,
-    data: { values: [1.1, 2.2, 3.3, 4.4, 5.5] },
+    data: { values: [1.1, 2.2, 3.3, 4.4, 5.5], dataType: 'Float32Array' },
   },
   vtkPoints: {
     class: vtkPoints,
     data: {
       values: [0, 0, 0, 1, 0, 0, 0, 1, 0],
+      dataType: 'Float32Array',
     },
   },
   vtkLookupTable,
@@ -48,6 +49,7 @@ const SERIALIZABLE_CLASSES = {
       points: {
         vtkClass: 'vtkPoints',
         values: [0, 0, 0, 1, 1, 1, 2, 2, 2],
+        dataType: 'Float32Array',
         numberOfComponents: 3,
       },
       polys: {
