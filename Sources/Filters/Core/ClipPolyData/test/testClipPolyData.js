@@ -23,7 +23,7 @@ function createSquareAsTriangles() {
   polydata.getPointData().setScalars(
     vtkDataArray.newInstance({
       name: 'inputScalars',
-      values: new Float32Array([-1, 1, 1, -1]),
+      values: new Float32Array([10, 30, 30, 10]),
       numberOfComponents: 1,
     })
   );
@@ -72,4 +72,13 @@ it('vtkClipPolyData clips a triangle mesh and produces clipped output', () => {
     Array.from(keptScalars).includes(0),
     'intersection points carry the clip value'
   ).toBeTruthy();
+
+  [kept, clipped].forEach((output) => {
+    const inputScalars = output.getPointData().getArrayByName('inputScalars');
+    expect(inputScalars.getNumberOfTuples()).toBe(output.getNumberOfPoints());
+    for (let i = 0; i < output.getNumberOfPoints(); i++) {
+      const [x] = output.getPoints().getPoint(i);
+      expect(inputScalars.getTuple(i)[0]).toBeCloseTo(20 + 10 * x);
+    }
+  });
 });

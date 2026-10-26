@@ -109,7 +109,7 @@ function vtkTextureMapToSphere(publicAPI, model) {
       name: 'Texture Coordinates',
       numberOfComponents: 2,
       size: nbPoints,
-      values: tcoordsData,
+      values: Float32Array.from(tcoordsData),
     });
 
     const output = outData[0]?.initialize() || vtkPolyData.newInstance();

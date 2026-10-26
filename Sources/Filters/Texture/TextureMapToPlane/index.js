@@ -238,7 +238,7 @@ function vtkTextureMapToPlane(publicAPI, model) {
       name: 'Texture Coordinates',
       numberOfComponents: 2,
       size: nbPoints,
-      values: tcoordsData,
+      values: Float32Array.from(tcoordsData),
     });
 
     output.getPointData().setTCoords(tCoords);

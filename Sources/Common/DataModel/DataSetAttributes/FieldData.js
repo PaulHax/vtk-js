@@ -2,7 +2,7 @@ import vtk from 'vtk.js/Sources/vtk';
 import macro from 'vtk.js/Sources/macros';
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
 
-const { vtkErrorMacro, vtkWarningMacro } = macro;
+const { vtkErrorMacro } = macro;
 
 // ----------------------------------------------------------------------------
 // vtkFieldData methods
@@ -194,7 +194,6 @@ function vtkFieldData(publicAPI, model) {
           if (fromId1 > -1 && fromId1 < arr.getNumberOfTuples()) {
             const tId = toId > -1 ? toId : fromId1;
             destArr.interpolateTuple(tId, arr, fromId1, arr, fromId2, t);
-            vtkWarningMacro('Unexpected case in interpolateData');
           } else {
             // if `fromId` is not provided, just copy all (or as much possible)
             // from `arr` to `destArr`.

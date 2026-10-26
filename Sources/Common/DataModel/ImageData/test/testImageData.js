@@ -1,4 +1,5 @@
 import { it, expect } from 'vitest';
+import macro from 'vtk.js/Sources/macros';
 import vtkImageData from 'vtk.js/Sources/Common/DataModel/ImageData';
 import vtkRTAnalyticSource from 'vtk.js/Sources/Filters/Sources/RTAnalyticSource';
 
@@ -6,6 +7,38 @@ it('Test vtkImageData instance', () => {
   expect(vtkImageData, 'Make sure the class definition exists').toBeTruthy();
   const instance = vtkImageData.newInstance();
   expect(instance).toBeTruthy();
+});
+
+it('reinitializes image geometry for reuse without warnings', () => {
+  const image = vtkImageData.newInstance();
+  image.setDimensions(2, 2, 2);
+  image.setOrigin(3, 4, 5);
+  image.setSpacing(2, 3, 4);
+  image.setDirection(0, 1, 0, -1, 0, 0, 0, 0, 1);
+
+  const warnings = [];
+  macro.setLoggerFunction('warn', (...args) => warnings.push(args));
+  try {
+    image.initialize();
+    image.initialize();
+
+    expect(image.getExtent()).toEqual([0, -1, 0, -1, 0, -1]);
+    expect(image.getNumberOfPoints()).toBe(0);
+    expect(image.getNumberOfCells()).toBe(0);
+    expect(image.getOrigin()).toEqual([0, 0, 0]);
+    expect(image.getSpacing()).toEqual([1, 1, 1]);
+    expect(Array.from(image.getDirection())).toEqual([
+      1, 0, 0, 0, 1, 0, 0, 0, 1,
+    ]);
+
+    image.setDimensions(1, 3, 1);
+    expect(image.getNumberOfCells()).toBe(2);
+    expect(image.getPoint(2)).toEqual([0, 2, 0]);
+    expect(warnings).toEqual([]);
+  } finally {
+    macro.setLoggerFunction('warn', console.warn);
+    image.delete();
+  }
 });
 
 it('Test vtkImageData histogram', () => {
