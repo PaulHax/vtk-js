@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import macro from 'vtk.js/Sources/macros';
+import vtkActor from 'vtk.js/Sources/Rendering/Core/Actor';
+import vtkCubeSource from 'vtk.js/Sources/Filters/Sources/CubeSource';
+import vtkMapper from 'vtk.js/Sources/Rendering/Core/Mapper';
 import vtkViewProxy from 'vtk.js/Sources/Proxy/Core/ViewProxy';
 import vtkView2DProxy from 'vtk.js/Sources/Proxy/Core/View2DProxy';
 
@@ -97,12 +100,41 @@ describe.each([
       expectMarkerOrientation(view);
     }));
 
+  it('fits visible bounds while preserving the requested orientation', () =>
+    withView(factory, {}, async (view) => {
+      const source = vtkCubeSource.newInstance({
+        center: [4, -3, 2],
+        xLength: 2,
+        yLength: 4,
+        zLength: 6,
+      });
+      const mapper = vtkMapper.newInstance();
+      const actor = vtkActor.newInstance();
+      mapper.setInputConnection(source.getOutputPort());
+      actor.setMapper(mapper);
+      view.addRepresentation(actor);
+      try {
+        await view.updateOrientation(0, -1, [0, 0, 1]);
+        const camera = view.getCamera();
+        expectVector(camera.getFocalPoint(), [4, -3, 2]);
+        expectVector(camera.getDirectionOfProjection(), [1, 0, 0]);
+        expectVector(camera.getViewUp(), [0, 0, 1]);
+        expect(camera.getPosition()[0]).toBeLessThan(actor.getBounds()[0]);
+        expectMarkerOrientation(view);
+      } finally {
+        view.removeRepresentation(actor);
+        actor.delete();
+        mapper.delete();
+        source.delete();
+      }
+    }));
+
   it('aligns the marker after an animated camera move', () =>
     withView(factory, {}, async (view) => {
       view.getInteractor().initialize();
-      await view.moveCamera([0, 0, 0], [0, 0, 1], [0, 1, 0], 4);
-      expectVector(view.getCamera().getPosition(), [0, 0, 1]);
-      expectVector(view.getCamera().getDirectionOfProjection(), [0, 0, -1]);
+      await view.moveCamera([0, 0, 0], [1, 0, 0], [0, 1, 0], 4);
+      expectVector(view.getCamera().getPosition(), [1, 0, 0]);
+      expectVector(view.getCamera().getDirectionOfProjection(), [-1, 0, 0]);
       expectVector(view.getCamera().getViewUp(), [0, 1, 0]);
       expectMarkerOrientation(view);
     }));
