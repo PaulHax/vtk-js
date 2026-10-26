@@ -32,6 +32,21 @@ function vtkViewProxy(publicAPI, model) {
       r + g + b > 1.5 ? 'black' : 'white';
   }
 
+  function setCameraPose(focalPoint, position, viewUp) {
+    const viewUpChanged = model.camera
+      .getViewUp()
+      .some((value, index) => value !== viewUp[index]);
+    // Camera observers must see the view-up and viewing direction together.
+    model.camera.setViewUpFrom(viewUp);
+    const positionChanged = model.camera.setPositionAndFocalPoint(
+      position,
+      focalPoint
+    );
+    if (viewUpChanged && !positionChanged) {
+      model.camera.modified();
+    }
+  }
+
   // Setup --------------------------------------------------------------------
   model.renderWindow = vtkRenderWindow.newInstance();
   model.renderer = vtkRenderer.newInstance({ background: [0, 0, 0] });
@@ -402,8 +417,7 @@ function vtkViewProxy(publicAPI, model) {
     model.viewUp = viewUp;
     const position = model.camera.getFocalPoint();
     position[model.axis] += model.orientation;
-    model.camera.setPosition(...position);
-    model.camera.setViewUp(...viewUp);
+    setCameraPose(originalFocalPoint, position, viewUp);
     model.renderer.resetCamera();
 
     const destFocalPoint = model.camera.getFocalPoint();
@@ -411,9 +425,7 @@ function vtkViewProxy(publicAPI, model) {
     const destViewUp = model.camera.getViewUp();
 
     // Reset to original to prevent initial render flash
-    model.camera.setFocalPoint(...originalFocalPoint);
-    model.camera.setPosition(...originalPosition);
-    model.camera.setViewUp(...originalViewUp);
+    setCameraPose(originalFocalPoint, originalPosition, originalViewUp);
 
     return publicAPI.moveCamera(
       destFocalPoint,
@@ -531,7 +543,8 @@ function vtkViewProxy(publicAPI, model) {
 
     if (animationStack.length === 1) {
       // update camera directly
-      model.camera.set(animationStack.pop());
+      const pose = animationStack.pop();
+      setCameraPose(pose.focalPoint, pose.position, pose.viewUp);
       model.renderer.resetCameraClippingRange();
       if (model.interactor.getLightFollowCamera()) {
         model.renderer.updateLightsGeometryToFollowCamera();
@@ -551,9 +564,7 @@ function vtkViewProxy(publicAPI, model) {
             position: cameraPosition,
             viewUp: cameraViewUp,
           } = animationStack.pop();
-          model.camera.setFocalPoint(...cameraFocalPoint);
-          model.camera.setPosition(...cameraPosition);
-          model.camera.setViewUp(...cameraViewUp);
+          setCameraPose(cameraFocalPoint, cameraPosition, cameraViewUp);
           model.renderer.resetCameraClippingRange();
 
           if (model.interactor.getLightFollowCamera()) {
@@ -651,7 +662,7 @@ const DEFAULT_VALUES = {
   orientationAxesType: 'arrow',
   disableAnimation: false,
   axis: 1,
-  orientation: 0,
+  orientation: 1,
   viewUp: [0, 0, 1],
 };
 
