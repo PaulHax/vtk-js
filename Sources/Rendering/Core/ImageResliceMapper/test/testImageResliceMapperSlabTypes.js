@@ -99,24 +99,10 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     zactor.setMapper(zmapper);
     ren4.addActor(zactor);
 
-    // Do a first pass render to create the API specific view nodes
     const glwindow = gc.registerResource(renderWindow.newAPISpecificView());
     renderWindow.addView(glwindow);
     glwindow.setContainer(renderWindowContainer);
     glwindow.setSize(400, 400);
-    renderWindow.render();
-
-    const oglren1 = glwindow.getViewNodeFor(ren1);
-    const oglren2 = glwindow.getViewNodeFor(ren2);
-    const oglren3 = glwindow.getViewNodeFor(ren3);
-    const oglren4 = glwindow.getViewNodeFor(ren4);
-    const oglamapper = oglren1.getViewNodeFor(amapper);
-    const oglcmapper = oglren2.getViewNodeFor(cmapper);
-    oglcmapper.setScalarTextures(oglamapper.getScalarTextures());
-    const oglsmapper = oglren3.getViewNodeFor(smapper);
-    oglsmapper.setScalarTextures(oglamapper.getScalarTextures());
-    const oglzmapper = oglren4.getViewNodeFor(zmapper);
-    oglzmapper.setScalarTextures(oglamapper.getScalarTextures());
 
     const cam = gc.registerResource(vtkCamera.newInstance());
     ren1.setActiveCamera(cam);
@@ -140,6 +126,20 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
           cmapper.setInputData(im);
           smapper.setInputData(im);
           zmapper.setInputData(im);
+
+          // Render populated mappers to create their API-specific view nodes.
+          renderWindow.render();
+          const oglren1 = glwindow.getViewNodeFor(ren1);
+          const oglren2 = glwindow.getViewNodeFor(ren2);
+          const oglren3 = glwindow.getViewNodeFor(ren3);
+          const oglren4 = glwindow.getViewNodeFor(ren4);
+          const oglamapper = oglren1.getViewNodeFor(amapper);
+          const oglcmapper = oglren2.getViewNodeFor(cmapper);
+          oglcmapper.setScalarTextures(oglamapper.getScalarTextures());
+          const oglsmapper = oglren3.getViewNodeFor(smapper);
+          oglsmapper.setScalarTextures(oglamapper.getScalarTextures());
+          const oglzmapper = oglren4.getViewNodeFor(zmapper);
+          oglzmapper.setScalarTextures(oglamapper.getScalarTextures());
 
           ren1.resetCamera();
           ren2.resetCamera();

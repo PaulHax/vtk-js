@@ -73,19 +73,10 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     sactor.setMapper(smapper);
     renderer.addActor(sactor);
 
-    // Do a first pass render to create the API specific view nodes
     const glwindow = gc.registerResource(renderWindow.newAPISpecificView());
     renderWindow.addView(glwindow);
     glwindow.setContainer(renderWindowContainer);
     glwindow.setSize(400, 400);
-    renderWindow.render();
-
-    const oglrenderer = glwindow.getViewNodeFor(renderer);
-    const oglamapper = oglrenderer.getViewNodeFor(amapper);
-    const oglcmapper = oglrenderer.getViewNodeFor(cmapper);
-    oglcmapper.setScalarTextures(oglamapper.getScalarTextures());
-    const oglsmapper = oglrenderer.getViewNodeFor(smapper);
-    oglsmapper.setScalarTextures(oglamapper.getScalarTextures());
 
     const promise = reader
       .setUrl(`${__BASE_PATH__}/Data/volume/headsq.vti`)
@@ -115,6 +106,15 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
           sslicePlane.setNormal(sn);
 
           smapper.setInputData(im);
+
+          // Render populated mappers to create their API-specific view nodes.
+          renderWindow.render();
+          const oglrenderer = glwindow.getViewNodeFor(renderer);
+          const oglamapper = oglrenderer.getViewNodeFor(amapper);
+          const oglcmapper = oglrenderer.getViewNodeFor(cmapper);
+          oglcmapper.setScalarTextures(oglamapper.getScalarTextures());
+          const oglsmapper = oglrenderer.getViewNodeFor(smapper);
+          oglsmapper.setScalarTextures(oglamapper.getScalarTextures());
 
           renderer.getActiveCamera().azimuth(-45);
           renderer.resetCamera();

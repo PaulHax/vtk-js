@@ -1,9 +1,11 @@
 import { it, expect } from 'vitest';
+import { allowLogs } from 'vtk.js/Sources/Testing/logging';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
 import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
 import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
 import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
+import { ColorSpace } from 'vtk.js/Sources/Rendering/Core/ColorTransferFunction/Constants';
 
 import colorMaps from '../ColorMaps.json';
 
@@ -35,11 +37,18 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)('Test ColorTransferFunction Presets', () => {
   // renderer.addActor(createScalarMap(0, 0));
 
   let count = 0;
-  colorMaps.forEach((preset, idx) => {
+  allowLogs('error');
+  colorMaps.forEach((preset) => {
     if (preset.RGBPoints && count < MAX_NUMBER_OF_PRESETS) {
       const i = count % NUMBER_PER_LINE;
       const j = Math.floor(count / NUMBER_PER_LINE);
-      renderer.addActor(createScalarMap(i * 0.5, j * 1.25, preset, gc));
+      const actor = createScalarMap(i * 0.5, j * 1.25, preset, gc);
+      if (preset.ColorSpace === 'CIELAB') {
+        expect(actor.getMapper().getLookupTable().getColorSpace()).toBe(
+          ColorSpace.RGB
+        );
+      }
+      renderer.addActor(actor);
       count += 1;
     }
   });

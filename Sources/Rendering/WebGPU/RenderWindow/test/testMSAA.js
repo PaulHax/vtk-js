@@ -1,4 +1,5 @@
 import { it, expect } from 'vitest';
+import { allowLogs } from 'vtk.js/Sources/Testing/logging';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
 import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
@@ -22,6 +23,7 @@ it.skipIf(!__VTK_TEST_WEBGPU__)(
       renderWindow.newAPISpecificView('WebGPU')
     );
 
+    allowLogs('error', 2);
     try {
       expect(apiView.getMultiSample(), 'MSAA is off by default').toBe(1);
       expect(apiView.setMultiSample(2), 'multiSample 2 rejected').toBe(false);

@@ -1,4 +1,5 @@
 import { it, expect } from 'vitest';
+import { allowLogs } from 'vtk.js/Sources/Testing/logging';
 import * as vtkMath from 'vtk.js/Sources/Common/Core/Math';
 
 it('Test angleBetweenVector', () => {
@@ -243,6 +244,7 @@ it('Test Multiply Matrix', () => {
     'multiplication of two matrices of compatible sizes, negative values'
   ).toBeTruthy();
 
+  allowLogs('error');
   expect(
     vtkMath.multiplyMatrix(m2, m2x2, 2, 4, 2, 2, resMat),
     'multiplication of two matrices of incompatible sizes'
@@ -596,6 +598,7 @@ it('Test solveHomogeneousLeastSquares', () => {
     vtkMath.areEquals(expected, m),
     'solve with order lower than number of samples'
   ).toBeTruthy();
+  allowLogs('warn');
   expect(
     vtkMath.solveHomogeneousLeastSquares(3, x, 4, m) === 0,
     'solve with order upper than number of samples (underdetermined system)'
@@ -639,6 +642,7 @@ it('Test solveLeastSquares', () => {
   y[0] = 0.0;
   y[1] = 0.0;
   y[2] = 0.0;
+  allowLogs('warn', 2);
   vtkMath.solveLeastSquares(3, x, 2, y, 1, m);
   const mHomogenous = vtkMath.createArray(2);
   vtkMath.solveHomogeneousLeastSquares(3, x, 2, mHomogenous);

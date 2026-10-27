@@ -1,4 +1,5 @@
 import { it, expect, vi } from 'vitest';
+import { allowLogs } from 'vtk.js/Sources/Testing/logging';
 
 import vtkOpenGLRenderWindow from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow';
 
@@ -33,6 +34,7 @@ it('does not manage externally owned canvases', () => {
 });
 
 it('captures at the current size when a resize would be needed', async () => {
+  allowLogs('warn', 2);
   const glWindow = vtkOpenGLRenderWindow.newInstance({ manageCanvas: false });
 
   // the size/scale request is dropped, so the capture takes the single-pass
