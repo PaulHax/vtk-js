@@ -157,7 +157,7 @@ function vtkImagePointDataIterator(publicAPI, model) {
         if (yOffset >= 0 && zOffset >= 0) {
           // If starting within stencil extent, check stencil immediately
           model.inStencil = true;
-          model.setSpanState(model.extent[0]);
+          publicAPI.setSpanState(model.extent[0]);
         }
       } else {
         model.spanCountPointer = null;

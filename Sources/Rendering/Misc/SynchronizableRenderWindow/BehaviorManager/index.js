@@ -101,7 +101,7 @@ export function applyBehaviors(renderWindow, state, context) {
     }
   }
   for (let i = 0; i < existingSets.length; i++) {
-    const key = currentSets[i];
+    const key = existingSets[i];
     if (!state.behaviors[key]) {
       // Need to delete previously created behavior
       localBehaviors[key].delete();

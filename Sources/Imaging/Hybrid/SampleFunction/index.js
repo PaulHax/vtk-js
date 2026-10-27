@@ -37,7 +37,7 @@ function vtkSampleFunction(publicAPI, model) {
       model.sampleDimensions[2],
     ];
     const numScalars = dims[0] * dims[1] * dims[2];
-    if (numScalars < 1 || dims[1] < 2 || dims[1] < 2 || dims[2] < 2) {
+    if (numScalars < 1 || dims[0] < 2 || dims[1] < 2 || dims[2] < 2) {
       vtkErrorMacro('Bad volume dimensions');
       return;
     }

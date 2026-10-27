@@ -16,7 +16,7 @@ fs.readFile(options.input, function (err, data) {
   parser.parseString(data, function (err, result) {
     var dataToWrite = result;
     if (options.process) {
-      var postProcessor = require('./' + options.process + '/post-process.js');
+      var postProcessor = require('./' + options.process + '/post-process.cjs');
       dataToWrite = postProcessor(result);
     }
     fs.writeFile(options.output, JSON.stringify(dataToWrite, null, 2), function(err) {

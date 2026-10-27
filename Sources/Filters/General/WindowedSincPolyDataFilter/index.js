@@ -578,7 +578,7 @@ function vtkWindowedSincPolyDataFilter(publicAPI, model) {
       for (let i = 0; i < numPts; ++i) {
         inPts.getPoint(i, x1);
         newPts[zero].getPoint(i, x2);
-        newScalars[i] = Math.sqrt(Math.distance2BetweenPoints(x1, x2));
+        newScalars[i] = Math.sqrt(vtkMath.distance2BetweenPoints(x1, x2));
       }
 
       const newScalarsArray = vtkDataArray.newInstance({
