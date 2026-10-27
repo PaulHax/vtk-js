@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { allowLogs } from 'vtk.js/Sources/Testing/logging';
 
 import vtkWebGPUConfiguration from 'vtk.js/Sources/Rendering/WebGPU/Configuration';
 import vtkWebGPURenderWindow from 'vtk.js/Sources/Rendering/WebGPU/RenderWindow';
@@ -31,6 +32,7 @@ it.skipIf(!__VTK_TEST_WEBGPU__)(
       expect(configuration.isInitialized()).toBe(true);
       expect(secondWindow.getDevice().getHandle()).toBe(nativeDevice);
 
+      allowLogs('warn');
       const deviceLost = new Promise((resolve) => {
         secondWindow.onDeviceLost(resolve);
       });

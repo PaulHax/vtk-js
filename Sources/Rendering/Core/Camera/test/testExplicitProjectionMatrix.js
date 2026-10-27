@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mat4 } from 'gl-matrix';
-import macro from 'vtk.js/Sources/macros';
+import { allowLogs } from 'vtk.js/Sources/Testing/logging';
 import { areEquals } from 'vtk.js/Sources/Common/Core/Math';
 import vtkCamera from 'vtk.js/Sources/Rendering/Core/Camera';
 
@@ -106,47 +106,20 @@ describe('Camera Explicit Projection Matrix', () => {
     });
   });
 
-  describe('setProjectionMatrix (deprecated)', () => {
-    it('routes through to explicitProjectionMatrix', () => {
+  describe('setProjectionMatrix alias', () => {
+    it('sets and clears the explicit projection matrix', () => {
+      allowLogs('warn');
       const explicit = mat4.perspective(mat4.create(), 1, 1, 1, 20);
-
       camera.setProjectionMatrix(explicit);
 
-      // Plain setGet, no defensive copy: same reference back.
       expect(camera.getExplicitProjectionMatrix()).toBe(explicit);
       const expected = mat4.transpose(mat4.create(), explicit);
       expect(areEquals(camera.getProjectionMatrix(1, -1, 1), expected)).toBe(
         true
       );
-    });
-
-    it('accepts null, matching WebXR frame loop teardown usage', () => {
-      camera.setProjectionMatrix(mat4.create());
-      expect(camera.getExplicitProjectionMatrix()).not.toBeNull();
 
       camera.setProjectionMatrix(null);
       expect(camera.getExplicitProjectionMatrix()).toBeNull();
-    });
-
-    it('warns at most once no matter how many times it is called', () => {
-      const warnings = [];
-      macro.setLoggerFunction('warn', (...args) =>
-        warnings.push(args.join(' '))
-      );
-      try {
-        camera.setProjectionMatrix(mat4.create());
-        const afterFirstCall = warnings.length;
-
-        // Called every frame by WebXR; repeated calls must not add further warnings.
-        camera.setProjectionMatrix(mat4.create());
-        camera.setProjectionMatrix(null);
-        camera.setProjectionMatrix(mat4.create());
-
-        expect(afterFirstCall).toBeLessThanOrEqual(1);
-        expect(warnings.length).toBe(afterFirstCall);
-      } finally {
-        macro.setLoggerFunction('warn', console.warn);
-      }
     });
   });
 });

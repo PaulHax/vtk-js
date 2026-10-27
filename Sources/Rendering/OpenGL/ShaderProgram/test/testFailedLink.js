@@ -1,4 +1,5 @@
 import { it, expect, vi } from 'vitest';
+import { allowLogs } from 'vtk.js/Sources/Testing/logging';
 
 import vtkShaderProgram from 'vtk.js/Sources/Rendering/OpenGL/ShaderProgram';
 
@@ -29,7 +30,7 @@ it('deletes the program when its link fails so a retry starts clean', () => {
   program.getVertexShader().setSource('void main() {}');
   program.getFragmentShader().setSource('void main() {}');
 
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  allowLogs('error', 2);
   gl.getProgramParameter.mockReturnValueOnce(false);
   expect(program.compileShader()).toBe(0);
   const failedHandle = gl.deleteProgram.mock.calls[0]?.[0];
@@ -41,5 +42,4 @@ it('deletes the program when its link fails so a retry starts clean', () => {
   expect(program.compileShader()).toBe(1);
   expect(program.getHandle()).not.toBe(failedHandle);
   expect(gl.detachShader).not.toHaveBeenCalled();
-  vi.restoreAllMocks();
 });

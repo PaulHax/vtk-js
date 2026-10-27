@@ -1,4 +1,5 @@
 import { it, expect } from 'vitest';
+import { allowLogs } from 'vtk.js/Sources/Testing/logging';
 import macro from 'vtk.js/Sources/macros';
 
 const MY_ENUM = {
@@ -396,6 +397,7 @@ it('Macro methods enum tests', () => {
     'Setting idempotent value should return false'
   ).toBeFalsy();
 
+  allowLogs('error', 3);
   expect(
     () => myTestClass.setMyProp7(42),
     'Invalid enum index should throw'
@@ -498,6 +500,7 @@ it('Macro methods object tests', () => {
     myTestClass.getMyProp1 = () => '42';
   }, 'Object should be frozen').toThrow(TypeError);
 
+  allowLogs('warn', 3);
   expect(myTestClass.set({ changeWhenModified: 'foo' })).toBeTruthy();
   const off = myTestClass.onModified((publicAPI) => {
     publicAPI.set({ changeWhenModified: 'bar' });

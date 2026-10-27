@@ -180,7 +180,6 @@ it.skipIf(!__VTK_TEST_WEBGPU__)(
       expect(writeSucceeded, 'write outside the bounds reports failure').toBe(
         false
       );
-      console.log(errors);
       expect(
         errors[0].includes('exceeds texture extent'),
         'error explains that the write region is out of bounds'

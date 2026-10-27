@@ -1,4 +1,5 @@
 import { it, expect } from 'vitest';
+import { allowLogs } from 'vtk.js/Sources/Testing/logging';
 import vtkMergePoints from 'vtk.js/Sources/Common/DataModel/MergePoints';
 import vtkPolyData from 'vtk.js/Sources/Common/DataModel/PolyData';
 
@@ -112,6 +113,7 @@ it('vtkMergePoints: Invalid input handling', () => {
   mergePoints.initPointInsertion(output.getPoints(), output.getBounds());
   mergePoints.buildLocator();
 
+  allowLogs('error', 3);
   const res1 = mergePoints.insertUniquePoint(null);
   expect(res1.inserted, 'Should not insert null point').toBeFalsy();
   expect(res1.id, 'Should return -1 for null point').toBe(-1);

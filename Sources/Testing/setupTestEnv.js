@@ -1,3 +1,5 @@
+import 'vtk.js/Sources/Testing/logging';
+
 // Load default classes for tests
 import '../IO/Core/DataAccessHelper/HtmlDataAccessHelper';
 import '../IO/Core/DataAccessHelper/HttpDataAccessHelper';
