@@ -1,0 +1,725 @@
+{
+  "pull_request": "https://github.com/PaulHax/vtk-js/pull/64",
+  "original_vtkjs": "67328bc3efad88ab05c833b647d4310cb2dcc724",
+  "earlier_pr": "a279920e479ece74c087010a6a30fa1f8f2c0213",
+  "updated_pr": "efe5ec9858fd6861a8dd51098c95590c89029780",
+  "cpp_version": "9.5.2",
+  "cpp_reference_source": "5969773b95be9f889e40d4802d5469c7ebf1abfb",
+  "settings": {
+    "scalar_type": "Uint8",
+    "lookup_range": [
+      0,
+      255
+    ],
+    "interpolation": "linear",
+    "camera": "parallel",
+    "cpp_border": true,
+    "cpp_trapezoid": "always enabled",
+    "capture": "actual framebuffer readback; only labels/layout added; no resizing or contrast adjustment"
+  },
+  "scenes": {
+    "extent-shifted": {
+      "dimensions": [
+        32,
+        32,
+        15
+      ],
+      "spacing": [
+        1,
+        1,
+        1
+      ],
+      "origin": [
+        -9,
+        7,
+        -3
+      ],
+      "direction": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "extentMin": [
+        9,
+        -7,
+        3
+      ],
+      "centerIndex": [
+        15.5,
+        15.5,
+        7
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "parallelScale": 12,
+      "type": "MEAN",
+      "thickness": 0,
+      "trapezoid": false,
+      "profile": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "id": "extent-shifted",
+      "label": "Equivalent shifted extent",
+      "phantom": "ramp"
+    },
+    "neighbors-max": {
+      "dimensions": [
+        32,
+        32,
+        15
+      ],
+      "spacing": [
+        1,
+        1,
+        1
+      ],
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "direction": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "extentMin": [
+        0,
+        0,
+        0
+      ],
+      "centerIndex": [
+        15.5,
+        15.5,
+        7
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "parallelScale": 12,
+      "type": "MAX",
+      "thickness": 4,
+      "trapezoid": false,
+      "profile": [
+        0,
+        10,
+        10,
+        10,
+        110,
+        10,
+        10,
+        10,
+        10,
+        10,
+        110,
+        10,
+        10,
+        10,
+        0
+      ],
+      "id": "neighbors-max",
+      "label": "Bright neighbors / MAX"
+    },
+    "constant-0p5-trap-1": {
+      "dimensions": [
+        32,
+        32,
+        15
+      ],
+      "spacing": [
+        1,
+        1,
+        1
+      ],
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "direction": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "extentMin": [
+        0,
+        0,
+        0
+      ],
+      "centerIndex": [
+        15.5,
+        15.5,
+        7
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "parallelScale": 12,
+      "type": "MEAN",
+      "thickness": 0.5,
+      "trapezoid": true,
+      "profile": [
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90
+      ],
+      "id": "constant-0p5-trap-1",
+      "label": "Constant 90 / T=0.5 / trapezoid=True"
+    },
+    "impulse-1p2-mean": {
+      "dimensions": [
+        32,
+        32,
+        15
+      ],
+      "spacing": [
+        1,
+        1,
+        1
+      ],
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "direction": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "extentMin": [
+        0,
+        0,
+        0
+      ],
+      "centerIndex": [
+        15.5,
+        15.5,
+        7
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "parallelScale": 12,
+      "type": "MEAN",
+      "thickness": 1.2,
+      "trapezoid": true,
+      "profile": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        40,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id": "impulse-1p2-mean",
+      "label": "Isolated center / T=1.2 / MEAN"
+    },
+    "phantom-max": {
+      "dimensions": [
+        32,
+        32,
+        15
+      ],
+      "spacing": [
+        1,
+        1,
+        1
+      ],
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "direction": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "extentMin": [
+        0,
+        0,
+        0
+      ],
+      "centerIndex": [
+        15.5,
+        15.5,
+        7
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "parallelScale": 12,
+      "type": "MAX",
+      "thickness": 4,
+      "trapezoid": true,
+      "profile": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "id": "phantom-max",
+      "label": "Layered phantom / MAX",
+      "phantom": "anatomy"
+    },
+    "phantom-mean": {
+      "dimensions": [
+        32,
+        32,
+        15
+      ],
+      "spacing": [
+        1,
+        1,
+        1
+      ],
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "direction": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "extentMin": [
+        0,
+        0,
+        0
+      ],
+      "centerIndex": [
+        15.5,
+        15.5,
+        7
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "parallelScale": 12,
+      "type": "MEAN",
+      "thickness": 4,
+      "trapezoid": true,
+      "profile": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "id": "phantom-mean",
+      "label": "Layered phantom / MEAN",
+      "phantom": "anatomy"
+    }
+  },
+  "pixel_results": {
+    "original": {
+      "extent-shifted": [
+        63,
+        63,
+        63
+      ],
+      "neighbors-max": [
+        60,
+        60,
+        60
+      ],
+      "constant-0p5-trap-1": [
+        90,
+        90,
+        90
+      ],
+      "impulse-1p2-mean": [
+        18,
+        18,
+        18
+      ],
+      "phantom-max": [
+        90,
+        90,
+        90
+      ],
+      "phantom-mean": [
+        84,
+        84,
+        84
+      ]
+    },
+    "pr": {
+      "extent-shifted": [
+        52,
+        52,
+        52
+      ],
+      "neighbors-max": [
+        10,
+        10,
+        10
+      ],
+      "constant-0p5-trap-1": [
+        60,
+        60,
+        60
+      ],
+      "impulse-1p2-mean": [
+        19,
+        19,
+        19
+      ],
+      "phantom-max": [
+        90,
+        90,
+        90
+      ],
+      "phantom-mean": [
+        76,
+        76,
+        76
+      ]
+    },
+    "fixed": {
+      "extent-shifted": [
+        52,
+        52,
+        52
+      ],
+      "neighbors-max": [
+        10,
+        10,
+        10
+      ],
+      "constant-0p5-trap-1": [
+        90,
+        90,
+        90
+      ],
+      "impulse-1p2-mean": [
+        28,
+        28,
+        28
+      ],
+      "phantom-max": [
+        90,
+        90,
+        90
+      ],
+      "phantom-mean": [
+        85,
+        85,
+        85
+      ]
+    },
+    "cpp": {
+      "extent-shifted": [
+        52,
+        52,
+        52
+      ],
+      "neighbors-max": [
+        35,
+        35,
+        35
+      ],
+      "constant-0p5-trap-1": [
+        90,
+        90,
+        90
+      ],
+      "impulse-1p2-mean": [
+        27,
+        27,
+        27
+      ],
+      "phantom-max": [
+        90,
+        90,
+        90
+      ],
+      "phantom-mean": [
+        85,
+        85,
+        85
+      ]
+    }
+  },
+  "cpp_camera_roll_cases": [
+    {
+      "dimensions": [
+        32,
+        32,
+        15
+      ],
+      "spacing": [
+        0.1,
+        5,
+        1
+      ],
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "direction": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "extentMin": [
+        0,
+        0,
+        0
+      ],
+      "centerIndex": [
+        15.5,
+        15.5,
+        7
+      ],
+      "normal": [
+        0.7071067811865476,
+        0,
+        0.7071067811865476
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "parallelScale": 12,
+      "type": "MAX",
+      "thickness": 4,
+      "trapezoid": false,
+      "profile": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        100,
+        0,
+        100,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id": "roll-0",
+      "label": "Anisotropic camera roll 0"
+    },
+    {
+      "dimensions": [
+        32,
+        32,
+        15
+      ],
+      "spacing": [
+        0.1,
+        5,
+        1
+      ],
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "direction": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "extentMin": [
+        0,
+        0,
+        0
+      ],
+      "centerIndex": [
+        15.5,
+        15.5,
+        7
+      ],
+      "normal": [
+        0.7071067811865476,
+        0,
+        0.7071067811865476
+      ],
+      "up": [
+        0.7071067811865476,
+        0,
+        -0.7071067811865476
+      ],
+      "parallelScale": 12,
+      "type": "MAX",
+      "thickness": 4,
+      "trapezoid": false,
+      "profile": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        100,
+        0,
+        100,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id": "roll-90",
+      "label": "Anisotropic camera roll 90"
+    }
+  ]
+}
