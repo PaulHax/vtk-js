@@ -17,27 +17,33 @@ import vtkPlane from 'vtk.js/Sources/Common/DataModel/Plane';
 function createSlabScene(
   gc,
   values,
-  { spacing = [1, 1, 1], center = (values.length - 1) / 2 } = {}
+  {
+    spacing = [1, 1, 1],
+    center = (values.length - 1) / 2,
+    normal = [0, 0, 1],
+    width = 16,
+  } = {}
 ) {
   const image = gc.registerResource(vtkImageData.newInstance());
-  image.setDimensions(16, 16, values.length);
+  image.setDimensions(width, width, values.length);
   image.setSpacing(spacing);
   image.getPointData().setScalars(
     gc.registerResource(
       vtkDataArray.newInstance({
         name: 'scalars',
         values: Uint8Array.from(
-          { length: 16 * 16 * values.length },
-          (_, index) => values[Math.floor(index / (16 * 16))]
+          { length: width * width * values.length },
+          (_, index) => values[Math.floor(index / (width * width))]
         ),
       })
     )
   );
 
   const plane = gc.registerResource(vtkPlane.newInstance());
-  const origin = image.indexToWorld([7.5, 7.5, center]);
+  const midpoint = (width - 1) / 2;
+  const origin = image.indexToWorld([midpoint, midpoint, center]);
   plane.setOrigin(origin);
-  plane.setNormal(0, 0, 1);
+  plane.setNormal(normal);
   const mapper = gc.registerResource(vtkImageResliceMapper.newInstance());
   mapper.setInputData(image);
   mapper.setSlicePlane(plane);
@@ -58,21 +64,27 @@ function createSlabScene(
   property.setPiecewiseFunction(0, opacity);
 
   const { renderer, renderWindow, view } = createTrackedRenderView(gc);
-  view.setSize(64, 64);
+  // An odd viewport puts pixel (32,32) on the exact central physical ray,
+  // including when an oblique camera is rolled.
+  view.setSize(65, 65);
   renderer.setBackground(0, 0, 1);
   renderer.addActor(actor);
   const camera = renderer.getActiveCamera();
   camera.setParallelProjection(true);
   camera.setFocalPoint(...origin);
-  camera.setPosition(origin[0], origin[1], origin[2] + 100);
+  camera.setPosition(
+    ...origin.map((value, axis) => value + 100 * normal[axis])
+  );
   camera.setViewUp(0, 1, 0);
   camera.setParallelScale(8 * Math.abs(spacing[1]));
   renderer.resetCameraClippingRange();
 
   return {
-    expectProjection(type, thickness, expected) {
+    roll: (degrees) => camera.roll(degrees),
+    expectProjection(type, thickness, expected, trapezoid = 0) {
       mapper.setSlabType(type);
       mapper.setSlabThickness(thickness);
+      mapper.setSlabTrapezoidIntegration(trapezoid);
       renderWindow.render();
       const gl = view.getContext();
       const pixel = new Uint8Array(4);
@@ -104,16 +116,31 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     slabTypes.forEach((type, index) =>
       scene.expectProjection(type, 4, expected[index])
     );
+    // SUM retains sample-sum units; trapezoid integration halves the two ends.
+    scene.expectProjection(SlabTypes.SUM, 4, 80, 1);
     gc.releaseResources();
   }
 );
 
-for (const { thickness, expected } of [
-  { thickness: 0, expected: [40, 40, 40, 40] },
+for (const { thickness, expected, trapezoidExpected } of [
+  {
+    thickness: 0,
+    expected: [40, 40, 40, 40],
+    trapezoidExpected: [40, 40, 40, 40],
+  },
   // A half-unit slab includes the center (40) and endpoints at +/-0.25 (30).
-  { thickness: 0.5, expected: [30, 40, 100 / 3, 100] },
-  // The regular samples at +/-0.5 are 20, and the endpoints at +/-0.6 are 16.
-  { thickness: 1.2, expected: [16, 40, 112 / 5, 112] },
+  {
+    thickness: 0.5,
+    expected: [30, 40, 100 / 3, 100],
+    trapezoidExpected: [30, 40, 35, 70],
+  },
+  // Uniform intervals put the interior samples at +/-0.3 (28), with endpoints
+  // at +/-0.6 (16). The trapezoidal MEAN equals the linear-profile average, 28.
+  {
+    thickness: 1.2,
+    expected: [16, 40, 128 / 5, 128],
+    trapezoidExpected: [16, 40, 28, 112],
+  },
 ]) {
   it.skipIf(__VTK_TEST_NO_WEBGL__)(
     `includes the center and endpoints of a slab with thickness ${thickness}`,
@@ -123,9 +150,10 @@ for (const { thickness, expected } of [
         index === 7 ? 40 : 0
       );
       const scene = createSlabScene(gc, values);
-      slabTypes.forEach((type, index) =>
-        scene.expectProjection(type, thickness, expected[index])
-      );
+      slabTypes.forEach((type, index) => {
+        scene.expectProjection(type, thickness, expected[index]);
+        scene.expectProjection(type, thickness, trapezoidExpected[index], 1);
+      });
       gc.releaseResources();
     }
   );
@@ -146,6 +174,23 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'preserves uniform intensity with trapezoid integration, including clipped slabs',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    for (const { depth, center, thicknesses } of [
+      { depth: 15, center: 7, thicknesses: [0, 0.5, 1, 1.2, 4] },
+      { depth: 4, center: 0.25, thicknesses: [4, 100] },
+    ]) {
+      const scene = createSlabScene(gc, Array(depth).fill(90), { center });
+      thicknesses.forEach((thickness) =>
+        scene.expectProjection(SlabTypes.MEAN, thickness, 90, 1)
+      );
+    }
+    gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'keeps stepping independently of rejected samples near a volume edge',
   () => {
     const gc = testUtils.createGarbageCollector();
@@ -153,9 +198,12 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     // Center and -0.5 are valid, followed by four valid positive offsets.
     scene.expectProjection(SlabTypes.SUM, 4, 60);
     scene.expectProjection(SlabTypes.MEAN, 4, 10);
+    // Weight the first/last accepted samples, even when an end is clipped.
+    scene.expectProjection(SlabTypes.SUM, 4, 50, 1);
     // A much larger slab has eight samples inside the image's half-voxel box.
     scene.expectProjection(SlabTypes.SUM, 100, 80);
     scene.expectProjection(SlabTypes.MEAN, 100, 10);
+    scene.expectProjection(SlabTypes.SUM, 100, 70, 1);
     gc.releaseResources();
   }
 );
@@ -170,6 +218,29 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     // Ten intervals on either side of the center give 21 samples. In Float32,
     // 10 * (0.01 / 2) is slightly less than 0.1 / 2; this is still the endpoint.
     scene.expectProjection(SlabTypes.SUM, 0.1, 210);
+    scene.expectProjection(SlabTypes.SUM, 0.1, 200, 1);
+    gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'keeps anisotropic oblique sampling independent of camera roll',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const scene = createSlabScene(
+      gc,
+      Array.from({ length: 15 }, (_, z) => (z === 6 || z === 8 ? 100 : 0)),
+      {
+        width: 32,
+        spacing: [0.1, 5, 1],
+        normal: [Math.SQRT1_2, 0, Math.SQRT1_2],
+      }
+    );
+    // The +/-1.4 world-unit samples nearly hit the two bright slices. Rolling
+    // changes neither the central ray nor the physical sampling positions.
+    scene.expectProjection(SlabTypes.MAX, 4, 99);
+    scene.roll(90);
+    scene.expectProjection(SlabTypes.MAX, 4, 99);
     gc.releaseResources();
   }
 );
