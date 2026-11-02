@@ -90,6 +90,7 @@ function makeRenderWindow(context) {
   let currentContext = context;
   return {
     getContext: () => currentContext,
+    isDeleted: () => false,
     setContext: (nextContext) => {
       currentContext = nextContext;
     },
