@@ -20,6 +20,7 @@ import {
   objectKey,
   sameKey,
 } from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper/helpers';
+import { createDataTextures } from './dataTextures';
 
 const { vtkErrorMacro, vtkWarningMacro } = macro;
 
@@ -130,7 +131,14 @@ function gatherValues(dataArray, component, table, selection) {
   return packed;
 }
 
-const BUFFERS = ['positions', 'colors', 'radius', 'rotation', 'opacity'];
+const BUFFERS = [
+  'positions',
+  'colors',
+  'radius',
+  'rotation',
+  'opacity',
+  'order',
+];
 
 // ----------------------------------------------------------------------------
 // vtkOpenGLPointGaussianMapper methods
@@ -145,6 +153,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
 
   const getPointsPrimitive = () => model.primitives[model.primTypes.Points];
   const isSplatting = () => model.renderable.getScaleFactor() !== 0;
+  const dataTextures = createDataTextures();
 
   // --------------------------------------------------------------------------
   // Render passes
@@ -295,6 +304,60 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       replaceShaderScalarOpacity(shaders);
     }
     superClass.replaceShaderValues(shaders, ren, actor);
+    if (model.layout.ordered) {
+      const attributes = [
+        ['vertexMC', 'vec4', 'pointPositions', '.xyz, 1.0'],
+        ...(getPointsPrimitive().getCABO().getColorComponents()
+          ? [['scalarColor', 'vec4', 'pointColors', '']]
+          : []),
+        ...(model.layout.radius
+          ? [
+              [
+                'radiusMC',
+                model.layout.anisotropic ? 'vec3' : 'float',
+                'pointRadius',
+                model.layout.anisotropic ? '.xyz' : '.r',
+              ],
+            ]
+          : []),
+        ...(model.layout.rotation
+          ? [['rotationMC', 'vec4', 'pointRotation', '']]
+          : []),
+        ...(model.layout.opacity
+          ? [['scalarOpacity', 'float', 'pointOpacity', '.r']]
+          : []),
+      ];
+      const declarations = [
+        'uniform highp usampler2D pointOrder;',
+        ...attributes.map(([, , name]) => `uniform highp sampler2D ${name};`),
+      ];
+      const statements = [
+        'int orderWidth = textureSize(pointOrder, 0).x;',
+        'int pointId = int(texelFetch(pointOrder, ivec2(gl_InstanceID % orderWidth, gl_InstanceID / orderWidth), 0).r);',
+        'int pointWidth = textureSize(pointPositions, 0).x;',
+        'ivec2 pointCoord = ivec2(pointId % pointWidth, pointId / pointWidth);',
+      ];
+      attributes.forEach(([name, type, texture, suffix]) => {
+        shaders.Vertex = shaders.Vertex.replace(
+          `attribute ${type} ${name};`,
+          `${type} ${name};`
+        );
+        const value = `texelFetch(${texture}, pointCoord, 0)${suffix}`;
+        statements.push(
+          `${name} = ${name === 'vertexMC' ? `vec4(${value})` : value};`
+        );
+      });
+      shaders.Vertex = vtkShaderProgram.substitute(
+        shaders.Vertex,
+        '//VTK::PointOrder::Dec',
+        declarations
+      ).result;
+      shaders.Vertex = vtkShaderProgram.substitute(
+        shaders.Vertex,
+        '//VTK::PointOrder::Impl',
+        statements
+      ).result;
+    }
   };
 
   // A splat's four vertices share its instance, whose index is the drawn
@@ -319,12 +382,13 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   publicAPI.getNeedToRebuildShaders = (cellBO, ren, actor) => {
     // The input reaches the shaders only through the buffers built from it,
     // which the shaders declare.
-    const { anisotropic, radius, rotation, opacity } = model.layout;
+    const { anisotropic, radius, rotation, opacity, ordered } = model.layout;
     const layoutKey = [
       anisotropic,
       radius,
       rotation,
       opacity,
+      ordered,
       cellBO.getCABO().getColorComponents(),
     ].join();
     let needRebuild = false;
@@ -353,6 +417,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   // The per-point attributes: per vertex for simple points, per instance for
   // splats, which also rebinds the ones the superclass bound per vertex.
   function bindPointAttributes(cellBO) {
+    if (model.layout.ordered) return;
     const gl = model.context;
     const program = cellBO.getProgram();
     const cabo = cellBO.getCABO();
@@ -426,6 +491,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       program.setUniformf('boundScale', renderable.getBoundScale());
       const [a, b, c] = renderable.getLowpassMatrixByReference() || [0, 0, 0];
       program.setUniform3f('lowpassMatrix', a, b, c);
+      if (model.layout.ordered) dataTextures.bind(program);
     }
   };
 
@@ -469,13 +535,17 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     const gl = model.context;
     const primitive = getPointsPrimitive();
     model.lastBoundBO = primitive;
-    primitive.updateShaders(ren, actor, publicAPI);
-    if (isSplatting()) {
-      // Splats face the camera, so, like simple points, none is culled.
-      model._openGLRenderWindow.disableCullFace();
-      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
-    } else {
-      gl.drawArrays(gl.POINTS, 0, count);
+    try {
+      primitive.updateShaders(ren, actor, publicAPI);
+      if (isSplatting()) {
+        // Splats face the camera, so, like simple points, none is culled.
+        model._openGLRenderWindow.disableCullFace();
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
+      } else {
+        gl.drawArrays(gl.POINTS, 0, count);
+      }
+    } finally {
+      if (model.layout.ordered) dataTextures.unbind();
     }
   };
 
@@ -523,12 +593,16 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     const renderable = model.renderable;
     const splatting = isSplatting();
     const anisotropic = splatting && renderable.getAnisotropic();
+    const pointOrder = splatting && renderable.getPointOrder();
     return {
       context: model.context,
+      ordered: !!pointOrder,
       selection: [
+        !!pointOrder,
         poly.getPoints().getNumberOfPoints(),
         ...objectKey(getVerts(poly)),
       ],
+      order: pointOrder ? objectKey(pointOrder) : null,
       positions: objectKey(poly.getPoints()),
       colors: getColorKey(poly),
       radius: splatting
@@ -562,6 +636,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     const built = model.bufferKeys;
     if (
       built &&
+      built.valid !== false &&
       built.context === keys.context &&
       sameKey(keys.selection, built.selection)
     ) {
@@ -597,7 +672,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     return true;
   }
 
-  function uploadPositions(cabo, points, selection) {
+  function buildPositions(cabo, points, selection) {
     const { useShiftAndScale, coordShift, coordScale } =
       computeCoordShiftAndScale(points);
     cabo.setCoordShiftAndScale(
@@ -617,7 +692,14 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
         : gatherTuples(points, selection);
     cabo.setStride(12);
     cabo.setVertexOffset(0);
-    cabo.upload(packed, ObjectType.ARRAY_BUFFER);
+    return packed;
+  }
+
+  function uploadPositions(cabo, points, selection) {
+    cabo.upload(
+      buildPositions(cabo, points, selection),
+      ObjectType.ARRAY_BUFFER
+    );
   }
 
   // The colour tuple of each drawn point, as a selection gatherTuples reads,
@@ -721,6 +803,76 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     opacity: buildOpacity,
   };
 
+  function buildOrderedSplats(poly, keys, stale, reselect) {
+    const cabo = getPointsPrimitive().getCABO();
+    const count = poly.getPoints().getNumberOfPoints();
+    const pointOrder = model.renderable.getPointOrder();
+    const order = pointOrder.getData();
+    let invalid =
+      !(order instanceof Uint32Array) ||
+      pointOrder.getNumberOfComponents() !== 1 ||
+      !!getVerts(poly)?.getNumberOfCells();
+    for (let i = 0; !invalid && i < order.length; i++) {
+      invalid = order[i] >= count;
+    }
+    if (invalid) {
+      vtkErrorMacro(
+        'pointOrder requires one-component Uint32 input point ids and no verts cells.'
+      );
+      cabo.setElementCount(0);
+      return false;
+    }
+    if (reselect || stale.includes('order')) {
+      model.selection = {
+        count: order.length,
+        pointIds: order,
+        cellIds: order,
+      };
+      model.renderable.setSelectionWebGLIdsToVTKIds({
+        points: order,
+        cells: order,
+      });
+    }
+    dataTextures.setRenderWindow(model._openGLRenderWindow);
+    const allPoints = { count, pointIds: null, cellIds: null };
+    if (stale.includes('positions')) {
+      dataTextures.upload(
+        'pointPositions',
+        buildPositions(cabo, poly.getPoints(), allPoints),
+        3
+      );
+    }
+    if (stale.includes('colors')) {
+      model.renderable.mapScalars(poly, 1.0);
+      const colors = model.renderable.getColorMapColors();
+      const selection = colors && getColorSelection(colors, poly, allPoints);
+      const hasColors = dataTextures.upload(
+        'pointColors',
+        selection && gatherTuples(colors, selection, Uint8Array),
+        4
+      );
+      cabo.setColorComponents(hasColors ? 4 : 0);
+      keys.colors = getColorKey(poly);
+    }
+    const components = {
+      radius: model.renderable.getAnisotropic() ? 3 : 1,
+      rotation: 4,
+      opacity: 1,
+    };
+    Object.entries(builders).forEach(([name, build]) => {
+      if (stale.includes(name)) {
+        model.layout[name] = dataTextures.upload(
+          `point${macro.capitalize(name)}`,
+          keys[name] && build(poly, allPoints),
+          components[name]
+        );
+      }
+    });
+    if (stale.includes('order')) dataTextures.upload('pointOrder', order, 1);
+    cabo.setElementCount(order.length);
+    return true;
+  }
+
   publicAPI.getNeedToRebuildBufferObjects = () => {
     const poly = model.currentInput;
     if (
@@ -737,7 +889,19 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   publicAPI.buildBufferObjects = (ren, actor) => {
     const poly = model.currentInput;
     const keys = getBufferKeys(poly);
+    if (model.bufferKeys && model.bufferKeys.ordered !== keys.ordered) {
+      publicAPI.releaseGraphicsResources();
+    }
     const { reselect, stale } = getStaleBuffers(poly, keys);
+    model.layout.ordered = keys.ordered;
+    if (keys.ordered) {
+      keys.valid = buildOrderedSplats(poly, keys, stale, reselect);
+      model.layout.anisotropic = model.renderable.getAnisotropic();
+      model.bufferKeys = keys;
+      model.VBOBuildTime.modified();
+      model.bufferKeysTime.modified();
+      return;
+    }
     if (reselect) {
       model.selection = getSelection(
         getVerts(poly),
@@ -785,6 +949,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   publicAPI.releaseGraphicsResources = (renderWindow) => {
     superClass.releaseGraphicsResources(renderWindow);
     getSplatBuffers().forEach((buffer) => buffer.releaseGraphicsResources());
+    dataTextures.release();
     model.bufferKeys = null;
     model.selection = null;
   };
@@ -792,7 +957,8 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   publicAPI.getAllocatedGPUMemoryInBytes = () =>
     getSplatBuffers().reduce(
       (total, buffer) => total + buffer.getAllocatedGPUMemoryInBytes(),
-      superClass.getAllocatedGPUMemoryInBytes()
+      superClass.getAllocatedGPUMemoryInBytes() +
+        dataTextures.getAllocatedGPUMemoryInBytes()
     );
 }
 
@@ -822,6 +988,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     radius: false,
     rotation: false,
     opacity: false,
+    ordered: false,
   };
   model.bufferKeysTime = {};
   macro.obj(model.bufferKeysTime, { mtime: 0 });

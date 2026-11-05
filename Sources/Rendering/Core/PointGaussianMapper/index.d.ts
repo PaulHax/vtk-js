@@ -1,5 +1,6 @@
 import { Nullable, Vector3 } from '../../../types';
 import vtkPiecewiseFunction from '../../../Common/DataModel/PiecewiseFunction';
+import vtkDataArray from '../../../Common/Core/DataArray';
 import vtkMapper, { IMapperInitialValues } from '../Mapper';
 
 export type IPointGaussianMapperInitialValues = IMapperInitialValues & {
@@ -18,9 +19,27 @@ export type IPointGaussianMapperInitialValues = IMapperInitialValues & {
   anisotropic?: boolean;
   rotationArray?: Nullable<string>;
   lowpassMatrix?: Vector3;
+  pointOrder?: Nullable<vtkDataArray>;
 };
 
 export type vtkPointGaussianMapper = vtkMapper & {
+  /**
+   * Get the optional order of topology-free Gaussian splats.
+   */
+  getPointOrder(): Nullable<vtkDataArray>;
+
+  /**
+   * Draw the listed input point ids in order. The array must have one component
+   * and Uint32Array storage; subsets and repeated ids are allowed. In splat
+   * mode, the input must have no verts cells. Point attributes remain resident
+   * in GPU textures, so changing only this array uploads only the order.
+   * Call modified() after editing the array in place. Hardware selection
+   * returns input point ids. Ignored for simple points (scaleFactor zero).
+   * This vtk.js extension does not sort points or select a blending policy.
+   * Default is null, which uses the ordinary attribute-buffer rendering path.
+   */
+  setPointOrder(pointOrder: Nullable<vtkDataArray>): boolean;
+
   /**
    * Get the name of the point data array that scales the splats.
    */

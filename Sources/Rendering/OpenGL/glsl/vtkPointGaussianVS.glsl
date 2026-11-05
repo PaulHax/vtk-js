@@ -20,6 +20,8 @@
 
 attribute vec4 vertexMC;
 
+//VTK::PointOrder::Dec
+
 uniform float scaleFactor;
 uniform float boundScale;
 uniform int cameraParallel;
@@ -105,6 +107,8 @@ mat3 getProjectionJacobian(vec3 positionVC)
 
 void main()
 {
+  //VTK::PointOrder::Impl
+
   //VTK::Color::Impl
 
   //VTK::Normal::Impl

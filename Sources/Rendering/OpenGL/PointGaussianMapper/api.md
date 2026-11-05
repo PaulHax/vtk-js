@@ -17,9 +17,24 @@ shader code, and the scale factor while it stays non-zero) upload nothing.
 After editing an array in place, call its `modified()`, or the polydata's,
 which uploads every buffer again.
 
+An optional `pointOrder` on the Core mapper selects indexed splat rendering for
+input without verts cells. It is a one-component `vtkDataArray` backed by
+`Uint32Array`, containing input point ids in draw order. The positions, colours,
+scales, rotations and opacities remain in GPU data textures. Updating only the
+order uploads only its integer texture; changing an attribute uploads only that
+attribute. This path supports subsets and repeated ids, and selection returns
+the original input ids. An empty order draws nothing. Invalid ids or verts cells
+produce an error and draw nothing. Simple points ignore the order.
+
+The caller supplies the order and blending policy. For ordinary alpha blending,
+sort from back to front. This option does not change the default translucent
+pass or perform sorting. Each attribute and the order must fit within the
+device's maximum two-dimensional texture size.
+
 A vertex shader template set through `ViewSpecificProperties` must match the
 mode: splats need the tags and outputs of `glsl/vtkPointGaussianVS.glsl`,
 simple points those of the polydata vertex shader.
+Indexed splats also require the `PointOrder::Dec` and `PointOrder::Impl` tags.
 
 ### getNumberOfDrawnPoints()
 

@@ -38,7 +38,7 @@ function vtkPointGaussianMapper(publicAPI, model) {
   publicAPI.getMTime = () =>
     Math.max(
       superClass.getMTime(),
-      ...[model.scaleFunction, model.scalarOpacityFunction]
+      ...[model.scaleFunction, model.scalarOpacityFunction, model.pointOrder]
         .filter(Boolean)
         .map((piecewiseFunction) => piecewiseFunction.getMTime())
     );
@@ -115,6 +115,7 @@ function defaultValues(initialValues) {
     anisotropic: false,
     rotationArray: null,
     lowpassMatrix: [0, 0, 0],
+    pointOrder: null,
     ...initialValues,
   };
 }
@@ -142,6 +143,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     'boundScale',
     'anisotropic',
     'rotationArray',
+    'pointOrder',
   ]);
   macro.setGetArray(publicAPI, model, ['lowpassMatrix'], 3);
 
