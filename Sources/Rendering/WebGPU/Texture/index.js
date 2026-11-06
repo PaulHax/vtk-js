@@ -5,6 +5,7 @@ import vtkWebGPUTypes from 'vtk.js/Sources/Rendering/WebGPU/Types';
 import vtkTexture from 'vtk.js/Sources/Rendering/Core/Texture';
 
 const { vtkErrorMacro } = macro;
+const MAX_FINITE_HALF_FLOAT = 65504;
 
 // ----------------------------------------------------------------------------
 // Global methods
@@ -153,9 +154,14 @@ function vtkWebGPUTexture(publicAPI, model) {
             sourceX * tDetails.numComponents;
           const outOffset = row * alignedRowElements;
           for (let i = 0; i < expectedRowElements; i++) {
-            outArray[outOffset + i] = HalfFloat.toHalf(
-              inputArray[inOffset + i]
-            );
+            const value = inputArray[inOffset + i];
+            const uploadValue = Number.isFinite(value)
+              ? Math.max(
+                  -MAX_FINITE_HALF_FLOAT,
+                  Math.min(value, MAX_FINITE_HALF_FLOAT)
+                )
+              : value;
+            outArray[outOffset + i] = HalfFloat.toHalf(uploadValue);
           }
         }
       }
