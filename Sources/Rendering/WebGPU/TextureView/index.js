@@ -10,9 +10,10 @@ import vtkWebGPUTypes from 'vtk.js/Sources/Rendering/WebGPU/Types';
 
 // Bind group validation requires `float` for an r32float texture when the
 // optional float32 filtering feature permits a filter sampler.
-function getLayoutSampleType(sampleType, device) {
+function getLayoutSampleType({ sampleType, elementSize }, device) {
   if (
     sampleType === 'unfilterable-float' &&
+    elementSize === 4 &&
     device?.hasFeature('float32-filterable')
   ) {
     return 'float';
@@ -38,7 +39,7 @@ function vtkWebGPUTextureView(publicAPI, model) {
       model.texture.getFormat()
     );
     model.bindGroupLayoutEntry.texture.sampleType = getLayoutSampleType(
-      tDetails.sampleType,
+      tDetails,
       model.texture.getDevice()
     );
   };

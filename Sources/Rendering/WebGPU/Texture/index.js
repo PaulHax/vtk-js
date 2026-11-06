@@ -28,17 +28,17 @@ function vtkWebGPUTexture(publicAPI, model) {
       return 'Uint16Array';
     }
 
-    if (model.format.endsWith('snorm')) {
-      if (tDetails.elementSize === 1) return 'Int8Array';
-      if (tDetails.elementSize === 2) return 'Int16Array';
+    if (
+      model.format.endsWith('snorm') ||
+      tDetails.sampleType === 'unfilterable-float'
+    ) {
+      return tDetails.nativeType.name;
     }
 
     if (tDetails.sampleType === 'sint') {
       if (tDetails.elementSize === 1) return 'Int8Array';
       if (tDetails.elementSize === 2) return 'Int16Array';
       if (tDetails.elementSize === 4) return 'Int32Array';
-    } else if (tDetails.sampleType === 'unfilterable-float') {
-      if (tDetails.elementSize === 4) return 'Float32Array';
     } else {
       if (tDetails.elementSize === 1) return 'Uint8Array';
       if (tDetails.elementSize === 2) return 'Uint16Array';
