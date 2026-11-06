@@ -54,15 +54,16 @@ function vtkWebGPUTextureManager(publicAPI, model) {
 
   // The state has two parts. The first part is valid for one scalar mtime.
   // The second part stays for the life of the data array:
+  //  - scalarOffset is fixed once selected so patches can reuse a texture.
   //  - promotedFormat is the 32 bit float format that an accurate texture of
   //    this array uses after its values stopped fitting half float. All
   //    mappers of the array then use this format and can share one texture.
   //  - liveTextures holds the most recent texture for each format, mip level
   //    and usage. A full upload writes into this texture instead of a new
   //    allocation.
-  function _getScalarState(scalars) {
+  function _getScalarState(scalars, states = model.scalarFormats) {
     const scalarMTime = scalars.getMTime();
-    let state = model.scalarFormats.get(scalars);
+    let state = states.get(scalars);
     if (state?.scalarMTime !== scalarMTime) {
       state = {
         contentTime: undefined,
@@ -70,34 +71,39 @@ function vtkWebGPUTextureManager(publicAPI, model) {
         halfFloatFitVersion: -1,
         formats: [],
         scalarMTime,
+        scalarOffset: state?.scalarOffset,
+        verifiedTexture: state?.verifiedTexture,
         promotedFormat: state?.promotedFormat ?? null,
         liveTextures: state?.liveTextures ?? new Map(),
       };
-      model.scalarFormats.set(scalars, state);
+      states.set(scalars, state);
     }
     return state;
   }
 
-  function _getPromotedFormat(scalars, preferSizeOverAccuracy) {
+  function _getPromotedFormat({
+    scalarState: state,
+    dataArray,
+    preferSizeOverAccuracy,
+  }) {
     if (preferSizeOverAccuracy) {
       return null;
     }
-    const state = _getScalarState(scalars);
     if (
       state.promotedFormat &&
-      !_formatMatchesDataArray(state.promotedFormat, scalars)
+      !_formatMatchesDataArray(state.promotedFormat, dataArray)
     ) {
       state.promotedFormat = null;
     }
     return state.promotedFormat;
   }
 
-  function _getCachedScalarFormat(scalars, preferSizeOverAccuracy) {
-    const promotedFormat = _getPromotedFormat(scalars, preferSizeOverAccuracy);
+  function _getCachedScalarFormat(req) {
+    const { scalarState: state, preferSizeOverAccuracy } = req;
+    const promotedFormat = _getPromotedFormat(req);
     if (promotedFormat) {
       return promotedFormat;
     }
-    const state = _getScalarState(scalars);
     const formatIndex = preferSizeOverAccuracy ? 1 : 0;
     const format = state.formats[formatIndex] ?? null;
     const formatNeedsHalfFloatFit =
@@ -111,8 +117,11 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     return format;
   }
 
-  function _cacheScalarFormat(scalars, format, preferSizeOverAccuracy) {
-    const state = _getScalarState(scalars);
+  function _cacheScalarFormat({
+    scalarState: state,
+    format,
+    preferSizeOverAccuracy,
+  }) {
     const formatIndex = preferSizeOverAccuracy ? 1 : 0;
     state.formats[formatIndex] = format;
     if (!preferSizeOverAccuracy && format.endsWith('32float')) {
@@ -120,8 +129,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     }
   }
 
-  function _updateContentState(scalars, contentTime) {
-    const state = _getScalarState(scalars);
+  function _updateContentState(state, contentTime) {
     const previousContentFitsHalfFloat =
       state.halfFloatFitVersion === state.contentVersion;
     if (state.contentTime !== contentTime) {
@@ -129,10 +137,6 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       state.contentVersion++;
     }
     return { previousContentFitsHalfFloat, version: state.contentVersion };
-  }
-
-  function _markHalfFloatFit(scalars, version) {
-    _getScalarState(scalars).halfFloatFitVersion = version;
   }
 
   function _formatMatchesDataArray(format, dataArray) {
@@ -157,20 +161,26 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     return format.endsWith('16float') || format.endsWith('32float');
   }
 
-  function _dataArrayFitsHalfFloat(dataArray) {
+  function _dataArrayFitsHalfFloat(dataArray, offset = 0) {
+    const min = offset - HALF_FLOAT_EXACT_INTEGER_LIMIT;
+    const max = offset + HALF_FLOAT_EXACT_INTEGER_LIMIT;
     const values = dataArray.getData();
     for (let i = 0; i < values.length; i++) {
-      if (
-        values[i] < -HALF_FLOAT_EXACT_INTEGER_LIMIT ||
-        values[i] > HALF_FLOAT_EXACT_INTEGER_LIMIT
-      ) {
+      if (values[i] < min || values[i] > max) {
         return false;
       }
     }
     return true;
   }
 
-  function _updatedExtentsFitHalfFloat(dataArray, dimensions, extents) {
+  function _updatedExtentsFitHalfFloat(
+    dataArray,
+    dimensions,
+    extents,
+    offset = 0
+  ) {
+    const min = offset - HALF_FLOAT_EXACT_INTEGER_LIMIT;
+    const max = offset + HALF_FLOAT_EXACT_INTEGER_LIMIT;
     const values = dataArray.getData();
     const numberOfComponents = dataArray.getNumberOfComponents();
     const rowLength = dimensions[0] * numberOfComponents;
@@ -185,10 +195,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
             z * sliceLength + y * rowLength + xmin * numberOfComponents;
           const end = start + extentRowLength;
           for (let i = start; i < end; i++) {
-            if (
-              values[i] < -HALF_FLOAT_EXACT_INTEGER_LIMIT ||
-              values[i] > HALF_FLOAT_EXACT_INTEGER_LIMIT
-            ) {
+            if (values[i] < min || values[i] > max) {
               return false;
             }
           }
@@ -220,7 +227,24 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       !req.preferSizeOverAccuracy &&
       model.device.hasFeature('float32-filterable')
     ) {
-      req.fitsHalfFloat = _dataArrayFitsHalfFloat(req.dataArray);
+      if (req.allowScalarOffset && req.scalarState.scalarOffset === undefined) {
+        // Read the values directly because imageData.modified() also permits
+        // in-place edits that do not invalidate the scalar array's range cache.
+        const { min, max } = vtkDataArray.computeRange(req.dataArray.getData());
+        req.fitsHalfFloat = max - min <= 2 * HALF_FLOAT_EXACT_INTEGER_LIMIT;
+        if (req.fitsHalfFloat) {
+          req.scalarState.scalarOffset =
+            min >= -HALF_FLOAT_EXACT_INTEGER_LIMIT &&
+            max <= HALF_FLOAT_EXACT_INTEGER_LIMIT
+              ? 0
+              : Math.floor((min + max) / 2);
+        }
+      } else {
+        req.fitsHalfFloat = _dataArrayFitsHalfFloat(
+          req.dataArray,
+          req.scalarState?.scalarOffset
+        );
+      }
       return req.fitsHalfFloat ? '16float' : '32float';
     }
 
@@ -231,7 +255,6 @@ function vtkWebGPUTextureManager(publicAPI, model) {
   function _fillRequest(req) {
     // fill in values based on imageData if the request has it
     if (req.imageData) {
-      req.dataArray = req.imageData.getPointData().getScalars();
       req.time = req.dataArray.getMTime();
       req.nativeArray = req.dataArray.getData();
       const dims = req.imageData.getDimensions();
@@ -353,6 +376,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       height: req.height,
       depth: req.depth,
       format: req.format,
+      scalarOffset: _scalarOffset(req),
       usage: req.usage,
       mipLevel: req.mipLevel,
     });
@@ -370,6 +394,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     return (
       !!texture?.getHandle?.() &&
       texture.getFormat() === req.format &&
+      (texture.getScalarOffset?.() ?? 0) === _scalarOffset(req) &&
       texture.getWidth() === req.width &&
       texture.getHeight() === req.height &&
       texture.getDepth() === req.depth &&
@@ -459,8 +484,14 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     _releaseUse(texture);
   };
 
+  function _scalarOffset({ format, scalarState }) {
+    return format === 'r16float' ? (scalarState?.scalarOffset ?? 0) : 0;
+  }
+
   function _liveTextureKey(req) {
-    return `${req.format}:${req.mipLevel ?? 0}:${req.usage}`;
+    const key = `${req.format}:${req.mipLevel ?? 0}:${req.usage}`;
+    const offset = _scalarOffset(req);
+    return offset ? `${key}:${offset}` : key;
   }
 
   // Write the full image into the most recent texture of the data array, if
@@ -501,26 +532,47 @@ function vtkWebGPUTextureManager(publicAPI, model) {
 
   function _getTextureForImageData(imgData, options) {
     const treq = { time: imgData.getMTime() };
-    const { updatedExtents, existingTexture } = options;
+    const { updatedExtents } = options;
+    let { existingTexture } = options;
     treq.imageData = imgData;
     treq.preferSizeOverAccuracy = !!options.preferSizeOverAccuracy;
     const scalars = imgData.getPointData().getScalars();
-    const { previousContentFitsHalfFloat, version } = _updateContentState(
+    treq.dataArray = scalars;
+    const dataType = scalars.getDataType();
+    treq.allowScalarOffset =
+      options.allowScalarOffset &&
+      !treq.preferSizeOverAccuracy &&
+      scalars.getNumberOfComponents() === 1 &&
+      (dataType === VtkDataTypes.SHORT ||
+        dataType === VtkDataTypes.UNSIGNED_SHORT);
+    const state = _getScalarState(
       scalars,
+      treq.allowScalarOffset ? model.offsetScalarFormats : model.scalarFormats
+    );
+    treq.scalarState = state;
+    if (existingTexture && updatedExtents?.length) {
+      // A compact texture can contain rounded values outside the patch.
+      // Only patch a texture previously checked for this scalar array.
+      if (
+        treq.allowScalarOffset
+          ? state.verifiedTexture?.deref() !== existingTexture
+          : existingTexture.getScalarOffset?.()
+      ) {
+        existingTexture = null;
+      }
+    }
+    const { previousContentFitsHalfFloat, version } = _updateContentState(
+      state,
       imgData.getMTime()
     );
     if (updatedExtents?.length && existingTexture) {
       const existingFormat = existingTexture.getFormat();
-      const promotedFormat = _getPromotedFormat(
-        scalars,
-        treq.preferSizeOverAccuracy
-      );
+      const promotedFormat = _getPromotedFormat(treq);
       if (promotedFormat && promotedFormat !== existingFormat) {
         // A different texture of this array already uses float32. Use the
         // same format, so that the request can share that texture.
         treq.forceFloat32 = true;
       } else if (_formatMatchesDataArray(existingFormat, scalars)) {
-        const dataType = scalars.getDataType();
         const canPromoteToFloat32 =
           !treq.preferSizeOverAccuracy &&
           dataType !== VtkDataTypes.UNSIGNED_CHAR &&
@@ -532,7 +584,8 @@ function vtkWebGPUTextureManager(publicAPI, model) {
           _updatedExtentsFitHalfFloat(
             scalars,
             imgData.getDimensions(),
-            updatedExtents
+            updatedExtents,
+            state.scalarOffset
           );
         if (!updatedExtentsFitHalfFloat) {
           treq.forceFloat32 = true;
@@ -544,10 +597,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
         }
       }
     } else {
-      treq.existingFormat = _getCachedScalarFormat(
-        imgData.getPointData().getScalars(),
-        treq.preferSizeOverAccuracy
-      );
+      treq.existingFormat = _getCachedScalarFormat(treq);
     }
     // fill out the req time and format based on imageData/image
     _fillRequest(treq);
@@ -576,7 +626,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       /* eslint-enable no-bitwise */
     }
 
-    treq.hash = `${treq.time}:${treq.format}:${treq.mipLevel ?? 0}:${treq.usage}`;
+    treq.hash = `${treq.time}:${_liveTextureKey(treq)}`;
 
     const cachedTexture = model.device.hasCachedObject(treq.hash);
     let patchTexture = existingTexture;
@@ -591,13 +641,9 @@ function vtkWebGPUTextureManager(publicAPI, model) {
         model.device.getCachedObject(treq.hash, () => patchTexture);
       }
       if (writeSucceeded) {
-        _cacheScalarFormat(
-          treq.dataArray,
-          treq.format,
-          treq.preferSizeOverAccuracy
-        );
+        _cacheScalarFormat(treq);
         if (treq.fitsHalfFloat) {
-          _markHalfFloatFit(treq.dataArray, version);
+          state.halfFloatFitVersion = version;
         }
         _setLiveTexture(treq, patchTexture);
         return patchTexture;
@@ -610,17 +656,13 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       treq.format =
         _formatPrefix(treq.dataArray.getNumberOfComponents()) +
         _scalarFormatSuffix(treq);
-      treq.hash = `${treq.time}:${treq.format}:${treq.mipLevel ?? 0}:${treq.usage}`;
+      treq.hash = `${treq.time}:${_liveTextureKey(treq)}`;
     }
 
-    _cacheScalarFormat(
-      treq.dataArray,
-      treq.format,
-      treq.preferSizeOverAccuracy
-    );
+    _cacheScalarFormat(treq);
 
     if (treq.fitsHalfFloat) {
-      _markHalfFloatFit(treq.dataArray, version);
+      state.halfFloatFitVersion = version;
     }
 
     const cachedResult = model.device.hasCachedObject(treq.hash);
@@ -652,6 +694,24 @@ function vtkWebGPUTextureManager(publicAPI, model) {
   publicAPI.getTextureForImageData = (imgData, options = {}) => {
     const texture = _getTextureForImageData(imgData, options);
     if (texture && typeof texture === 'object') {
+      const state = model.offsetScalarFormats.get(
+        imgData.getPointData().getScalars()
+      );
+      if (
+        state &&
+        (options.allowScalarOffset || options.preferSizeOverAccuracy)
+      ) {
+        const verified = state.verifiedTexture?.deref();
+        if (options.preferSizeOverAccuracy && verified === texture) {
+          state.verifiedTexture = null;
+        } else if (
+          options.allowScalarOffset &&
+          !options.preferSizeOverAccuracy &&
+          verified !== texture
+        ) {
+          state.verifiedTexture = new WeakRef(texture);
+        }
+      }
       if (options.owner) {
         _acquireTexture(options.owner, texture);
       } else {
@@ -665,10 +725,9 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     const treq = { time: srcTexture.getMTime(), label };
     if (srcTexture.getInputData()) {
       treq.imageData = srcTexture.getInputData();
-      treq.existingFormat = _getCachedScalarFormat(
-        treq.imageData.getPointData().getScalars(),
-        false
-      );
+      treq.dataArray = treq.imageData.getPointData().getScalars();
+      treq.scalarState = _getScalarState(treq.dataArray);
+      treq.existingFormat = _getCachedScalarFormat(treq);
     } else if (srcTexture.getImage()) {
       treq.image = srcTexture.getImage();
     } else if (srcTexture.getJsImageData()) {
@@ -681,7 +740,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     // fill out the req time and format based on imageData/image
     _fillRequest(treq);
     if (treq.imageData) {
-      _cacheScalarFormat(treq.dataArray, treq.format, false);
+      _cacheScalarFormat(treq);
     }
     // _fillRequest derives the cache hash from the scalar array mtime alone,
     // discarding the texture mtime seeded above. A texture rebuild must also
@@ -692,7 +751,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       treq.time = Math.max(treq.time, treq.imageData.getMTime());
     }
     treq.mipLevel = srcTexture.getMipLevel();
-    treq.hash = `${treq.time}:${treq.format}:${treq.mipLevel ?? 0}:${treq.usage}`;
+    treq.hash = `${treq.time}:${_liveTextureKey(treq)}`;
     const texture = model.device.getTextureManager().getTexture(treq);
     if (texture && typeof texture === 'object') {
       model.unownedTextures.add(texture);
@@ -709,6 +768,7 @@ const DEFAULT_VALUES = {
   handle: null,
   device: null,
   scalarFormats: null,
+  offsetScalarFormats: null,
   textureOwners: null,
   textureUseCounts: null,
   unownedTextures: null,
@@ -719,6 +779,7 @@ const DEFAULT_VALUES = {
 export function extend(publicAPI, model, initialValues = {}) {
   Object.assign(model, DEFAULT_VALUES, initialValues);
   model.scalarFormats = new WeakMap();
+  model.offsetScalarFormats = new WeakMap();
   model.textureOwners = new WeakMap();
   model.textureUseCounts = new Map();
   model.unownedTextures = new WeakSet();

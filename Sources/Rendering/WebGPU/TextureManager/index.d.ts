@@ -57,6 +57,8 @@ export type WebGPUImageDataTextureOptions = {
    * Allow half float storage even when it cannot represent all scalar values.
    */
   preferSizeOverAccuracy?: boolean;
+  /** Permit offset encoding for scalar data. The caller must decode getScalarOffset(). */
+  allowScalarOffset?: boolean;
   generateMipmaps?: boolean;
   /**
    * A key for one texture binding. Release it when the binding is no longer used.
