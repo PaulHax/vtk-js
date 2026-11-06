@@ -34,7 +34,7 @@ const volFragTemplate = `
 
 //VTK::IOStructs::Dec
 
-fn getTextureValue(vTex: texture_3d<f32>, tpos: vec4<f32>, vNum: i32) -> vec4<f32>
+fn sampleVolume(vTex: texture_3d<f32>, tpos: vec4<f32>, vNum: i32) -> vec4<f32>
 {
   let forceNearestMask = i32(volumeSSBO.values[vNum].componentInfo.w);
   if (forceNearestMask == 0)
@@ -60,6 +60,13 @@ fn getTextureValue(vTex: texture_3d<f32>, tpos: vec4<f32>, vNum: i32) -> vec4<f3
   if ((forceNearestMask & 4) != 0) { value.z = nearestValue.z; }
   if ((forceNearestMask & 8) != 0) { value.w = nearestValue.w; }
 
+  return value;
+}
+
+fn getTextureValue(vTex: texture_3d<f32>, tpos: vec4<f32>, vNum: i32) -> vec4<f32>
+{
+  var value = sampleVolume(vTex, tpos, vNum);
+  value.x += volumeSSBO.values[vNum].textureScaleOffset.y;
   return value;
 }
 
@@ -168,7 +175,6 @@ fn labelFragToTPos(vNum: i32, tcoord: vec2<f32>, fragZ: f32) -> vec4<f32>
 // Screen space label outline compare the segment under this fragment with the
 // segments under its screen neighbors within the per segment thickness;
 // any mismatch means we are on an edge and the outline color is emitted.
-// labelOutline = (useLabelOutline, outlineOpacity, textureScale, unused)
 fn getColorForLabelOutline(vTex: texture_3d<f32>, tcoord: vec2<f32>, fragZ: f32, vNum: i32, rowStart: i32, tfunRows: f32) -> vec4<f32>
 {
   let centerTPos = labelFragToTPos(vNum, tcoord, fragZ);
@@ -182,7 +188,7 @@ fn getColorForLabelOutline(vTex: texture_3d<f32>, tcoord: vec2<f32>, fragZ: f32,
 
   let centerValue = getTextureValue(vTex, centerTPos, vNum);
   // recover the raw label value from the normalized texture sample
-  let segmentIndex = i32(round(centerValue.r * volumeSSBO.values[vNum].labelOutline.z));
+  let segmentIndex = i32(round(centerValue.r * volumeSSBO.values[vNum].textureScaleOffset.x));
   if (segmentIndex == 0)
   {
     return vec4<f32>(0.0);
@@ -1638,7 +1644,7 @@ fn labelEdgeNeighborMissesSegment(
   vTex: texture_3d<f32>, vNum: i32, segmentIndex: i32,
   minPosSC: vec4<f32>, rayStepSC: vec4<f32>, numSteps: f32) -> bool
 {
-  let labelScale: f32 = volumeSSBO.values[vNum].labelOutline.z;
+  let labelScale: f32 = volumeSSBO.values[vNum].textureScaleOffset.x;
   var tpos: vec4<f32> = volumeSSBO.values[vNum].SCTCMatrix * minPosSC;
   let tpos2: vec4<f32> = volumeSSBO.values[vNum].SCTCMatrix * (minPosSC + rayStepSC);
   let tstep: vec4<f32> = tpos2 - tpos;
@@ -1688,7 +1694,7 @@ fn traverseLabelEdge(vTex: texture_3d<f32>, vNum: i32, rowIdx: i32, segRowIdx: i
 
   let tfunRows: f32 = f32(textureDimensions(tfunTexture).y);
   // scale to recover the raw label value from the normalized sample
-  let labelScale: f32 = volumeSSBO.values[vNum].labelOutline.z;
+  let labelScale: f32 = volumeSSBO.values[vNum].textureScaleOffset.x;
 
   // clear the segment bitmask (private vars are zero initialized once per
   // invocation, but several volumes can share this blend mode)
@@ -2447,6 +2453,7 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
         mtime,
         vol.getMTime(),
         image.getMTime(),
+        model.textureViews[i + 4].getTexture().getMTime(),
         volMapr.getMTime(),
         volMapr.getClippingPlanesMTime(),
         vprop.getMTime()
@@ -2501,7 +2508,8 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
     const ipScalarRangeMinArray = new Float64Array(model.volumes.length * 4);
     const ipScalarRangeMaxArray = new Float64Array(model.volumes.length * 4);
     const componentInfoArray = new Float64Array(model.volumes.length * 4);
-    const labelOutlineArray = new Float64Array(model.volumes.length * 4);
+    const textureScaleOffsetArray = new Float32Array(model.volumes.length * 2);
+    const labelOutlineArray = new Float64Array(model.volumes.length * 2);
     const colorScaleArray = new Float64Array(model.volumes.length * 4);
     const colorShiftArray = new Float64Array(model.volumes.length * 4);
     const opacityScaleArray = new Float64Array(model.volumes.length * 4);
@@ -2611,7 +2619,10 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
       spacingArray[vidx * 4 + 3] = 1.0;
 
       // handle filteringMode
-      const tScale = model.textureViews[vidx + 4].getTexture().getScale();
+      const texture = model.textureViews[vidx + 4].getTexture();
+      const tScale = texture.getScale();
+      textureScaleOffsetArray[vidx * 2] = tScale;
+      textureScaleOffsetArray[vidx * 2 + 1] = texture.getScalarOffset();
       const ipScalarRange = actor.getProperty().getIpScalarRange();
       const filterMode = actor.getProperty().getFilterMode();
       for (let component = 0; component < numComp; component++) {
@@ -2649,15 +2660,11 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
       }
       componentInfoArray[vidx * 4 + 3] = forceNearestMask;
 
-      // labelOutline = (useLabelOutline, outlineOpacity, textureScale, unused)
-      labelOutlineArray[vidx * 4] = vprop.getUseLabelOutline() ? 1.0 : 0.0;
+      labelOutlineArray[vidx * 2] = vprop.getUseLabelOutline() ? 1.0 : 0.0;
       const labelOutlineOpacity = vprop.getLabelOutlineOpacity();
-      labelOutlineArray[vidx * 4 + 1] = Array.isArray(labelOutlineOpacity)
+      labelOutlineArray[vidx * 2 + 1] = Array.isArray(labelOutlineOpacity)
         ? (labelOutlineOpacity[0] ?? 1.0)
         : labelOutlineOpacity;
-      // scale to recover the raw label value from the normalized sample
-      labelOutlineArray[vidx * 4 + 2] = tScale;
-      labelOutlineArray[vidx * 4 + 3] = 0.0;
 
       for (let component = 0; component < numComp; component++) {
         const sscale = tScale;
@@ -2708,7 +2715,8 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
       model.SSBO.addEntry('ipScalarRangeMin', 'vec4<f32>');
       model.SSBO.addEntry('ipScalarRangeMax', 'vec4<f32>');
       model.SSBO.addEntry('componentInfo', 'vec4<f32>');
-      model.SSBO.addEntry('labelOutline', 'vec4<f32>');
+      model.SSBO.addEntry('textureScaleOffset', 'vec2<f32>');
+      model.SSBO.addEntry('labelOutline', 'vec2<f32>');
       model.SSBO.addEntry('colorScale', 'vec4<f32>');
       model.SSBO.addEntry('colorShift', 'vec4<f32>');
       model.SSBO.addEntry('opacityScale', 'vec4<f32>');
@@ -2735,6 +2743,10 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
       ipScalarRangeMaxArray
     );
     model.SSBO.setAllInstancesFromArray('componentInfo', componentInfoArray);
+    model.SSBO.setAllInstancesFromArray(
+      'textureScaleOffset',
+      textureScaleOffsetArray
+    );
     model.SSBO.setAllInstancesFromArray('labelOutline', labelOutlineArray);
     model.SSBO.setAllInstancesFromArray('colorScale', colorScaleArray);
     model.SSBO.setAllInstancesFromArray('colorShift', colorShiftArray);
@@ -2996,6 +3008,7 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
           updatedExtents,
           existingTexture,
           preferSizeOverAccuracy,
+          allowScalarOffset: true,
           owner: webgpuvol,
         });
       if (updatedExtents.length) {

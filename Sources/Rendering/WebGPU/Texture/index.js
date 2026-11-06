@@ -143,6 +143,7 @@ function vtkWebGPUTexture(publicAPI, model) {
 
     // Select, convert, and pad each source row in one pass.
     if (halfFloat) {
+      const { scalarOffset } = model;
       for (let z = 0; z < depth; z++) {
         const sourceSliceOffset = (sourceZ + z) * sourceSliceElements;
         for (let y = 0; y < height; y++) {
@@ -154,7 +155,7 @@ function vtkWebGPUTexture(publicAPI, model) {
           const outOffset = row * alignedRowElements;
           for (let i = 0; i < expectedRowElements; i++) {
             outArray[outOffset + i] = HalfFloat.toHalf(
-              inputArray[inOffset + i]
+              inputArray[inOffset + i] - scalarOffset
             );
           }
         }
@@ -224,6 +225,8 @@ function vtkWebGPUTexture(publicAPI, model) {
       model.dimension = model.depth === 1 ? '2d' : '3d';
     }
     model.format = options.format ? options.format : 'rgba8unorm';
+    model.scalarOffset =
+      model.format === 'r16float' ? (options.scalarOffset ?? 0) : 0;
     model.mipLevel = options.mipLevel
       ? Math.min(
           options.mipLevel,
@@ -269,6 +272,8 @@ function vtkWebGPUTexture(publicAPI, model) {
       model.dimension = model.depth === 1 ? '2d' : '3d';
     }
     model.format = options.format ? options.format : 'rgba8unorm';
+    model.scalarOffset =
+      model.format === 'r16float' ? (options.scalarOffset ?? 0) : 0;
     /* eslint-disable no-undef */
     /* eslint-disable no-bitwise */
     model.usage = options.usage
@@ -555,6 +560,7 @@ const DEFAULT_VALUES = {
   ready: false,
   label: null,
   sampleCount: 1,
+  scalarOffset: 0,
 };
 
 // ----------------------------------------------------------------------------
@@ -576,6 +582,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     'mipLevel',
     'usage',
     'sampleCount',
+    'scalarOffset',
   ]);
   macro.setGet(publicAPI, model, ['_device', 'label']);
 
