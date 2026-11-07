@@ -26,8 +26,10 @@ export interface IWebGPUTextureCreateOptions {
    * Defaults to 'rgba8unorm'.
    */
   format?: GPUTextureFormat;
-  /** Integer offset subtracted when uploading scalar values to r16float. */
+  /** Offset subtracted before dividing scalar values by scalarScale for r16float. */
   scalarOffset?: number;
+  /** Positive scalar encoding divisor for r16float. Defaults to 1. */
+  scalarScale?: number;
 
   /**
    * The highest mip level to allocate. Defaults to 0, a single level.
@@ -169,8 +171,11 @@ export interface vtkWebGPUTexture extends vtkObject {
    */
   getScale(): number;
 
-  /** Offset to add to the scaled sample to recover the source scalar. */
+  /** Offset to add after multiplying the sample by getScalarScale(). */
   getScalarOffset(): number;
+
+  /** Multiply the sample by this value before adding getScalarOffset(). */
+  getScalarScale(): number;
 
   /**
    * The number of components a texel of this texture's format holds.

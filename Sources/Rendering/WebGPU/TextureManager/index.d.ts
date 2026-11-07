@@ -57,8 +57,13 @@ export type WebGPUImageDataTextureOptions = {
    * Allow half float storage even when it cannot represent all scalar values.
    */
   preferSizeOverAccuracy?: boolean;
-  /** Permit offset encoding for scalar data. The caller must decode getScalarOffset(). */
-  allowScalarOffset?: boolean;
+  /**
+   * Permit encoding for single-component Int16/Uint16 scalars. Decode samples
+   * as sample * getScalarScale() + getScalarOffset(). Accurate storage uses
+   * exact integer offsets; compact storage normalizes the range to [-1, 1]
+   * with half-float rounding and rewrites the texture when the range expands.
+   */
+  allowScalarEncoding?: boolean;
   generateMipmaps?: boolean;
   /**
    * A key for one texture binding. Release it when the binding is no longer used.
