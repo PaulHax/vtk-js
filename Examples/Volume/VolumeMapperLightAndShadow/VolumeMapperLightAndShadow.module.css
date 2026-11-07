@@ -1,0 +1,31 @@
+.logo {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  pointer-events: none;
+}
+
+.transferFunctionControls {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  max-height: calc(100% - 10px);
+  --width: min(400px, calc(100% - 10px));
+  --name-width: 32%;
+}
+
+.transferTitle,
+.sliderLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.transferTitle::before {
+  order: 1;
+  margin-left: auto;
+}
+
+.sliderLabel img {
+  filter: invert(1);
+}

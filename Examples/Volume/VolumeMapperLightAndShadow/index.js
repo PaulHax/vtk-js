@@ -4,12 +4,16 @@ import '@kitware/vtk.js/IO/Core/DataAccessHelper/HttpDataAccessHelper';
 import '@kitware/vtk.js/Rendering/Profiles/Volume';
 import '@kitware/vtk.js/Rendering/Profiles/Geometry';
 import vtkColorTransferFunction from '@kitware/vtk.js/Rendering/Core/ColorTransferFunction';
+import vtkColorMaps from '@kitware/vtk.js/Rendering/Core/ColorTransferFunction/ColorMapsLite';
 import vtkFullScreenRenderWindow from '@kitware/vtk.js/Rendering/Misc/FullScreenRenderWindow';
 import vtkPiecewiseFunction from '@kitware/vtk.js/Common/DataModel/PiecewiseFunction';
 import vtkVolume from '@kitware/vtk.js/Rendering/Core/Volume';
 import vtkVolumeMapper from '@kitware/vtk.js/Rendering/Core/VolumeMapper';
 import vtkLight from '@kitware/vtk.js/Rendering/Core/Light';
 import vtkVolumeController from '@kitware/vtk.js/Interaction/UI/VolumeController';
+import spacingIcon from '@kitware/vtk.js/Interaction/UI/Icons/Spacing.svg?url';
+import contrastIcon from '@kitware/vtk.js/Interaction/UI/Icons/Contrast.svg?url';
+import logo from '@kitware/vtk.js/Interaction/UI/Icons/Logo.svg?url';
 import vtkBoundingBox from '@kitware/vtk.js/Common/DataModel/BoundingBox';
 import vtkFPSMonitor from '@kitware/vtk.js/Interaction/UI/FPSMonitor';
 import vtkHttpDataSetReader from '@kitware/vtk.js/IO/Core/HttpDataSetReader';
@@ -19,6 +23,7 @@ import vtkSphereSource from '@kitware/vtk.js/Filters/Sources/SphereSource';
 import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
 
 import GUI from 'lil-gui';
+import style from './VolumeMapperLightAndShadow.module.css';
 
 // ----------------------------------------------------------------------------
 // Show loading progress bar
@@ -30,13 +35,53 @@ const fpsMonitor = vtkFPSMonitor.newInstance();
 const progressContainer = document.createElement('div');
 myContainer.appendChild(progressContainer);
 
+const gui = new GUI();
+const rendererURL = new URL(window.location.href);
+const nextRenderer =
+  rendererURL.searchParams.get('viewAPI') === 'WebGPU' ? 'WebGL' : 'WebGPU';
+rendererURL.searchParams.set('viewAPI', nextRenderer);
+gui
+  .add(
+    { switchRenderer: () => window.location.assign(rendererURL.href) },
+    'switchRenderer'
+  )
+  .name(`Switch to ${nextRenderer}`);
+
+// ----------------------------------------------------------------------------
+// Transfer-function controls
+// ----------------------------------------------------------------------------
+function prependIcon(label, src) {
+  const icon = new Image(16, 16);
+  icon.alt = '';
+  icon.src = src;
+  label.prepend(icon);
+}
+
+function addTransferFunctionControls(panel, controls) {
+  panel
+    .add(controls, 'presetName', vtkColorMaps.rgbPresetNames)
+    .name('Color Map')
+    .onChange(controls.setPreset);
+
+  function addSlider(property, label, icon, onChange) {
+    const slider = panel.add(controls, property, 0, 1, 0.01).name(label);
+    slider.onChange(onChange);
+    slider.$name.classList.add(style.sliderLabel);
+    prependIcon(slider.$name, icon);
+  }
+
+  addSlider('spacing', 'Spacing', spacingIcon, controls.setSpacing);
+  addSlider('contrast', 'Contrast', contrastIcon, controls.setContrast);
+}
+
 // ----------------------------------------------------------------------------
 // Main function to set up and render volume
 // ----------------------------------------------------------------------------
 function createVolumeShadowViewer(rootContainer, reader, imageData) {
   // Container content and style
   const background = [0, 0, 0];
-  const containerStyle = { height: '100%', width: '100%' };
+  // Stretch the canvas to the viewport independently of its rounded pixel buffer.
+  const containerStyle = { display: 'flex', height: '100%', width: '100%' };
   const controlPanelStyle = {
     position: 'absolute',
     left: '5px',
@@ -59,11 +104,15 @@ function createVolumeShadowViewer(rootContainer, reader, imageData) {
     controlPanelStyle,
   });
 
-  const gui = new GUI();
-
   const renderer = fullScreenRenderer.getRenderer();
   renderer.setTwoSidedLighting(false);
   const renderWindow = fullScreenRenderer.getRenderWindow();
+
+  const logoImage = new Image(48, 48);
+  logoImage.src = logo;
+  logoImage.alt = 'vtk.js';
+  logoImage.className = style.logo;
+  rootContainer.appendChild(logoImage);
 
   // FPS monitor
   const fpsElm = fpsMonitor.getFpsMonitorContainer();
@@ -72,6 +121,7 @@ function createVolumeShadowViewer(rootContainer, reader, imageData) {
   fpsElm.style.bottom = '10px';
   fpsElm.style.background = 'rgba(255,255,255,0.5)';
   fpsElm.style.borderRadius = '5px';
+  fpsElm.style.font = getComputedStyle(gui.domElement).font;
   fpsMonitor.setContainer(rootContainer);
   fpsMonitor.setRenderWindow(renderWindow);
 
@@ -148,27 +198,25 @@ function createVolumeShadowViewer(rootContainer, reader, imageData) {
   actorProperty.setUseLabelOutline(false);
   actorProperty.setLabelOutlineThickness(2);
 
-  // Control UI for sample distance, transfer function, and shadow on/off
+  // Control UI for sample distance and transfer function
+  const transferPanel = new GUI({
+    container: rootContainer,
+    title: 'Transfer Function',
+  });
+  transferPanel.domElement.classList.add(style.transferFunctionControls);
+  transferPanel.$title.classList.add(style.transferTitle);
   const controllerWidget = vtkVolumeController.newInstance({
     size: [400, 150],
     rescaleColorMap: true,
+    createControls: (controls) =>
+      addTransferFunctionControls(transferPanel, controls),
   });
   const isBackgroundDark = background[0] + background[1] + background[2] < 1.5;
-  const useShadow = 1;
-  controllerWidget.setContainer(rootContainer);
-  controllerWidget.setupContent(
-    renderWindow,
-    actor,
-    isBackgroundDark,
-    useShadow
-  );
+  controllerWidget.setupContent(renderWindow, actor, isBackgroundDark);
+  controllerWidget.setContainer(transferPanel.$children);
 
-  fullScreenRenderer.setResizeCallback(({ width, _height }) => {
-    if (width > 414) {
-      controllerWidget.setSize(400, 150);
-    } else {
-      controllerWidget.setSize(width - 14, 150);
-    }
+  fullScreenRenderer.setResizeCallback(() => {
+    controllerWidget.setSize(transferPanel.domElement.clientWidth, 150);
     controllerWidget.render();
     fpsMonitor.update();
   });
@@ -202,12 +250,20 @@ function createVolumeShadowViewer(rootContainer, reader, imageData) {
     renderWindow.render();
   }
   const params = {
+    UseShadow: actorProperty.getShade(),
     DensityNormal: isDensity,
     VolumeBlending: actorProperty.getVolumetricScatteringBlending(),
     GlobalReach: actorProperty.getGlobalIlluminationReach(),
     SampleDist: mapper.getVolumeShadowSamplingDistFactor(),
     Anisotropy: actorProperty.getAnisotropy(),
   };
+  gui
+    .add(params, 'UseShadow')
+    .name('Use Shadow')
+    .onChange((useShadow) => {
+      actorProperty.setShade(useShadow);
+      renderWindow.render();
+    });
   gui
     .add(params, 'DensityNormal')
     .name('Density Normal')
@@ -250,7 +306,12 @@ function createVolumeShadowViewer(rootContainer, reader, imageData) {
   renderer.addActor(actor);
 
   // Camera and first render
+  const camera = renderer.getActiveCamera();
+  camera.elevation(90);
+  camera.setViewUp(0, 0, -1);
   renderer.resetCamera();
+  camera.dolly(1.5);
+  renderer.resetCameraClippingRange();
   renderWindow.render();
 
   // Make some variables global so that you can inspect and

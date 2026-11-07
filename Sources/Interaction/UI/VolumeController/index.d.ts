@@ -11,6 +11,18 @@ export interface IVolumeControllerInitialValues {
   size?: Size;
   expanded?: boolean;
   rescaleColorMap?: boolean;
+  /**
+   * Bind external controls during setup. The widget then contains only the
+   * opacity editor. Spacing and contrast range from 0 to 1.
+   */
+  createControls?: (controls: {
+    presetName: string;
+    spacing: number;
+    contrast: number;
+    setPreset(name: string): void;
+    setSpacing(value: number): void;
+    setContrast(value: number): void;
+  }) => void;
 }
 
 export interface vtkVolumeController extends vtkObject {

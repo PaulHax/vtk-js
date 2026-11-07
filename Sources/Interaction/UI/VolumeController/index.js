@@ -25,34 +25,34 @@ function vtkVolumeController(publicAPI, model) {
   model.classHierarchy.push('vtkVolumeController');
 
   model.el = document.createElement('div');
-  model.el.setAttribute('class', style.container);
+  if (!model.createControls) {
+    model.el.className = style.container;
+  }
 
   model.widget = vtkPiecewiseGaussianWidget.newInstance({
     numberOfBins: 256,
     size: model.size,
   });
 
-  function updateUseShadow() {
-    const useShadow = !!Number(model.el.querySelector('.js-shadow').value);
-    model.actor.getProperty().setShade(useShadow);
+  function updateUseShadow(value) {
+    model.actor.getProperty().setShade(!!Number(value));
     model.renderWindow.render();
   }
 
-  function updateColorMapPreset() {
+  function updateColorMapPreset(presetName = model.presetName) {
+    const preset = vtkColorMaps.getPresetByName(presetName);
     const sourceDS = model.actor.getMapper().getInputData();
-    if (!sourceDS) {
+    if (!sourceDS || !preset) {
       return;
     }
 
+    model.presetName = presetName;
     const dataArray =
       sourceDS.getPointData().getScalars() ||
       sourceDS.getPointData().getArrays()[0];
     const dataRange = model.rescaleColorMap
       ? model.colorDataRange
       : dataArray.getRange();
-    const preset = vtkColorMaps.getPresetByName(
-      model.el.querySelector('.js-color-preset').value
-    );
     const lookupTable = model.actor.getProperty().getRGBTransferFunction(0);
     lookupTable.applyColorMap(preset);
     lookupTable.setMappingRange(...dataRange);
@@ -60,8 +60,7 @@ function vtkVolumeController(publicAPI, model) {
     model.renderWindow.render();
   }
 
-  function updateSpacing() {
-    const value = Number(model.el.querySelector('.js-spacing').value);
+  function updateSpacing(value) {
     const sourceDS = model.actor.getMapper().getInputData();
     const sampleDistance =
       0.7 *
@@ -77,8 +76,7 @@ function vtkVolumeController(publicAPI, model) {
     model.renderWindow.render();
   }
 
-  function updateEdgeGradient() {
-    const value = Number(model.el.querySelector('.js-edge').value);
+  function updateEdgeGradient(value) {
     if (value === 0) {
       model.actor.getProperty().setUseGradientOpacity(0, false);
     } else {
@@ -127,36 +125,35 @@ function vtkVolumeController(publicAPI, model) {
     ['button', 'presets', 'shadow'].forEach((name) => {
       localStyle[name] = style[`${name}${stylePostFix}`];
     });
+    const spacing = 0.4;
+    const contrast = 0.2;
+    const controls = model.createControls
+      ? ''
+      : `<div class="${style.line}">
+          <div class="${localStyle.button} js-button">${svgLogo}</div>
+          <select class="${localStyle.shadow} js-shadow js-toggle">
+            <option value="1">Use Shadow</option>
+            <option value="0">No Shadow</option>
+          </select>
+          <select class="${localStyle.presets} js-color-preset js-toggle">
+            ${PRESETS_OPTIONS}
+          </select>
+        </div>
+        <div class="${style.line} js-toggle">
+          <div class="${style.sliderEntry}">
+            <div class="${style.sliderIcon}">${svgSpacing}</div>
+            <input type="range" min="0" max="1" value="${spacing}" step="0.01" class="${style.slider} js-spacing" />
+          </div>
+          <div class="${style.sliderEntry}">
+            <div class="${style.sliderIcon}">${svgEdge}</div>
+            <input type="range" min="0" max="1" value="${contrast}" step="0.01" class="${style.slider} js-edge" />
+          </div>
+        </div>`;
     model.el.innerHTML = `
-      <div class="${style.line}">
-        <div class="${localStyle.button} js-button">${svgLogo}</div>
-        <select class="${localStyle.shadow} js-shadow js-toggle">
-          <option value="1">Use Shadow</option>
-          <option value="0">No Shadow</option>
-        </select>
-        <select class="${localStyle.presets} js-color-preset js-toggle">
-          ${PRESETS_OPTIONS}
-        </select>
-      </div>
-      <div class="${style.line} js-toggle">
-        <div class="${style.sliderEntry}">
-          <div class="${style.sliderIcon}">${svgSpacing}</div>
-          <input type="range" min="0" max="1" value="0.4" step="0.01" class="${style.slider} js-spacing" />
-        </div>
-        <div class="${style.sliderEntry}">
-          <div class="${style.sliderIcon}">${svgEdge}</div>
-          <input type="range" min="0" max="1" value="0.2" step="0.01" class="${style.slider} js-edge" />
-        </div>
-      </div>
+      ${controls}
       <div class="${style.piecewiseEditor} js-pwf js-toggle"></div>
     `;
 
-    // DOM elements
-    const domToggleButton = model.el.querySelector('.js-button');
-    const domShadow = model.el.querySelector('.js-shadow');
-    const domPreset = model.el.querySelector('.js-color-preset');
-    const domSpacing = model.el.querySelector('.js-spacing');
-    const domEdge = model.el.querySelector('.js-edge');
     const widgetContainer = model.el.querySelector('.js-pwf');
 
     // Piecewise editor widget
@@ -186,12 +183,6 @@ function vtkVolumeController(publicAPI, model) {
     model.colorDataRange = model.widget.getOpacityRange();
 
     // Attach listeners
-    domToggleButton.addEventListener('click', publicAPI.toggleVisibility);
-    domShadow.addEventListener('change', updateUseShadow);
-    domPreset.addEventListener('change', updateColorMapPreset);
-    domSpacing.addEventListener('input', updateSpacing);
-    domEdge.addEventListener('input', updateEdgeGradient);
-
     model.widget.onOpacityChange(() => {
       model.widget.applyOpacity(piecewiseFunction);
       model.colorDataRange = model.widget.getOpacityRange();
@@ -220,15 +211,44 @@ function vtkVolumeController(publicAPI, model) {
       }
     });
 
-    // Set default values
-    domShadow.value = Number(useShadow) ? '1' : '0';
-    domPreset.value = presetName;
-
     // Apply values
-    updateUseShadow();
-    updateColorMapPreset();
-    updateSpacing();
-    updateEdgeGradient();
+    updateUseShadow(useShadow);
+    updateColorMapPreset(presetName);
+    updateSpacing(spacing);
+    updateEdgeGradient(contrast);
+
+    if (model.createControls) {
+      model.createControls({
+        presetName,
+        spacing,
+        contrast,
+        setPreset: updateColorMapPreset,
+        setSpacing: updateSpacing,
+        setContrast: updateEdgeGradient,
+      });
+    } else {
+      model.el
+        .querySelector('.js-button')
+        .addEventListener('click', publicAPI.toggleVisibility);
+      const domShadow = model.el.querySelector('.js-shadow');
+      const domPreset = model.el.querySelector('.js-color-preset');
+      const domSpacing = model.el.querySelector('.js-spacing');
+      const domEdge = model.el.querySelector('.js-edge');
+      domShadow.value = Number(useShadow) ? '1' : '0';
+      domPreset.value = presetName;
+      domShadow.addEventListener('change', () =>
+        updateUseShadow(domShadow.value)
+      );
+      domPreset.addEventListener('change', () =>
+        updateColorMapPreset(domPreset.value)
+      );
+      domSpacing.addEventListener('input', () =>
+        updateSpacing(domSpacing.valueAsNumber)
+      );
+      domEdge.addEventListener('input', () =>
+        updateEdgeGradient(domEdge.valueAsNumber)
+      );
+    }
   };
 
   publicAPI.setContainer = (el) => {
