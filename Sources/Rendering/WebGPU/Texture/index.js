@@ -143,7 +143,7 @@ function vtkWebGPUTexture(publicAPI, model) {
 
     // Select, convert, and pad each source row in one pass.
     if (halfFloat) {
-      const { scalarOffset } = model;
+      const { scalarOffset, scalarScale } = model;
       for (let z = 0; z < depth; z++) {
         const sourceSliceOffset = (sourceZ + z) * sourceSliceElements;
         for (let y = 0; y < height; y++) {
@@ -155,7 +155,7 @@ function vtkWebGPUTexture(publicAPI, model) {
           const outOffset = row * alignedRowElements;
           for (let i = 0; i < expectedRowElements; i++) {
             outArray[outOffset + i] = HalfFloat.toHalf(
-              inputArray[inOffset + i] - scalarOffset
+              (inputArray[inOffset + i] - scalarOffset) / scalarScale
             );
           }
         }
@@ -227,6 +227,8 @@ function vtkWebGPUTexture(publicAPI, model) {
     model.format = options.format ? options.format : 'rgba8unorm';
     model.scalarOffset =
       model.format === 'r16float' ? (options.scalarOffset ?? 0) : 0;
+    model.scalarScale =
+      model.format === 'r16float' ? (options.scalarScale ?? 1) : 1;
     model.mipLevel = options.mipLevel
       ? Math.min(
           options.mipLevel,
@@ -274,6 +276,8 @@ function vtkWebGPUTexture(publicAPI, model) {
     model.format = options.format ? options.format : 'rgba8unorm';
     model.scalarOffset =
       model.format === 'r16float' ? (options.scalarOffset ?? 0) : 0;
+    model.scalarScale =
+      model.format === 'r16float' ? (options.scalarScale ?? 1) : 1;
     /* eslint-disable no-undef */
     /* eslint-disable no-bitwise */
     model.usage = options.usage
@@ -561,6 +565,7 @@ const DEFAULT_VALUES = {
   label: null,
   sampleCount: 1,
   scalarOffset: 0,
+  scalarScale: 1,
 };
 
 // ----------------------------------------------------------------------------
@@ -583,6 +588,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     'usage',
     'sampleCount',
     'scalarOffset',
+    'scalarScale',
   ]);
   macro.setGet(publicAPI, model, ['_device', 'label']);
 

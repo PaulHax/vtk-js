@@ -66,7 +66,8 @@ fn sampleVolume(vTex: texture_3d<f32>, tpos: vec4<f32>, vNum: i32) -> vec4<f32>
 fn getTextureValue(vTex: texture_3d<f32>, tpos: vec4<f32>, vNum: i32) -> vec4<f32>
 {
   var value = sampleVolume(vTex, tpos, vNum);
-  value.x += volumeSSBO.values[vNum].textureScaleOffset.y;
+  value.x = value.x * volumeSSBO.values[vNum].textureScaleOffset.z
+    + volumeSSBO.values[vNum].textureScaleOffset.y;
   return value;
 }
 
@@ -2508,8 +2509,8 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
     const ipScalarRangeMinArray = new Float64Array(model.volumes.length * 4);
     const ipScalarRangeMaxArray = new Float64Array(model.volumes.length * 4);
     const componentInfoArray = new Float64Array(model.volumes.length * 4);
-    const textureScaleOffsetArray = new Float32Array(model.volumes.length * 2);
-    const labelOutlineArray = new Float64Array(model.volumes.length * 2);
+    const textureScaleOffsetArray = new Float32Array(model.volumes.length * 4);
+    const labelOutlineArray = new Float64Array(model.volumes.length * 4);
     const colorScaleArray = new Float64Array(model.volumes.length * 4);
     const colorShiftArray = new Float64Array(model.volumes.length * 4);
     const opacityScaleArray = new Float64Array(model.volumes.length * 4);
@@ -2621,8 +2622,9 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
       // handle filteringMode
       const texture = model.textureViews[vidx + 4].getTexture();
       const tScale = texture.getScale();
-      textureScaleOffsetArray[vidx * 2] = tScale;
-      textureScaleOffsetArray[vidx * 2 + 1] = texture.getScalarOffset();
+      textureScaleOffsetArray[vidx * 4] = tScale;
+      textureScaleOffsetArray[vidx * 4 + 1] = texture.getScalarOffset();
+      textureScaleOffsetArray[vidx * 4 + 2] = texture.getScalarScale();
       const ipScalarRange = actor.getProperty().getIpScalarRange();
       const filterMode = actor.getProperty().getFilterMode();
       for (let component = 0; component < numComp; component++) {
@@ -2660,9 +2662,9 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
       }
       componentInfoArray[vidx * 4 + 3] = forceNearestMask;
 
-      labelOutlineArray[vidx * 2] = vprop.getUseLabelOutline() ? 1.0 : 0.0;
+      labelOutlineArray[vidx * 4] = vprop.getUseLabelOutline() ? 1.0 : 0.0;
       const labelOutlineOpacity = vprop.getLabelOutlineOpacity();
-      labelOutlineArray[vidx * 2 + 1] = Array.isArray(labelOutlineOpacity)
+      labelOutlineArray[vidx * 4 + 1] = Array.isArray(labelOutlineOpacity)
         ? (labelOutlineOpacity[0] ?? 1.0)
         : labelOutlineOpacity;
 
@@ -2715,8 +2717,9 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
       model.SSBO.addEntry('ipScalarRangeMin', 'vec4<f32>');
       model.SSBO.addEntry('ipScalarRangeMax', 'vec4<f32>');
       model.SSBO.addEntry('componentInfo', 'vec4<f32>');
-      model.SSBO.addEntry('textureScaleOffset', 'vec2<f32>');
-      model.SSBO.addEntry('labelOutline', 'vec2<f32>');
+      // Keep the following entries and each volume instance aligned to 16 bytes.
+      model.SSBO.addEntry('textureScaleOffset', 'vec4<f32>');
+      model.SSBO.addEntry('labelOutline', 'vec4<f32>');
       model.SSBO.addEntry('colorScale', 'vec4<f32>');
       model.SSBO.addEntry('colorShift', 'vec4<f32>');
       model.SSBO.addEntry('opacityScale', 'vec4<f32>');
@@ -3008,7 +3011,7 @@ function vtkWebGPUVolumePassFSQ(publicAPI, model) {
           updatedExtents,
           existingTexture,
           preferSizeOverAccuracy,
-          allowScalarOffset: true,
+          allowScalarEncoding: true,
           owner: webgpuvol,
         });
       if (updatedExtents.length) {

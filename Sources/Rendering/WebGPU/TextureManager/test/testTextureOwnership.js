@@ -27,6 +27,7 @@ function createFakeTexture(req) {
     getMipLevel: () => req.mipLevel ?? 0,
     getUsage: () => req.usage,
     getHandle: () => (destroyed ? null : {}),
+    getScalarScale: () => 1,
     writeImageData: vi.fn(),
     writeSubImageData: vi.fn(() => true),
     generateMipmaps: () => {},

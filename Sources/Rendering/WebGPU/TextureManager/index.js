@@ -54,7 +54,8 @@ function vtkWebGPUTextureManager(publicAPI, model) {
 
   // The state has two parts. The first part is valid for one scalar mtime.
   // The second part stays for the life of the data array:
-  //  - scalarOffset is fixed once selected so patches can reuse a texture.
+  //  - scalarOffset and scalarScale describe the encoding. Compact uploads
+  //    retain it until the range grows, then rewrite the entire texture.
   //  - promotedFormat is the 32 bit float format that an accurate texture of
   //    this array uses after its values stopped fitting half float. All
   //    mappers of the array then use this format and can share one texture.
@@ -72,6 +73,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
         formats: [],
         scalarMTime,
         scalarOffset: state?.scalarOffset,
+        scalarScale: state?.scalarScale,
         verifiedTexture: state?.verifiedTexture,
         promotedFormat: state?.promotedFormat ?? null,
         liveTextures: state?.liveTextures ?? new Map(),
@@ -139,12 +141,19 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     return { previousContentFitsHalfFloat, version: state.contentVersion };
   }
 
-  function _formatMatchesDataArray(format, dataArray) {
+  function _formatMatchesDataArray(
+    format,
+    dataArray,
+    normalizeScalars = false
+  ) {
     const numberOfComponents = dataArray.getNumberOfComponents();
     const textureComponents = numberOfComponents === 3 ? 4 : numberOfComponents;
     const formatDetails = vtkWebGPUTypes.getDetailsFromTextureFormat(format);
     if (formatDetails?.numComponents !== textureComponents) {
       return false;
+    }
+    if (normalizeScalars) {
+      return format === 'r16float';
     }
 
     const dataType = dataArray.getDataType();
@@ -161,9 +170,13 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     return format.endsWith('16float') || format.endsWith('32float');
   }
 
-  function _dataArrayFitsHalfFloat(dataArray, offset = 0) {
-    const min = offset - HALF_FLOAT_EXACT_INTEGER_LIMIT;
-    const max = offset + HALF_FLOAT_EXACT_INTEGER_LIMIT;
+  function _dataArrayFitsRange(
+    dataArray,
+    offset = 0,
+    halfWidth = HALF_FLOAT_EXACT_INTEGER_LIMIT
+  ) {
+    const min = offset - halfWidth;
+    const max = offset + halfWidth;
     const values = dataArray.getData();
     for (let i = 0; i < values.length; i++) {
       if (values[i] < min || values[i] > max) {
@@ -173,14 +186,15 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     return true;
   }
 
-  function _updatedExtentsFitHalfFloat(
+  function _updatedExtentsFitRange(
     dataArray,
     dimensions,
     extents,
-    offset = 0
+    offset = 0,
+    halfWidth = HALF_FLOAT_EXACT_INTEGER_LIMIT
   ) {
-    const min = offset - HALF_FLOAT_EXACT_INTEGER_LIMIT;
-    const max = offset + HALF_FLOAT_EXACT_INTEGER_LIMIT;
+    const min = offset - halfWidth;
+    const max = offset + halfWidth;
     const values = dataArray.getData();
     const numberOfComponents = dataArray.getNumberOfComponents();
     const rowLength = dimensions[0] * numberOfComponents;
@@ -206,6 +220,9 @@ function vtkWebGPUTextureManager(publicAPI, model) {
   }
 
   function _scalarFormatSuffix(req) {
+    if (req.normalizeScalars) {
+      return '16float';
+    }
     const dataType = req.dataArray.getDataType();
     if (
       dataType === VtkDataTypes.UNSIGNED_CHAR ||
@@ -227,7 +244,10 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       !req.preferSizeOverAccuracy &&
       model.device.hasFeature('float32-filterable')
     ) {
-      if (req.allowScalarOffset && req.scalarState.scalarOffset === undefined) {
+      if (
+        req.allowScalarEncoding &&
+        req.scalarState.scalarOffset === undefined
+      ) {
         // Read the values directly because imageData.modified() also permits
         // in-place edits that do not invalidate the scalar array's range cache.
         const { min, max } = vtkDataArray.computeRange(req.dataArray.getData());
@@ -240,7 +260,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
               : Math.floor((min + max) / 2);
         }
       } else {
-        req.fitsHalfFloat = _dataArrayFitsHalfFloat(
+        req.fitsHalfFloat = _dataArrayFitsRange(
           req.dataArray,
           req.scalarState?.scalarOffset
         );
@@ -377,6 +397,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       depth: req.depth,
       format: req.format,
       scalarOffset: _scalarOffset(req),
+      scalarScale: _scalarScale(req),
       usage: req.usage,
       mipLevel: req.mipLevel,
     });
@@ -395,6 +416,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       !!texture?.getHandle?.() &&
       texture.getFormat() === req.format &&
       (texture.getScalarOffset?.() ?? 0) === _scalarOffset(req) &&
+      texture.getScalarScale() === _scalarScale(req) &&
       texture.getWidth() === req.width &&
       texture.getHeight() === req.height &&
       texture.getDepth() === req.depth &&
@@ -488,9 +510,16 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     return format === 'r16float' ? (scalarState?.scalarOffset ?? 0) : 0;
   }
 
+  function _scalarScale({ format, scalarState }) {
+    return format === 'r16float' ? (scalarState?.scalarScale ?? 1) : 1;
+  }
+
   function _liveTextureKey(req) {
     const key = `${req.format}:${req.mipLevel ?? 0}:${req.usage}`;
     const offset = _scalarOffset(req);
+    if (req.normalizeScalars) {
+      return `${key}:normalized:${offset}:${_scalarScale(req)}`;
+    }
     return offset ? `${key}:${offset}` : key;
   }
 
@@ -530,6 +559,46 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     return _createTexture(req);
   };
 
+  function _updateCompactEncoding(req, dimensions, extents, existingTexture) {
+    const { scalarState: state, dataArray } = req;
+    if (state.halfFloatFitVersion === state.contentVersion) {
+      return;
+    }
+    const canPatch =
+      extents?.length && state.verifiedTexture?.deref() === existingTexture;
+    const fits =
+      state.scalarScale !== undefined &&
+      (canPatch
+        ? _updatedExtentsFitRange(
+            dataArray,
+            dimensions,
+            extents,
+            state.scalarOffset,
+            state.scalarScale
+          )
+        : _dataArrayFitsRange(
+            dataArray,
+            state.scalarOffset,
+            state.scalarScale
+          ));
+    if (!fits) {
+      // A new encoding applies to every texel, including those outside a patch.
+      const { min, max } = vtkDataArray.computeRange(dataArray.getData());
+      state.scalarOffset = dataArray.getNumberOfTuples() ? (min + max) / 2 : 0;
+      state.scalarScale = max > min ? (max - min) / 2 : 1;
+    }
+    state.halfFloatFitVersion = state.contentVersion;
+  }
+
+  function _canEncodeScalars(scalars) {
+    const dataType = scalars.getDataType();
+    return (
+      scalars.getNumberOfComponents() === 1 &&
+      (dataType === VtkDataTypes.SHORT ||
+        dataType === VtkDataTypes.UNSIGNED_SHORT)
+    );
+  }
+
   function _getTextureForImageData(imgData, options) {
     const treq = { time: imgData.getMTime() };
     const { updatedExtents } = options;
@@ -539,24 +608,25 @@ function vtkWebGPUTextureManager(publicAPI, model) {
     const scalars = imgData.getPointData().getScalars();
     treq.dataArray = scalars;
     const dataType = scalars.getDataType();
-    treq.allowScalarOffset =
-      options.allowScalarOffset &&
-      !treq.preferSizeOverAccuracy &&
-      scalars.getNumberOfComponents() === 1 &&
-      (dataType === VtkDataTypes.SHORT ||
-        dataType === VtkDataTypes.UNSIGNED_SHORT);
-    const state = _getScalarState(
-      scalars,
-      treq.allowScalarOffset ? model.offsetScalarFormats : model.scalarFormats
-    );
+    treq.allowScalarEncoding =
+      options.allowScalarEncoding && _canEncodeScalars(scalars);
+    treq.normalizeScalars =
+      treq.allowScalarEncoding && treq.preferSizeOverAccuracy;
+    const states = treq.normalizeScalars
+      ? model.compactScalarFormats
+      : treq.allowScalarEncoding
+        ? model.offsetScalarFormats
+        : model.scalarFormats;
+    const state = _getScalarState(scalars, states);
     treq.scalarState = state;
     if (existingTexture && updatedExtents?.length) {
       // A compact texture can contain rounded values outside the patch.
       // Only patch a texture previously checked for this scalar array.
       if (
-        treq.allowScalarOffset
+        treq.allowScalarEncoding
           ? state.verifiedTexture?.deref() !== existingTexture
-          : existingTexture.getScalarOffset?.()
+          : existingTexture.getScalarOffset?.() ||
+            existingTexture.getScalarScale() !== 1
       ) {
         existingTexture = null;
       }
@@ -565,6 +635,14 @@ function vtkWebGPUTextureManager(publicAPI, model) {
       state,
       imgData.getMTime()
     );
+    if (treq.normalizeScalars) {
+      _updateCompactEncoding(
+        treq,
+        imgData.getDimensions(),
+        updatedExtents,
+        existingTexture
+      );
+    }
     if (updatedExtents?.length && existingTexture) {
       const existingFormat = existingTexture.getFormat();
       const promotedFormat = _getPromotedFormat(treq);
@@ -572,7 +650,9 @@ function vtkWebGPUTextureManager(publicAPI, model) {
         // A different texture of this array already uses float32. Use the
         // same format, so that the request can share that texture.
         treq.forceFloat32 = true;
-      } else if (_formatMatchesDataArray(existingFormat, scalars)) {
+      } else if (
+        _formatMatchesDataArray(existingFormat, scalars, treq.normalizeScalars)
+      ) {
         const canPromoteToFloat32 =
           !treq.preferSizeOverAccuracy &&
           dataType !== VtkDataTypes.UNSIGNED_CHAR &&
@@ -581,7 +661,7 @@ function vtkWebGPUTextureManager(publicAPI, model) {
           model.device.hasFeature('float32-filterable');
         const updatedExtentsFitHalfFloat =
           !canPromoteToFloat32 ||
-          _updatedExtentsFitHalfFloat(
+          _updatedExtentsFitRange(
             scalars,
             imgData.getDimensions(),
             updatedExtents,
@@ -684,6 +764,9 @@ function vtkWebGPUTextureManager(publicAPI, model) {
    *
    * `preferSizeOverAccuracy` permits binary16 storage when the scalar range is
    * not exact in that format.
+   * With allowScalarEncoding, compact single-component Int16/Uint16 data is
+   * normalized to [-1, 1]. Range expansion requires a full upload; other
+   * partial updates retain the existing encoding and texture allocation.
    * A partial update scans only its extents and keeps the existing format when
    * the scalar type is compatible and all updated values fit.
    *
@@ -694,18 +777,25 @@ function vtkWebGPUTextureManager(publicAPI, model) {
   publicAPI.getTextureForImageData = (imgData, options = {}) => {
     const texture = _getTextureForImageData(imgData, options);
     if (texture && typeof texture === 'object') {
-      const state = model.offsetScalarFormats.get(
-        imgData.getPointData().getScalars()
-      );
-      if (
-        state &&
-        (options.allowScalarOffset || options.preferSizeOverAccuracy)
-      ) {
+      const scalars = imgData.getPointData().getScalars();
+      const allowScalarEncoding =
+        options.allowScalarEncoding && _canEncodeScalars(scalars);
+      const compactState = model.compactScalarFormats.get(scalars);
+      if (compactState) {
+        if (allowScalarEncoding && options.preferSizeOverAccuracy) {
+          compactState.verifiedTexture = new WeakRef(texture);
+        } else if (compactState.verifiedTexture?.deref() === texture) {
+          compactState.verifiedTexture = null;
+          compactState.halfFloatFitVersion = -1;
+        }
+      }
+      const state = model.offsetScalarFormats.get(scalars);
+      if (state && (allowScalarEncoding || options.preferSizeOverAccuracy)) {
         const verified = state.verifiedTexture?.deref();
         if (options.preferSizeOverAccuracy && verified === texture) {
           state.verifiedTexture = null;
         } else if (
-          options.allowScalarOffset &&
+          allowScalarEncoding &&
           !options.preferSizeOverAccuracy &&
           verified !== texture
         ) {
@@ -769,6 +859,7 @@ const DEFAULT_VALUES = {
   device: null,
   scalarFormats: null,
   offsetScalarFormats: null,
+  compactScalarFormats: null,
   textureOwners: null,
   textureUseCounts: null,
   unownedTextures: null,
@@ -780,6 +871,7 @@ export function extend(publicAPI, model, initialValues = {}) {
   Object.assign(model, DEFAULT_VALUES, initialValues);
   model.scalarFormats = new WeakMap();
   model.offsetScalarFormats = new WeakMap();
+  model.compactScalarFormats = new WeakMap();
   model.textureOwners = new WeakMap();
   model.textureUseCounts = new Map();
   model.unownedTextures = new WeakSet();

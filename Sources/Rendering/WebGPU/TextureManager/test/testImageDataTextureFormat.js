@@ -189,7 +189,7 @@ describe('offset scalar texture uploads', () => {
   ])('stores and updates a range spanning 4096 exactly', (values) => {
     const { manager, writeTexture } = createDevice();
     const image = createImageData(values);
-    const options = { allowScalarOffset: true };
+    const options = { allowScalarEncoding: true };
     const raw = manager.getTextureForImageData(image);
     const texture = manager.getTextureForImageData(image, options);
     const offset = texture.getScalarOffset();
@@ -241,7 +241,7 @@ describe('offset scalar texture uploads', () => {
     const image = createImageData(values);
     const raw = manager.getTextureForImageData(image);
     expect(
-      manager.getTextureForImageData(image, { allowScalarOffset: true })
+      manager.getTextureForImageData(image, { allowScalarEncoding: true })
     ).toBe(raw);
 
     const other = createImageData(values);
@@ -249,7 +249,7 @@ describe('offset scalar texture uploads', () => {
     values[1] = 3001;
     other.modified();
     const encoded = manager.getTextureForImageData(other, {
-      allowScalarOffset: true,
+      allowScalarEncoding: true,
     });
     expect(encoded.getFormat()).toBe('r16float');
     expect(encoded.getScalarOffset()).toBeGreaterThan(0);
@@ -257,7 +257,7 @@ describe('offset scalar texture uploads', () => {
     other.modified();
     expect(
       manager
-        .getTextureForImageData(other, { allowScalarOffset: true })
+        .getTextureForImageData(other, { allowScalarEncoding: true })
         .getFormat()
     ).toBe('r32float');
   });
@@ -268,7 +268,7 @@ describe('offset scalar texture uploads', () => {
       const values = new Uint16Array([1001, shared ? 1002 : 3001]);
       const image = createImageData(values);
       if (shared) {
-        manager.getTextureForImageData(image, { allowScalarOffset: true });
+        manager.getTextureForImageData(image, { allowScalarEncoding: true });
         values[1] = 3001;
         image.modified();
       }
@@ -278,7 +278,7 @@ describe('offset scalar texture uploads', () => {
       values[0]++;
       image.modified();
       const accurate = manager.getTextureForImageData(image, {
-        allowScalarOffset: true,
+        allowScalarEncoding: true,
         existingTexture: compact,
         updatedExtents: [[0, 0, 0, 0, 0, 0]],
       });
