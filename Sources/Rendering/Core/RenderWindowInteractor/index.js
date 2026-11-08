@@ -655,8 +655,11 @@ function vtkRenderWindowInteractor(publicAPI, model) {
   function forceRender() {
     if (model._view && model.enabled && model.enableRender) {
       model.inRender = true;
-      model._view.traverseAllPasses();
-      model.inRender = false;
+      try {
+        model._view.traverseAllPasses();
+      } finally {
+        model.inRender = false;
+      }
     }
     // outside the above test so that third-party code can redirect
     // the render to the appropriate class
@@ -865,19 +868,28 @@ function vtkRenderWindowInteractor(publicAPI, model) {
       model._animationStartTime = currTime;
       model._animationFrameCount = 1;
     }
-    publicAPI.animationEvent();
-    forceRender();
-    if (
-      animationRequesters.size > 0 ||
-      Date.now() < model._animationExtendedEnd
-    ) {
-      model.animationRequest = requestAnimationFrame(publicAPI.handleAnimation);
-    } else {
-      cancelAnimationFrame(model.animationRequest);
-      model.animationRequest = null;
-      publicAPI.endAnimationEvent();
-      publicAPI.render();
+    try {
+      publicAPI.animationEvent();
+      forceRender();
+    } finally {
+      // a frame that throws still has to schedule the next one or end the
+      // animation, or isAnimating() stays true with no frame to come
+      if (
+        animationRequesters.size > 0 ||
+        Date.now() < model._animationExtendedEnd
+      ) {
+        model.animationRequest = requestAnimationFrame(
+          publicAPI.handleAnimation
+        );
+      } else {
+        cancelAnimationFrame(model.animationRequest);
+        model.animationRequest = null;
+        publicAPI.endAnimationEvent();
+      }
     }
+    // the still frame once the animation has ended, kept out of the finally
+    // so a frame that threw is not rendered again; skipped while animating
+    publicAPI.render();
   };
 
   publicAPI.handleWheel = (event) => {

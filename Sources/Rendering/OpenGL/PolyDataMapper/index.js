@@ -80,8 +80,11 @@ function vtkOpenGLPolyDataMapper(publicAPI, model) {
     if (prepass) {
       model.haveSeenDepthRequest = true;
       model.renderDepth = true;
-      publicAPI.render();
-      model.renderDepth = false;
+      try {
+        publicAPI.render();
+      } finally {
+        model.renderDepth = false;
+      }
     }
   };
 

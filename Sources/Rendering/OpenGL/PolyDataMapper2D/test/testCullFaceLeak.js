@@ -83,6 +83,7 @@ function makeBackfaceCulledSphereCase() {
   actor.getProperty().setBackfaceCulling(true);
 
   return {
+    mapper,
     resources: [actor, mapper, source],
     addToRenderer: (renderer) => renderer.addActor(actor),
   };
@@ -143,8 +144,7 @@ function isBright(pixel) {
 // child1 shows an image only. child2 shows an image plus a leaking actor.
 // Both children share one WebGL context. If the leaking actor's cull state
 // is not cleaned up, child1's back-facing image quad is culled on re-render.
-function runLeakTest(leakingCase) {
-  const gc = testUtils.createGarbageCollector();
+function createLeakTestWindows(gc, leakingCase) {
   const root = document.querySelector('body');
   const childContainer1 = gc.registerDOMElement(document.createElement('div'));
   const childContainer2 = gc.registerDOMElement(document.createElement('div'));
@@ -187,6 +187,12 @@ function runLeakTest(leakingCase) {
   ].forEach((resource) => gc.registerResource(resource));
 
   parentView.resizeFromChildRenderWindows();
+  return { parentRenderWindow, child1, child2 };
+}
+
+function runLeakTest(leakingCase) {
+  const gc = testUtils.createGarbageCollector();
+  const { parentRenderWindow, child1 } = createLeakTestWindows(gc, leakingCase);
 
   parentRenderWindow.render();
   const firstRenderPixel = getCenterPixel(child1.view.getCanvas());
@@ -213,4 +219,29 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'Test 3D actor backface culling does not leak between child render windows',
   () => runLeakTest(makeBackfaceCulledSphereCase())
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'Test the cull face of an actor that throws does not leak between child render windows',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const leakingCase = makeBackfaceCulledSphereCase();
+    const { parentRenderWindow, child1, child2 } = createLeakTestWindows(
+      gc,
+      leakingCase
+    );
+    parentRenderWindow.render();
+
+    // Naming an array the input lacks makes the mapper throw while it builds
+    // its buffers, after it has turned culling on.
+    leakingCase.mapper.setCustomShaderAttributes(['missing']);
+    expect(() => child2.renderWindow.render()).toThrow(TypeError);
+
+    child1.renderWindow.render();
+    const pixel = getCenterPixel(child1.view.getCanvas());
+    expect(
+      isBright(pixel),
+      `first child slice remains visible after the leaking actor threw (${pixel})`
+    ).toBe(true);
+  }
 );
