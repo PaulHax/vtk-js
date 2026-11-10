@@ -24,7 +24,6 @@ attribute vec4 vertexMC;
 
 uniform float scaleFactor;
 uniform float boundScale;
-uniform int cameraParallel;
 
 // low-pass filter added to the projected covariance, in normalized device
 // coordinates; stored as (a, b, c) of the symmetric matrix [a b; b c]
@@ -82,27 +81,20 @@ mat3 computeCov3D(vec3 scale, vec4 rotation)
   return M * transpose(M);
 }
 
-// Jacobian of the view to normalized device transform at positionVC, up to a
-// sign the covariance does not see: exact for a parallel projection, the
-// local affine approximation of a perspective one (EWA Splatting, Zwicker et
-// al. 2002, eq. 29 and 31).
-mat3 getProjectionJacobian(vec3 positionVC)
+// Derivative of the homogeneous divide with respect to view coordinates.
+// Using every projection term also handles oblique and host-supplied matrices.
+mat3 getProjectionJacobian(vec4 positionPC)
 {
-  vec2 scale = vec2(VCPCMatrix[0][0], VCPCMatrix[1][1]);
-  if (cameraParallel != 0)
-  {
-    return mat3(scale.x, 0.0, 0.0, 0.0, scale.y, 0.0, 0.0, 0.0, 0.0);
-  }
-  // The approximation stretches splats without bound away from the view
-  // axis, so it is taken no further out than 30% beyond the edges of the
-  // view, as in 3D Gaussian Splatting (Kerbl et al. 2023).
-  vec2 skew = vec2(VCPCMatrix[2][0], VCPCMatrix[2][1]);
-  vec2 ndc = clamp(-scale * positionVC.xy / positionVC.z - skew, -1.3, 1.3);
-  vec2 shear = (ndc + skew) / positionVC.z;
+  vec3 rowX = vec3(VCPCMatrix[0][0], VCPCMatrix[1][0], VCPCMatrix[2][0]);
+  vec3 rowY = vec3(VCPCMatrix[0][1], VCPCMatrix[1][1], VCPCMatrix[2][1]);
+  vec3 rowW = vec3(VCPCMatrix[0][3], VCPCMatrix[1][3], VCPCMatrix[2][3]);
+  vec2 ndc = positionPC.xy / positionPC.w;
+  vec3 dx = (rowX - ndc.x * rowW) / positionPC.w;
+  vec3 dy = (rowY - ndc.y * rowW) / positionPC.w;
   return mat3(
-    scale.x / positionVC.z, 0.0, 0.0,
-    0.0, scale.y / positionVC.z, 0.0,
-    shear.x, shear.y, 0.0);
+    dx.x, dy.x, 0.0,
+    dx.y, dy.y, 0.0,
+    dx.z, dy.z, 0.0);
 }
 
 void main()
@@ -131,7 +123,7 @@ void main()
     return;
   }
 
-  mat3 T = getProjectionJacobian(posVC.xyz) * MCVCLinearMatrix;
+  mat3 T = getProjectionJacobian(posPC) * MCVCLinearMatrix;
 
   //VTK::Covariance::Impl
 

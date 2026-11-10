@@ -31,6 +31,14 @@ sort from back to front. This option does not change the default translucent
 pass or perform sorting. Each attribute and the order must fit within the
 device's maximum two-dimensional texture size.
 
+The covariance uses the complete linear model-to-view transform, including
+nonuniform actor scale and shear, independently of position-buffer shift and
+scale. Projection uses the derivative of the supplied homogeneous projection
+matrix at the splat center. This also supports oblique and explicit projection
+matrices without deriving a focal length from the camera view angle. Parallel
+projection is a mapper adaptation; the base Gaussian glTF extension defines
+perspective reconstruction only.
+
 A vertex shader template set through `ViewSpecificProperties` must match the
 mode: splats need the tags and outputs of `glsl/vtkPointGaussianVS.glsl`,
 simple points those of the polydata vertex shader.
