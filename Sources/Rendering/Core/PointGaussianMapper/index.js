@@ -84,13 +84,20 @@ function vtkPointGaussianMapper(publicAPI, model) {
     if (model.scaleFactor !== 0 && !model.splatShaderCode) {
       return false;
     }
+    const directColors = getPointArray(
+      publicAPI.getInputData(),
+      model.directColorArray
+    );
     const opacities = getPointArray(
       publicAPI.getInputData(),
       model.opacityArray
     );
     return opacities
       ? isOpacityArrayOpaque(opacities)
-      : superClass.getIsOpaque();
+      : directColors && publicAPI.getScalarVisibility()
+        ? directColors.getNumberOfComponents() === 4 &&
+          directColors.getRange(3)[0] >= 1.0
+        : superClass.getIsOpaque();
   };
 }
 
@@ -116,6 +123,7 @@ function defaultValues(initialValues) {
     rotationArray: null,
     lowpassMatrix: [0, 0, 0],
     pointOrder: null,
+    directColorArray: null,
     ...initialValues,
   };
 }
@@ -144,6 +152,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     'anisotropic',
     'rotationArray',
     'pointOrder',
+    'directColorArray',
   ]);
   macro.setGetArray(publicAPI, model, ['lowpassMatrix'], 3);
 

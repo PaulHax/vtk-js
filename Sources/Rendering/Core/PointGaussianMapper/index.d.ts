@@ -20,9 +20,24 @@ export type IPointGaussianMapperInitialValues = IMapperInitialValues & {
   rotationArray?: Nullable<string>;
   lowpassMatrix?: Vector3;
   pointOrder?: Nullable<vtkDataArray>;
+  directColorArray?: Nullable<string>;
 };
 
 export type vtkPointGaussianMapper = vtkMapper & {
+  /** Get the optional point-data Float32 RGBA source. */
+  getDirectColorArray(): Nullable<string>;
+
+  /**
+   * Use a named four-component Float32 point-data array directly as RGBA,
+   * bypassing scalar mapping and byte conversion while scalar visibility is on.
+   * RGB values retain their floating-point range. The caller supplies color
+   * space and composition policy; normalized targets need premultiplied alpha
+   * to preserve color range before blending. OpacityArray, when specified,
+   * replaces this array's alpha as with ordinary mapped colors.
+   * This vtk.js extension defaults to null, preserving mapped color behavior.
+   */
+  setDirectColorArray(name: Nullable<string>): boolean;
+
   /**
    * Get the optional order of topology-free Gaussian splats.
    */

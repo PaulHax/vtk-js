@@ -390,6 +390,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       opacity,
       ordered,
       cellBO.getCABO().getColorComponents(),
+      model.layout.floatColors,
     ].join();
     let needRebuild = false;
     if (cellBO.getReferenceByName('pointGaussianLayout') !== layoutKey) {
@@ -454,14 +455,14 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
         offset: cabo.getVertexOffset(),
         stride: cabo.getStride(),
       });
-      if (cabo.getColorComponents()) {
-        bind(cabo.getColorBO(), 'scalarColor', 4, {
-          type: gl.UNSIGNED_BYTE,
-          normalize: true,
-          offset: cabo.getColorOffset(),
-          stride: cabo.getColorBOStride(),
-        });
-      }
+    }
+    if (cabo.getColorComponents() && (divisor || model.layout.floatColors)) {
+      bind(cabo.getColorBO(), 'scalarColor', 4, {
+        type: model.layout.floatColors ? gl.FLOAT : gl.UNSIGNED_BYTE,
+        normalize: !model.layout.floatColors,
+        offset: cabo.getColorOffset(),
+        stride: cabo.getColorBOStride(),
+      });
     }
     const { anisotropic, radius, rotation, opacity } = model.layout;
     if (radius) {
@@ -564,10 +565,42 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   // Buffers
   // --------------------------------------------------------------------------
 
+  function getDirectColors(poly) {
+    const renderable = model.renderable;
+    if (
+      !renderable.getScalarVisibility() ||
+      !renderable.getDirectColorArray()
+    ) {
+      return null;
+    }
+    const colors = getPointArray(poly, renderable.getDirectColorArray());
+    if (
+      !colors ||
+      colors.getNumberOfComponents() !== 4 ||
+      !(colors.getData() instanceof Float32Array) ||
+      colors.getNumberOfTuples() < poly.getPoints().getNumberOfPoints()
+    ) {
+      throw new Error(
+        'directColorArray requires a four-component Float32 RGBA tuple for each point.'
+      );
+    }
+    return colors;
+  }
+
+  function getColors(poly) {
+    const direct = getDirectColors(poly);
+    if (direct) return direct;
+    model.renderable.mapScalars(poly, 1.0);
+    return model.renderable.getColorMapColors();
+  }
+
   function getColorKey(poly) {
     const renderable = model.renderable;
     if (!renderable.getScalarVisibility()) {
       return [false];
+    }
+    if (renderable.getDirectColorArray()) {
+      return ['direct', ...objectKey(getDirectColors(poly))];
     }
     const scalarSource = [
       renderable.getScalarMode(),
@@ -706,7 +739,10 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   // or null when the mapped colours cannot colour the drawn points.
   function getColorSelection(colors, poly, { count, pointIds, cellIds }) {
     const tuples = colors.getNumberOfTuples();
-    if (model.renderable.getAreScalarsMappedFromCells()) {
+    if (
+      !model.renderable.getDirectColorArray() &&
+      model.renderable.getAreScalarsMappedFromCells()
+    ) {
       // Cell colours reach points only through the verts cells drawing them;
       // verts come first in the cell order, so a verts index is a cell id.
       const verts = getVerts(poly);
@@ -722,8 +758,8 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   }
 
   function uploadColors(cabo, poly, selection) {
-    model.renderable.mapScalars(poly, 1.0);
-    const colors = model.renderable.getColorMapColors();
+    const colors = getColors(poly);
+    model.layout.floatColors = !!getDirectColors(poly);
     const colorSelection = colors && getColorSelection(colors, poly, selection);
     if (!colorSelection) {
       cabo.getColorBO()?.releaseGraphicsResources();
@@ -731,16 +767,16 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       cabo.setColorComponents(0);
       return;
     }
-    // Mapped colours are RGBA bytes.
+    const ColorArray = model.layout.floatColors ? Float32Array : Uint8Array;
     cabo.setColorBO(
       uploadArrayBuffer(
         cabo.getColorBO(),
-        gatherTuples(colors, colorSelection, Uint8Array)
+        gatherTuples(colors, colorSelection, ColorArray)
       )
     );
     cabo.setColorComponents(4);
     cabo.setColorOffset(0);
-    cabo.setColorBOStride(4);
+    cabo.setColorBOStride(4 * ColorArray.BYTES_PER_ELEMENT);
   }
 
   function buildRadius(poly, selection) {
@@ -843,12 +879,13 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       );
     }
     if (stale.includes('colors')) {
-      model.renderable.mapScalars(poly, 1.0);
-      const colors = model.renderable.getColorMapColors();
+      const colors = getColors(poly);
+      model.layout.floatColors = !!getDirectColors(poly);
+      const ColorArray = model.layout.floatColors ? Float32Array : Uint8Array;
       const selection = colors && getColorSelection(colors, poly, allPoints);
       const hasColors = dataTextures.upload(
         'pointColors',
-        selection && gatherTuples(colors, selection, Uint8Array),
+        selection && gatherTuples(colors, selection, ColorArray),
         4
       );
       cabo.setColorComponents(hasColors ? 4 : 0);

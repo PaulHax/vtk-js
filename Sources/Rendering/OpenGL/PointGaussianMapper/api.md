@@ -31,6 +31,14 @@ sort from back to front. This option does not change the default translucent
 pass or perform sorting. Each attribute and the order must fit within the
 device's maximum two-dimensional texture size.
 
+An optional `directColorArray` names four-component Float32 RGBA point data.
+It bypasses scalar mapping and byte conversion while scalar visibility is on,
+retaining the RGB range required by reconstructed appearance. The source must
+supply one tuple per input point; `opacityArray`, when present, still replaces
+its alpha. The renderer does not infer the reconstruction color space or a
+blending policy. A normalized render target requires premultiplied shader output
+and a source blend factor of one to avoid clamping colors before alpha blending.
+
 The covariance uses the complete linear model-to-view transform, including
 nonuniform actor scale and shear, independently of position-buffer shift and
 scale. Projection uses the derivative of the supplied homogeneous projection
