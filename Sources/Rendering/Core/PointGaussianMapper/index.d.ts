@@ -1,78 +1,354 @@
+import { Nullable, Vector3 } from '../../../types';
+import vtkPiecewiseFunction from '../../../Common/DataModel/PiecewiseFunction';
+import vtkDataArray from '../../../Common/Core/DataArray';
 import vtkMapper, { IMapperInitialValues } from '../Mapper';
 
 export type IPointGaussianMapperInitialValues = IMapperInitialValues & {
+  scaleArray?: Nullable<string>;
+  scaleArrayComponent?: number;
+  scaleFunction?: Nullable<vtkPiecewiseFunction>;
+  scaleTableSize?: number;
+  opacityArray?: Nullable<string>;
+  opacityArrayComponent?: number;
+  scalarOpacityFunction?: Nullable<vtkPiecewiseFunction>;
+  opacityTableSize?: number;
   scaleFactor?: number;
-  pointSizeScale?: number;
-  circle?: boolean;
-  worldSize?: number;
-  maximumPointCount?: number;
+  splatShaderCode?: Nullable<string>;
+  emissive?: boolean;
+  boundScale?: number;
+  anisotropic?: boolean;
+  rotationArray?: Nullable<string>;
+  lowpassMatrix?: Vector3;
+  pointOrder?: Nullable<vtkDataArray>;
+  directColorArray?: Nullable<string>;
+  coordinateShiftAndScaleEnabled?: boolean;
+};
+
+export type PointAttributeName =
+  | 'positions'
+  | 'colors'
+  | 'radius'
+  | 'rotation'
+  | 'opacity';
+
+export type PointAttributeUpdate = {
+  source: vtkDataArray;
+  fromMTime: number;
+  toMTime: number;
+  /** First tuple and tuple count, in the unchanged backing array. */
+  ranges: readonly (readonly [number, number])[];
 };
 
 export type vtkPointGaussianMapper = vtkMapper & {
   /**
-   * Get the Gaussian scale selector. Only 0 (simple points) is supported.
+   * Record complete in-place edits after calling each source's modified().
+   * Indexed rendering can upload only these tuples when a complete history
+   * connects its last upload to the current source modification time.
+   * History is bounded to 64 updates per attribute. Unrecorded modifications,
+   * replaced arrays, layout changes and context restoration upload in full.
+   * This records upload history only; it does not modify the source arrays.
+   * Pass null to clear history. The colors source is directColorArray.
+   */
+  setPointAttributeUpdateRanges(
+    updates: Partial<Record<PointAttributeName, PointAttributeUpdate>> | null
+  ): boolean;
+
+  /** Complete combined tuple ranges for a source interval, or null on a gap. */
+  getPointAttributeUpdateRanges(
+    name: PointAttributeName,
+    source: vtkDataArray,
+    fromMTime: number,
+    toMTime: number
+  ): [number, number][] | null;
+
+  /** Get whether automatic position-buffer shift and scale are enabled. */
+  getCoordinateShiftAndScaleEnabled(): boolean;
+
+  /**
+   * Enable automatic position-buffer shift and scale (default true). Disable
+   * only for already origin-relative Float32 positions whose precision is
+   * managed by the caller. Keeping raw storage enables indexed subrange
+   * uploads without repacking the complete position array.
+   */
+  setCoordinateShiftAndScaleEnabled(enabled: boolean): boolean;
+
+  /** Get the optional point-data Float32 RGBA source. */
+  getDirectColorArray(): Nullable<string>;
+
+  /**
+   * Use a named four-component Float32 point-data array directly as RGBA,
+   * bypassing scalar mapping and byte conversion while scalar visibility is on.
+   * RGB values retain their floating-point range. The caller supplies color
+   * space and composition policy; normalized targets need premultiplied alpha
+   * to preserve color range before blending. OpacityArray, when specified,
+   * replaces this array's alpha as with ordinary mapped colors.
+   * This vtk.js extension defaults to null, preserving mapped color behavior.
+   */
+  setDirectColorArray(name: Nullable<string>): boolean;
+
+  /**
+   * Get the optional order of topology-free Gaussian splats.
+   */
+  getPointOrder(): Nullable<vtkDataArray>;
+
+  /**
+   * Draw the listed input point ids in order. The array must have one component
+   * and Uint32Array storage; subsets and repeated ids are allowed. In splat
+   * mode, the input must have no verts cells. Point attributes remain resident
+   * in GPU textures, so changing only this array uploads only the order.
+   * Call modified() after editing the array in place. Hardware selection
+   * returns input point ids. Ignored for simple points (scaleFactor zero).
+   * This vtk.js extension does not sort points or select a blending policy.
+   * Default is null, which uses the ordinary attribute-buffer rendering path.
+   */
+  setPointOrder(pointOrder: Nullable<vtkDataArray>): boolean;
+
+  /**
+   * Get the name of the point data array that scales the splats.
+   */
+  getScaleArray(): Nullable<string>;
+
+  /**
+   * Set the name of the point data array that scales the splats. Each value,
+   * after the optional scale function, is a splat's standard deviation before
+   * the scale factor. With anisotropic splats the array must have three
+   * components, one standard deviation per axis. Default is null: every
+   * splat has a standard deviation of one.
+   * @param {Nullable<String>} scaleArray
+   */
+  setScaleArray(scaleArray: Nullable<string>): boolean;
+
+  /**
+   * Get the component of the scale array to use.
+   */
+  getScaleArrayComponent(): number;
+
+  /**
+   * Set the component of the scale array to use. A single-component array
+   * always uses its only component, a fractional component rounds down, and
+   * one outside the tuple uses the tuple magnitude. Ignored for anisotropic
+   * splats. Default is 0.
+   * @param {Number} scaleArrayComponent
+   */
+  setScaleArrayComponent(scaleArrayComponent: number): boolean;
+
+  /**
+   * Get the optional function that maps scale array values.
+   */
+  getScaleFunction(): Nullable<vtkPiecewiseFunction>;
+
+  /**
+   * Set an optional function that maps scale array values to standard
+   * deviations. It is sampled over its own range into a table of
+   * scaleTableSize entries, and values outside that range clamp to its ends.
+   * Only used with a scale array, and not for anisotropic splats.
+   * @param {Nullable<vtkPiecewiseFunction>} scaleFunction
+   */
+  setScaleFunction(scaleFunction: Nullable<vtkPiecewiseFunction>): boolean;
+
+  /**
+   * Get the number of samples taken from the scale function.
+   */
+  getScaleTableSize(): number;
+
+  /**
+   * Set the number of samples taken from the scale function. Default is 1024.
+   * @param {Number} scaleTableSize
+   */
+  setScaleTableSize(scaleTableSize: number): boolean;
+
+  /**
+   * Get the name of the point data array that sets the opacities.
+   */
+  getOpacityArray(): Nullable<string>;
+
+  /**
+   * Set the name of the point data array that sets each point's opacity, in
+   * place of the alpha of its colour. Values are mapped through the optional
+   * scalar opacity function, then multiplied by the property opacity. An
+   * array with values below one makes the prop translucent, unless it is
+   * emissive. Default is null.
+   * @param {Nullable<String>} opacityArray
+   */
+  setOpacityArray(opacityArray: Nullable<string>): boolean;
+
+  /**
+   * Get the component of the opacity array to use.
+   */
+  getOpacityArrayComponent(): number;
+
+  /**
+   * Set the component of the opacity array to use, with the same rules as
+   * scaleArrayComponent. Default is 0.
+   * @param {Number} opacityArrayComponent
+   */
+  setOpacityArrayComponent(opacityArrayComponent: number): boolean;
+
+  /**
+   * Get the optional function that maps opacity array values.
+   */
+  getScalarOpacityFunction(): Nullable<vtkPiecewiseFunction>;
+
+  /**
+   * Set an optional function that maps opacity array values to opacities,
+   * sampled like the scale function. Only used with an opacity array.
+   * @param {Nullable<vtkPiecewiseFunction>} scalarOpacityFunction
+   */
+  setScalarOpacityFunction(
+    scalarOpacityFunction: Nullable<vtkPiecewiseFunction>
+  ): boolean;
+
+  /**
+   * Get the number of samples taken from the scalar opacity function.
+   */
+  getOpacityTableSize(): number;
+
+  /**
+   * Set the number of samples taken from the scalar opacity function.
+   * Default is 1024.
+   * @param {Number} opacityTableSize
+   */
+  setOpacityTableSize(opacityTableSize: number): boolean;
+
+  /**
+   * Get the factor applied to every splat's standard deviation.
    */
   getScaleFactor(): number;
 
   /**
-   * Select VTK simple-point mode. Nonzero values throw because Gaussian
-   * splats are unsupported. Defaults to 0, unlike VTK C++ (1).
-   * @param scaleFactor Must be 0.
+   * Set the factor applied to every splat's standard deviation, after the
+   * scale function. Zero draws simple points of the actor point size, one
+   * vertex per point, instead of splats. Default is 1.
+   * @param {Number} scaleFactor
    */
   setScaleFactor(scaleFactor: number): boolean;
 
-  /** vtk.js extension: get the display-size multiplier. */
-  getPointSizeScale(): number;
+  /**
+   * Get the fragment shader code that shades the splats.
+   */
+  getSplatShaderCode(): Nullable<string>;
 
   /**
-   * vtk.js extension: multiply pixel diameter, or world diameter when worldSize
-   * is enabled. This does not select Gaussian rendering. Defaults to 1.
+   * Set fragment shader code that replaces the default Gaussian falloff of
+   * the splats. It replaces the //VTK::Color::Impl tag, so start the code
+   * with that tag to keep the default colouring. It can read and modify
+   * `opacity`, `diffuseColor` and `ambientColor`, and read
+   * `offsetVCVSOutput`, the offset from the splat centre in standard
+   * deviations. Non-emissive splats with custom code render as opaque
+   * geometry unless an opacity makes them translucent, so code that fades
+   * `opacity` also needs, for example, the actor forced translucent. Not
+   * used for simple points. Default is null.
+   * @param {Nullable<String>} splatShaderCode
    */
-  setPointSizeScale(pointSizeScale: number): boolean;
+  setSplatShaderCode(splatShaderCode: Nullable<string>): boolean;
 
   /**
-   * Whether points render as round splats (a gl_PointCoord edge discard)
-   * instead of opaque squares.
+   * Get whether points and splats emit light.
    */
-  getCircle(): boolean;
+  getEmissive(): boolean;
 
   /**
-   * @param circle false (opaque square) by default.
+   * Set whether points and splats emit light. Emissive points blend
+   * additively and write no depth. They render with the opaque geometry, in
+   * actor order, so add their actors after the opaque ones: opaque geometry
+   * drawn after them covers them even where it is behind them. A property
+   * opacity below one, or an actor forced translucent, makes them ordinary
+   * translucent geometry; an opacity array, or an actor forced opaque, dims
+   * them and keeps them additive. When false, simple points and splats with
+   * custom shader code render as opaque geometry, and splats with the
+   * default Gaussian falloff, like anything with an opacity below one,
+   * render as translucent geometry. Default is true.
+   * @param {Boolean} emissive
    */
-  setCircle(circle: boolean): boolean;
+  setEmissive(emissive: boolean): boolean;
 
   /**
-   * Get the world-space point diameter (0 when screen-space sizing is active).
+   * Get the half extent of each splat's quad, in standard deviations.
    */
-  getWorldSize(): number;
+  getBoundScale(): number;
 
   /**
-   * Point diameter in model units. When > 0, each point's pixel size is
-   * derived from its distance to the camera (perspective) or the parallel
-   * scale (orthographic), multiplied by pointSizeScale and the actor
-   * transform's scale (assumed isotropic; anisotropic actor scaling uses
-   * the x-axis norm). The screen-space actor point size acts as the pixel
-   * floor (sub-pixel splats keep the classic fixed-size look) and the
-   * implementation's gl_PointSize range caps the ceiling.
-   * When 0 (default), points use the actor point size in screen pixels.
-   * @param worldSize 0 by default.
+   * Set the half extent of each splat's quad, in standard deviations. The
+   * default of 3 contains the visible part of a Gaussian. Custom splat
+   * shader code that draws a smaller shape can lower it to shade fewer
+   * fragments. Default is 3.
+   * @param {Number} boundScale
    */
-  setWorldSize(worldSize: number): boolean;
+  setBoundScale(boundScale: number): boolean;
 
   /**
-   * Get the maximum input prefix submitted to the GPU. A negative value means
-   * all input points.
+   * Get whether splats are anisotropic.
    */
-  getMaximumPointCount(): number;
+  getAnisotropic(): boolean;
 
   /**
-   * Limit drawing to a prefix of the already-uploaded point buffer. Finite
-   * values are truncated and clamped to the available input; a negative value
-   * restores the full input. Non-finite values are ignored. Changing this does
-   * not rebuild the point or color VBO.
-   * @param maximumPointCount -1 by default.
+   * Set whether splats are anisotropic 3D Gaussians: stretched by the three
+   * components of the scale array and oriented by the rotation array.
+   * Default is false.
+   * @param {Boolean} anisotropic
    */
-  setMaximumPointCount(maximumPointCount: number): boolean;
+  setAnisotropic(anisotropic: boolean): boolean;
+
+  /**
+   * Get the name of the point data array that orients anisotropic splats.
+   */
+  getRotationArray(): Nullable<string>;
+
+  /**
+   * Set the name of the point data array that orients anisotropic splats.
+   * Each tuple is a quaternion with the real part first. Default is null:
+   * unrotated.
+   * @param {Nullable<String>} rotationArray
+   */
+  setRotationArray(rotationArray: Nullable<string>): boolean;
+
+  /**
+   * Get the low-pass filter added to the projected splat covariance.
+   */
+  getLowpassMatrix(): Vector3;
+
+  /**
+   * Get a reference to the low-pass filter added to the projected splat
+   * covariance.
+   */
+  getLowpassMatrixByReference(): Vector3;
+
+  /**
+   * Set a low-pass filter added to each splat's projected 2D covariance,
+   * for example to keep splats at least a pixel wide. The symmetric matrix
+   * [a b; b c] is given as (a, b, c), in squared normalized device
+   * coordinates: a variance of v square pixels in a view of W by H pixels
+   * is (4v / W^2, 0, 4v / H^2). Default is (0, 0, 0).
+   * @param {Number} a
+   * @param {Number} b
+   * @param {Number} c
+   */
+  setLowpassMatrix(a: number, b: number, c: number): boolean;
+
+  /**
+   * Set a low-pass filter added to each splat's projected 2D covariance.
+   * @param {Vector3} lowpassMatrix
+   */
+  setLowpassMatrix(lowpassMatrix: Vector3): boolean;
+
+  /**
+   * Set the low-pass filter from an array, copying its values.
+   * @param {Vector3} lowpassMatrix
+   */
+  setLowpassMatrixFrom(lowpassMatrix: Vector3): boolean;
+
+  /**
+   * Point Gaussians always colour each point from a single colour, so they
+   * never use texture colouring.
+   */
+  canUseTextureMapForColoring(): boolean;
+
+  /**
+   * Not supported: the point buffers carry no custom attributes. Logs a
+   * warning and returns false.
+   * @param {String[]} customShaderAttributes
+   */
+  setCustomShaderAttributes(customShaderAttributes: string[]): boolean;
 };
 
 /**
@@ -91,13 +367,26 @@ export function extend(
 
 /**
  * Method use to create a new instance of vtkPointGaussianMapper
+ * @param {IPointGaussianMapperInitialValues} [initialValues] for pre-setting some of its content
  */
 export function newInstance(
   initialValues?: IPointGaussianMapperInitialValues
 ): vtkPointGaussianMapper;
 
 /**
- * vtkPointGaussianMapper inherits from vtkMapper.
+ * vtkPointGaussianMapper draws each point of a vtkPolyData as a Gaussian
+ * splat, or as a simple point when the scale factor is zero, without needing
+ * cells. When the polydata has verts cells, only the points they reference
+ * are drawn. It matches VTK's vtkPointGaussianMapper: splats are sized by a
+ * scale array through an optional piecewise function, their opacity can come
+ * from an opacity array, custom fragment shader code can draw other shapes,
+ * and anisotropic splats render 3D Gaussian splatting data from scale and
+ * rotation arrays. Point Gaussians are unlit. By default the splats emit
+ * light; see setEmissive for how that orders them with other geometry.
+ * Splats do not support actors in the DISPLAY coordinate system.
+ *
+ * Hardware selection returns point ids, and for cells the ids of the verts
+ * cells that draw the points, or the point ids when there are no verts cells.
  */
 export declare const vtkPointGaussianMapper: {
   newInstance: typeof newInstance;

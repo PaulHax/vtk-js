@@ -1,216 +1,209 @@
-import { it, expect, vi } from 'vitest';
+import { it, expect } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
-import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
-import vtkActor from 'vtk.js/Sources/Rendering/Core/Actor';
+import vtkColorTransferFunction from 'vtk.js/Sources/Rendering/Core/ColorTransferFunction';
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
+import vtkPiecewiseFunction from 'vtk.js/Sources/Common/DataModel/PiecewiseFunction';
 import vtkPointGaussianMapper from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper';
-import vtkPolyData from 'vtk.js/Sources/Common/DataModel/PolyData';
-import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
-import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
+import vtkPointSet from 'vtk.js/Sources/Common/DataModel/PointSet';
+import {
+  DISC,
+  capture,
+  countLitAlong,
+  countLitPixels,
+  createPointSelector,
+  createPolyData,
+  createScene,
+  lookDownZ,
+  rgbaAt,
+} from './pointGaussianTestUtils';
 
-// Deliberately NO verts cell array: the mapper must draw straight from the
-// points. Three non-collinear points so the render is not degenerate.
-function makePointCloud(coords, rgb) {
-  const polyData = vtkPolyData.newInstance();
-  polyData.getPoints().setData(Float32Array.from(coords), 3);
-  if (rgb) {
-    polyData.getPointData().setScalars(
-      vtkDataArray.newInstance({
-        name: 'RGB',
-        numberOfComponents: 3,
-        values: Uint8Array.from(rgb),
-      })
-    );
-  }
-  return polyData;
-}
+it('vtkPointGaussianMapper has the VTK defaults', () => {
+  const mapper = vtkPointGaussianMapper.newInstance();
+  expect(mapper.getScaleArray()).toBe(null);
+  expect(mapper.getScaleArrayComponent()).toBe(0);
+  expect(mapper.getScaleFunction()).toBe(null);
+  expect(mapper.getScaleTableSize()).toBe(1024);
+  expect(mapper.getOpacityArray()).toBe(null);
+  expect(mapper.getOpacityArrayComponent()).toBe(0);
+  expect(mapper.getScalarOpacityFunction()).toBe(null);
+  expect(mapper.getOpacityTableSize()).toBe(1024);
+  expect(mapper.getScaleFactor()).toBe(1.0);
+  expect(mapper.getSplatShaderCode()).toBe(null);
+  expect(mapper.getEmissive()).toBe(true);
+  expect(mapper.getBoundScale()).toBe(3.0);
+  expect(mapper.getAnisotropic()).toBe(false);
+  expect(mapper.getRotationArray()).toBe(null);
+  expect(mapper.getLowpassMatrix()).toEqual([0, 0, 0]);
 
-function getActivePrimitiveCABOs(openGLRenderWindow, mapper) {
-  const openGLMapper = openGLRenderWindow.getViewNodeFor(mapper);
-  const primitives = openGLMapper.getReferenceByName('primitives');
-  return primitives
-    .map((primitive) => primitive.getCABO())
-    .filter((cabo) => cabo.getElementCount() > 0);
-}
-
-function imageDataFromDataURI(dataURI) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      resolve(ctx.getImageData(0, 0, img.width, img.height));
-    };
-    img.onerror = reject;
-    img.src = dataURI;
-  });
-}
-
-it('vtkPointGaussianMapper normalizes its progressive draw count', () => {
-  const mapper = vtkPointGaussianMapper.newInstance({ scaleFactor: 0 });
-  expect(mapper.getMaximumPointCount()).toBe(-1);
-  expect(mapper.setMaximumPointCount(3.8)).toBe(true);
-  expect(mapper.getMaximumPointCount()).toBe(3);
-  expect(mapper.setMaximumPointCount(Number.NaN)).toBe(false);
-  expect(mapper.getMaximumPointCount()).toBe(3);
-  expect(mapper.setMaximumPointCount(-20)).toBe(true);
-  expect(mapper.getMaximumPointCount()).toBe(-1);
+  const other = vtkPointGaussianMapper.newInstance();
+  mapper.getLowpassMatrixByReference()[0] = 1;
+  expect(other.getLowpassMatrix()).toEqual([0, 0, 0]);
   mapper.delete();
+  other.delete();
+});
+
+it('vtkPointGaussianMapper reports translucency from emissive, splat shape and opacities', () => {
+  const gc = testUtils.createGarbageCollector();
+  const polyData = createPolyData(gc, [0, 0, 0, 1, 0, 0]);
+  const opacities = vtkDataArray.newInstance({
+    name: 'opacity',
+    values: Float32Array.from([0.25, 1]),
+  });
+  polyData.getPointData().addArray(opacities);
+  const mapper = gc.registerResource(
+    vtkPointGaussianMapper.newInstance({ opacityArray: 'opacity' })
+  );
+  mapper.setInputData(polyData);
+
+  expect(mapper.getIsOpaque(), 'emissive').toBe(true);
+  mapper.setEmissive(false);
+  expect(mapper.getIsOpaque(), 'Gaussian splats fade out').toBe(false);
+  mapper.setSplatShaderCode(DISC);
+  expect(mapper.getIsOpaque(), 'opacity array below one').toBe(false);
+
+  opacities.setData(Float32Array.from([1, 1]));
+  expect(mapper.getIsOpaque(), 'opacity array at one').toBe(true);
+  mapper.setSplatShaderCode(null);
+  mapper.setScaleFactor(0);
+  expect(mapper.getIsOpaque(), 'simple points').toBe(true);
+
+  const opacityFunction = vtkPiecewiseFunction.newInstance();
+  opacityFunction.addPoint(0, 1);
+  opacityFunction.addPoint(1, 0.5);
+  mapper.setScalarOpacityFunction(opacityFunction);
+  expect(mapper.getIsOpaque(), 'opacity function below one').toBe(false);
+
+  opacities.setData(Float32Array.from([0, 0]));
+  expect(
+    mapper.getIsOpaque(),
+    'the data only reaches the opaque part of the function'
+  ).toBe(true);
+
+  mapper.setOpacityArray('missing');
+  expect(mapper.getIsOpaque(), 'no such array').toBe(true);
+
+  gc.releaseResources();
 });
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'vtkPointGaussianMapper uploads one vertex per input point (not 3N)',
-  () => {
+  'vtkPointGaussianMapper sizes splats through the scale function, clamped to its range',
+  async () => {
     const gc = testUtils.createGarbageCollector();
-    const container = document.querySelector('body');
-    const renderWindowContainer = gc.registerDOMElement(
-      document.createElement('div')
+    const polyData = createPolyData(gc, [0, 0, 0]);
+    const scales = vtkDataArray.newInstance({
+      name: 'scale',
+      values: Float32Array.of(0),
+    });
+    polyData.getPointData().addArray(scales);
+    const scaleFunction = vtkPiecewiseFunction.newInstance();
+    scaleFunction.addPoint(0, 1);
+    scaleFunction.addPoint(1, 4);
+    // A linear function needs two samples; a fractional count rounds down.
+    const scene = createScene(
+      gc,
+      vtkPointGaussianMapper.newInstance({
+        emissive: false,
+        splatShaderCode: DISC,
+        scaleArray: 'scale',
+        scaleFunction,
+        scaleTableSize: 2.5,
+      }),
+      polyData,
+      50
     );
-    container.appendChild(renderWindowContainer);
+    // 5 px per unit: a disc of radius r units is 10 r px wide.
+    lookDownZ(scene.renderer, 5);
+    const discWidth = async (scale) => {
+      scales.setData(Float32Array.of(scale));
+      return countLitAlong(await capture(scene), { row: 25 });
+    };
 
-    const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
-    const renderer = gc.registerResource(vtkRenderer.newInstance());
-    renderWindow.addRenderer(renderer);
+    expect(await discWidth(0.5)).toBeCloseTo(25, -1);
+    expect(await discWidth(-0.25), 'clamped below').toBeCloseTo(10, -1);
+    expect(await discWidth(7), 'clamped above').toBeCloseTo(40, -1);
 
-    const numPoints = 5;
-    const coords = [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0.5, 0.5, 1];
-    const polyData = gc.registerResource(
-      makePointCloud(
-        coords,
-        [255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 255, 0, 255]
-      )
-    );
-    const mapper = gc.registerResource(
-      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
-    );
-    const actor = gc.registerResource(vtkActor.newInstance());
-
-    mapper.setInputData(polyData);
-    mapper.setColorModeToDirectScalars();
-    mapper.setScalarVisibility(true);
-    actor.setMapper(mapper);
-    renderer.addActor(actor);
-    renderer.resetCamera();
-
-    const openGLRenderWindow = gc.registerResource(
-      renderWindow.newAPISpecificView()
-    );
-    openGLRenderWindow.setContainer(renderWindowContainer);
-    renderWindow.addView(openGLRenderWindow);
-    openGLRenderWindow.setSize(50, 50);
-    renderWindow.render();
-
-    const uploadedPoints = Float32Array.from(coords);
-    const bufferData = vi.spyOn(openGLRenderWindow.getContext(), 'bufferData');
-    polyData.getPoints().setData(uploadedPoints, 3);
-    renderWindow.render();
+    // The function edited in place, the data unchanged.
+    scaleFunction.removeAllPoints();
+    scaleFunction.addPoint(2, 2);
     expect(
-      bufferData.mock.calls.some(([, data]) => data === uploadedPoints),
-      'tightly packed Float32 positions upload without a staging copy'
-    ).toBe(true);
-    bufferData.mockRestore();
-
-    const cabos = getActivePrimitiveCABOs(openGLRenderWindow, mapper);
-    expect(cabos.length, 'exactly one active (Points) VBO').toBe(1);
-    expect(
-      cabos[0].getElementCount(),
-      'N input points upload N vertices, not 3N'
-    ).toBe(numPoints);
-
-    const pointCABO = cabos[0];
-    const positionHandle = pointCABO.getHandle();
-    const colorBO = pointCABO.getColorBO();
-    const colorHandle = colorBO.getHandle();
-    const deleteBuffer = vi.spyOn(
-      openGLRenderWindow.getContext(),
-      'deleteBuffer'
-    );
-
-    // Exercise the normal scene-graph lifecycle rather than reaching into a
-    // primitive. Removing the actor makes its mapper view node release both
-    // the point and color allocations as it is pruned on the next traversal.
-    renderer.removeActor(actor);
-    renderWindow.render();
-
-    expect(
-      deleteBuffer.mock.calls.map(([handle]) => handle),
-      'scene removal deletes the point and color buffer handles'
-    ).toEqual(expect.arrayContaining([positionHandle, colorHandle]));
-    expect(pointCABO.getAllocatedGPUMemoryInBytes()).toBe(0);
-    deleteBuffer.mockRestore();
+      countLitAlong(await capture(scene), { row: 25 }),
+      'a single-point function'
+    ).toBeCloseTo(20, -1);
 
     gc.releaseResources();
   }
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'vtkPointGaussianMapper changes its draw prefix without rebuilding VBOs',
-  () => {
+  'vtkPointGaussianMapper draws every point of the input without cells',
+  async () => {
     const gc = testUtils.createGarbageCollector();
-    const container = document.querySelector('body');
-    const renderWindowContainer = gc.registerDOMElement(
-      document.createElement('div')
+    const scene = createScene(
+      gc,
+      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 }),
+      createPolyData(
+        gc,
+        [-0.5, -0.5, 0, 0.5, -0.5, 0, -0.5, 0.5, 0, 0.5, 0.5, 0, 0, 0, 1]
+      ),
+      50
     );
-    container.appendChild(renderWindowContainer);
-
-    const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
-    const renderer = gc.registerResource(vtkRenderer.newInstance());
-    renderWindow.addRenderer(renderer);
-    const polyData = gc.registerResource(
-      makePointCloud(
-        [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0.5, 0.5, 1],
-        [255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 255, 0, 255]
-      )
+    scene.actor.getProperty().setPointSize(4);
+    lookDownZ(scene.renderer, 1);
+    const [node] = await createPointSelector(scene).selectAsync(
+      scene.renderer,
+      0,
+      0,
+      49,
+      49
     );
-    const mapper = gc.registerResource(
-      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
+    expect([...node.getSelectionList()].sort()).toEqual([0, 1, 2, 3, 4]);
+    gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper draws the points of a point set',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    const pointSet = gc.registerResource(vtkPointSet.newInstance());
+    pointSet.getPoints().setData(Float32Array.of(0, 0, 0), 3);
+    const scene = createScene(
+      gc,
+      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 }),
+      pointSet,
+      20
     );
-    const actor = gc.registerResource(vtkActor.newInstance());
-    mapper.setInputData(polyData);
-    mapper.setColorModeToDirectScalars();
-    actor.setMapper(mapper);
-    renderer.addActor(actor);
-    renderer.resetCamera();
+    scene.actor.getProperty().setPointSize(4);
+    lookDownZ(scene.renderer, 1);
+    expect(countLitPixels(await capture(scene))).toBe(16);
+    gc.releaseResources();
+  }
+);
 
-    const openGLRenderWindow = gc.registerResource(
-      renderWindow.newAPISpecificView()
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper refuses custom shader attributes and keeps drawing',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    const polyData = createPolyData(gc, [0, 0, 0]);
+    polyData
+      .getPointData()
+      .addArray(
+        vtkDataArray.newInstance({ name: 'a', values: Float32Array.of(1) })
+      );
+    const scene = createScene(
+      gc,
+      vtkPointGaussianMapper.newInstance({
+        scaleFactor: 0,
+        customShaderAttributes: ['a'],
+      }),
+      polyData,
+      20
     );
-    openGLRenderWindow.setContainer(renderWindowContainer);
-    renderWindow.addView(openGLRenderWindow);
-    openGLRenderWindow.setSize(50, 50);
-    renderWindow.render();
-
-    const gl = openGLRenderWindow.getContext();
-    const drawArrays = vi.spyOn(gl, 'drawArrays');
-    const bufferData = vi.spyOn(gl, 'bufferData');
-
-    mapper.setMaximumPointCount(2);
-    renderWindow.render();
-    expect(
-      drawArrays.mock.calls.some(
-        ([mode, first, count]) =>
-          mode === gl.POINTS && first === 0 && count === 2
-      )
-    ).toBe(true);
-    expect(bufferData).not.toHaveBeenCalled();
-
-    drawArrays.mockClear();
-    mapper.setMaximumPointCount(-1);
-    renderWindow.render();
-    expect(
-      drawArrays.mock.calls.some(
-        ([mode, first, count]) =>
-          mode === gl.POINTS && first === 0 && count === 5
-      )
-    ).toBe(true);
-    expect(bufferData).not.toHaveBeenCalled();
-
-    drawArrays.mockRestore();
-    bufferData.mockRestore();
+    scene.actor.getProperty().setPointSize(4);
+    lookDownZ(scene.renderer, 1);
+    expect(scene.mapper.setCustomShaderAttributes(['a'])).toBe(false);
+    expect(countLitPixels(await capture(scene))).toBe(16);
     gc.releaseResources();
   }
 );
@@ -219,81 +212,93 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'vtkPointGaussianMapper renders full-range direct RGB above 127',
   async () => {
     const gc = testUtils.createGarbageCollector();
-    const container = document.querySelector('body');
-    const renderWindowContainer = gc.registerDOMElement(
-      document.createElement('div')
+    // Colours above the signed-byte midpoint would wrap dark if the colour
+    // path ever read Uint8 as Int8.
+    const scene = createScene(
+      gc,
+      vtkPointGaussianMapper.newInstance({ scaleFactor: 0, emissive: false }),
+      createPolyData(gc, [0, 0, 0], [10, 200, 250]),
+      50
     );
-    container.appendChild(renderWindowContainer);
-
-    const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
-    const renderer = gc.registerResource(vtkRenderer.newInstance());
-    renderer.setBackground(0, 0, 0);
-    renderWindow.addRenderer(renderer);
-
-    // A single point coloured well above the signed-byte midpoint. If the color
-    // path ever misread Uint8 as Int8, 200/250 would wrap dark; we assert bright.
-    const polyData = gc.registerResource(
-      makePointCloud([0, 0, 0], [10, 200, 250])
-    );
-    const mapper = gc.registerResource(
-      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
-    );
-    const actor = gc.registerResource(vtkActor.newInstance());
-
-    mapper.setInputData(polyData);
-    mapper.setColorModeToDirectScalars();
-    mapper.setScalarVisibility(true);
-    actor.setMapper(mapper);
-    actor.getProperty().setPointSize(40);
-    renderer.addActor(actor);
-
-    const cam = renderer.getActiveCamera();
-    cam.setPosition(0, 0, 10);
-    cam.setFocalPoint(0, 0, 0);
-    cam.setViewUp(0, 1, 0);
-    renderer.resetCameraClippingRange();
-
-    const openGLRenderWindow = gc.registerResource(
-      renderWindow.newAPISpecificView()
-    );
-    openGLRenderWindow.setContainer(renderWindowContainer);
-    renderWindow.addView(openGLRenderWindow);
-    openGLRenderWindow.setSize(50, 50);
-
-    const promise = openGLRenderWindow
-      .captureNextImage()
-      .then(imageDataFromDataURI)
-      .then(({ data, width, height }) => {
-        const center =
-          (Math.floor(height / 2) * width + Math.floor(width / 2)) * 4;
-        const [r, g, b] = [data[center], data[center + 1], data[center + 2]];
-        expect(
-          g,
-          'green channel 200 renders bright, not wrapped dark'
-        ).toBeGreaterThan(150);
-        expect(
-          b,
-          'blue channel 250 renders bright, not wrapped dark'
-        ).toBeGreaterThan(150);
-        expect(r, 'red channel 10 stays dark').toBeLessThan(90);
-      })
-      .finally(gc.releaseResources);
-    renderWindow.render();
-    return promise;
+    scene.actor.getProperty().setPointSize(40);
+    lookDownZ(scene.renderer, 1);
+    const [red, green, blue] = rgbaAt(await capture(scene), 25, 25);
+    expect(red).toBeLessThan(90);
+    expect(green).toBeGreaterThan(150);
+    expect(blue).toBeGreaterThan(150);
+    gc.releaseResources();
   }
 );
 
-it('rejects Gaussian mode instead of rendering it as simple points', () => {
-  expect(() => vtkPointGaussianMapper.newInstance({ scaleFactor: 1 })).toThrow(
-    'supports only simple points'
-  );
-  const mapper = vtkPointGaussianMapper.newInstance({ scaleFactor: 0 });
-  for (const value of [1, -1, NaN, Infinity]) {
-    expect(() => mapper.setScaleFactor(value)).toThrow(
-      'supports only simple points'
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper colours each point even when scalars would interpolate',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    const polyData = createPolyData(gc, [0, 0, 0]);
+    polyData
+      .getPointData()
+      .setScalars(
+        vtkDataArray.newInstance({ name: 's', values: Float32Array.of(1) })
+      );
+    const lookupTable = gc.registerResource(
+      vtkColorTransferFunction.newInstance()
     );
+    lookupTable.addRGBPoint(0, 0, 0, 1);
+    lookupTable.addRGBPoint(1, 0, 1, 0);
+    const mapper = vtkPointGaussianMapper.newInstance({
+      scaleFactor: 0,
+      emissive: false,
+    });
+    const scene = createScene(gc, mapper, polyData, 50);
+    mapper.setColorModeToDefault();
+    mapper.setLookupTable(lookupTable);
+    mapper.setInterpolateScalarsBeforeMapping(true);
+    scene.actor.getProperty().setPointSize(20);
+    lookDownZ(scene.renderer, 1);
+    const [red, green] = rgbaAt(await capture(scene), 25, 25);
+    expect(green, 'the mapped colour, not the white actor').toBe(255);
+    expect(red).toBe(0);
+    gc.releaseResources();
   }
-  mapper.setPointSizeScale(2);
-  expect(mapper.getScaleFactor()).toBe(0);
-  mapper.delete();
-});
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper colours points from cell scalars only through the verts cells that draw them',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    const polyData = createPolyData(gc, [-1, 0, 0, 1, 0, 0]);
+    polyData.getLines().setData(Uint16Array.from([2, 0, 1]));
+    const cellColors = vtkDataArray.newInstance({
+      numberOfComponents: 3,
+      values: Uint8Array.from([255, 0, 0]),
+    });
+    polyData.getCellData().setScalars(cellColors);
+    const scene = createScene(
+      gc,
+      vtkPointGaussianMapper.newInstance({ scaleFactor: 0, emissive: false }),
+      polyData,
+      40
+    );
+    scene.mapper.setScalarModeToUseCellData();
+    scene.actor.getProperty().setColor(0, 0, 1);
+    scene.actor.getProperty().setPointSize(10);
+    // 10 px per unit: points 0 and 1 land on columns 10 and 30.
+    lookDownZ(scene.renderer, 2);
+    const colourAt = async (column) =>
+      rgbaAt(await capture(scene), column, 20).slice(0, 3);
+
+    expect(
+      await colourAt(10),
+      'a line colour belongs to no single point'
+    ).toEqual([0, 0, 255]);
+
+    // Two verts cells draw points 1 and 0, in that order.
+    polyData.getLines().setData(new Uint16Array(0));
+    polyData.getVerts().setData(Uint16Array.from([1, 1, 1, 0]));
+    cellColors.setData(Uint8Array.from([255, 0, 0, 0, 255, 0]), 3);
+    expect(await colourAt(10)).toEqual([0, 255, 0]);
+    expect(await colourAt(30)).toEqual([255, 0, 0]);
+
+    gc.releaseResources();
+  }
+);

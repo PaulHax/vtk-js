@@ -1,136 +1,132 @@
-import { it, expect, vi } from 'vitest';
+import { it, expect } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
-import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
 import vtkActor from 'vtk.js/Sources/Rendering/Core/Actor';
+import vtkMapper from 'vtk.js/Sources/Rendering/Core/Mapper';
+import vtkPlaneSource from 'vtk.js/Sources/Filters/Sources/PlaneSource';
 import vtkPointGaussianMapper from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper';
-import vtkPolyData from 'vtk.js/Sources/Common/DataModel/PolyData';
-import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
-import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
 import { FieldAssociations } from 'vtk.js/Sources/Common/DataModel/DataSet/Constants';
-import { PassTypes } from 'vtk.js/Sources/Rendering/OpenGL/HardwareSelector/Constants';
+import {
+  attributeIds,
+  createPointSelector,
+  createPolyData,
+  createScene,
+  lookDownZ,
+} from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper/test/pointGaussianTestUtils';
 
-function makeScene() {
-  const gc = testUtils.createGarbageCollector();
-  const container = document.querySelector('body');
-  const renderWindowContainer = gc.registerDOMElement(
-    document.createElement('div')
-  );
-  container.appendChild(renderWindowContainer);
+// Points at x = -1, 0, 1 seen from +z: in a 60 px view with a parallel
+// scale of 1.5 they land 20 px apart, at x = 10, 30 and 50.
+const PIXEL_X = [10, 30, 50];
 
-  const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
-  const renderer = gc.registerResource(vtkRenderer.newInstance());
-  renderWindow.addRenderer(renderer);
-
-  const polyData = gc.registerResource(vtkPolyData.newInstance());
-  polyData.getPoints().setData(Float32Array.from([0, 0, 0]), 3);
-  const mapper = gc.registerResource(
-    vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
-  );
-  const actor = gc.registerResource(vtkActor.newInstance());
-  mapper.setInputData(polyData);
-  mapper.setScalarVisibility(false);
-  actor.setMapper(mapper);
-  actor.getProperty().setPointSize(20);
-  renderer.addActor(actor);
-  renderer.resetCamera();
-
-  const openGLRenderWindow = gc.registerResource(
-    renderWindow.newAPISpecificView()
-  );
-  openGLRenderWindow.setContainer(renderWindowContainer);
-  openGLRenderWindow.setSize(50, 50);
-  renderWindow.addView(openGLRenderWindow);
-  renderWindow.render();
-
-  return {
-    actor,
+function makeScene(
+  gc,
+  initialValues,
+  coordinates = [-1, 0, 0, 0, 0, 0, 1, 0, 0]
+) {
+  const scene = createScene(
     gc,
-    mapper,
-    openGLMapper: openGLRenderWindow.getViewNodeFor(mapper),
-    openGLRenderWindow,
-    polyData,
-    renderer,
-  };
+    vtkPointGaussianMapper.newInstance(initialValues),
+    createPolyData(gc, coordinates),
+    60
+  );
+  scene.actor.getProperty().setPointSize(8);
+  lookDownZ(scene.renderer, 1.5);
+  const selector = createPointSelector(scene);
+  const selectPixel = (x) => selector.selectAsync(scene.renderer, x, 30, x, 30);
+  return { ...scene, selector, selectPixel };
 }
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'vtkPointGaussianMapper selects direct point ids and schedules the high-id pass',
+  'vtkPointGaussianMapper selects point ids in simple-point and splat modes',
   async () => {
-    const scene = makeScene();
-    const selector = scene.openGLRenderWindow.getSelector();
-    selector.setFieldAssociation(FieldAssociations.FIELD_ASSOCIATION_POINTS);
+    const gc = testUtils.createGarbageCollector();
+    const points = makeScene(gc, { scaleFactor: 0 });
+    for (let id = 0; id < 3; id++) {
+      expect(attributeIds(await points.selectPixel(PIXEL_X[id]))).toEqual([id]);
+    }
 
-    const selection = await selector.selectAsync(
-      scene.renderer,
-      24,
-      24,
-      26,
-      26
-    );
-    expect(selection).toHaveLength(1);
-    expect(selection[0].getProperties().attributeID).toBe(0);
+    // Splats of radius 0.1 with the default bound of three deviations reach
+    // 0.3 units, 6 px, from their centre.
+    const splats = makeScene(gc, { scaleFactor: 0.1 });
+    for (let id = 0; id < 3; id++) {
+      expect(attributeIds(await splats.selectPixel(PIXEL_X[id]))).toEqual([id]);
+    }
+    expect(await splats.selectPixel(20), 'between the splats').toEqual([]);
 
-    const originalPoints = scene.polyData.getPoints();
-    scene.polyData.setPoints({
-      getNumberOfPoints: () => 0x01000000 + 1,
-    });
-    const openGLRenderer = scene.openGLRenderWindow.getViewNodeFor(
-      scene.renderer
-    );
-    openGLRenderer.setSelector(selector);
-    scene.openGLMapper.updateMaximumPointCellIds();
-    openGLRenderer.setSelector(null);
-    expect(selector.getMaximumPointId()).toBe(0x01000000);
-    expect(selector.passRequired(PassTypes.ID_HIGH24)).toBe(true);
-
-    scene.mapper.setMaximumPointCount(7);
-    openGLRenderer.setSelector(selector);
-    scene.openGLMapper.updateMaximumPointCellIds();
-    openGLRenderer.setSelector(null);
-    expect(selector.getMaximumPointId()).toBe(6);
-    expect(selector.passRequired(PassTypes.ID_HIGH24)).toBe(false);
-    scene.polyData.setPoints(originalPoints);
-
-    scene.gc.releaseResources();
+    gc.releaseResources();
   }
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'vtkPointGaussianMapper has no topology-free cell selection',
+  'vtkPointGaussianMapper reports point ids of the points drawn by verts',
   async () => {
-    const scene = makeScene();
-    const selector = scene.openGLRenderWindow.getSelector();
-    selector.setFieldAssociation(FieldAssociations.FIELD_ASSOCIATION_CELLS);
-
-    await expect(
-      selector.selectAsync(scene.renderer, 24, 24, 26, 26)
-    ).resolves.toEqual([]);
-
-    scene.gc.releaseResources();
+    const gc = testUtils.createGarbageCollector();
+    for (const scaleFactor of [0, 0.1]) {
+      const scene = makeScene(gc, { scaleFactor });
+      scene.polyData.getVerts().setData(Uint16Array.from([1, 2, 1, 0]));
+      expect(attributeIds(await scene.selectPixel(PIXEL_X[2]))).toEqual([2]);
+      expect(attributeIds(await scene.selectPixel(PIXEL_X[0]))).toEqual([0]);
+      expect(
+        await scene.selectPixel(PIXEL_X[1]),
+        'point 1 is in no verts cell'
+      ).toEqual([]);
+    }
+    gc.releaseResources();
   }
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'vtkPointGaussianMapper round splats select only their visible disc',
+  'vtkPointGaussianMapper selects the nearest of overlapping points',
   async () => {
-    const scene = makeScene();
-    scene.mapper.setCircle(true);
-    scene.openGLRenderWindow
-      .getSelector()
-      .setFieldAssociation(FieldAssociations.FIELD_ASSOCIATION_POINTS);
+    const gc = testUtils.createGarbageCollector();
+    for (const scaleFactor of [0, 0.1]) {
+      // The nearer point is drawn first.
+      const scene = makeScene(gc, { scaleFactor }, [0, 0, 1, 0, 0, 0]);
+      expect(attributeIds(await scene.selectPixel(PIXEL_X[1]))).toEqual([0]);
+    }
+    gc.releaseResources();
+  }
+);
 
-    await expect(
-      scene.openGLRenderWindow
-        .getSelector()
-        .selectAsync(scene.renderer, 24, 24, 26, 26)
-    ).resolves.toHaveLength(1);
-    await expect(
-      scene.openGLRenderWindow
-        .getSelector()
-        .selectAsync(scene.renderer, 16, 16, 16, 16)
-    ).resolves.toEqual([]);
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper selects the verts cells drawing its points, in front of other props',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    for (const scaleFactor of [0, 0.1]) {
+      const scene = makeScene(gc, { scaleFactor });
+      const plane = gc.registerResource(
+        vtkPlaneSource.newInstance({
+          xResolution: 1,
+          yResolution: 1,
+          origin: [-3, -3, -1],
+          point1: [3, -3, -1],
+          point2: [-3, 3, -1],
+        })
+      );
+      const planeMapper = gc.registerResource(vtkMapper.newInstance());
+      planeMapper.setInputConnection(plane.getOutputPort());
+      const planeActor = gc.registerResource(vtkActor.newInstance());
+      planeActor.setMapper(planeMapper);
+      scene.renderer.addActor(planeActor);
+      scene.selector.setFieldAssociation(
+        FieldAssociations.FIELD_ASSOCIATION_CELLS
+      );
+      const selectCell = async (x) => {
+        const [node] = await scene.selectPixel(x);
+        const { prop, attributeID } = node.getProperties();
+        return [prop === scene.actor ? 'points' : 'plane', attributeID];
+      };
 
-    scene.gc.releaseResources();
+      expect(await selectCell(PIXEL_X[1]), 'without verts, point ids').toEqual([
+        'points',
+        1,
+      ]);
+      // Cell 0 draws points 0 and 2, cell 1 draws point 1.
+      scene.polyData.getVerts().setData(Uint16Array.from([2, 0, 2, 1, 1]));
+      expect(await selectCell(PIXEL_X[2])).toEqual(['points', 0]);
+      expect(await selectCell(PIXEL_X[1])).toEqual(['points', 1]);
+      expect(await selectCell(20), 'between the points').toEqual(['plane', 0]);
+    }
+    gc.releaseResources();
   }
 );

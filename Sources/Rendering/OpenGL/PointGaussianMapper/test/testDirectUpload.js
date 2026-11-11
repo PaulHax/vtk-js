@@ -1,47 +1,64 @@
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
-import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
-import vtkActor from 'vtk.js/Sources/Rendering/Core/Actor';
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
+import vtkPiecewiseFunction from 'vtk.js/Sources/Common/DataModel/PiecewiseFunction';
 import vtkPoints from 'vtk.js/Sources/Common/Core/Points';
 import vtkPointGaussianMapper from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper';
-import vtkPolyData from 'vtk.js/Sources/Common/DataModel/PolyData';
-import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
-import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
+import {
+  createPolyData,
+  createScene,
+  renderUploads,
+} from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper/test/pointGaussianTestUtils';
 
-function makeScene(gc, polyData) {
-  const container = document.querySelector('body');
-  const renderWindowContainer = gc.registerDOMElement(
-    document.createElement('div')
+function makeScene(gc, polyData, initialValues = { scaleFactor: 0 }) {
+  const scene = createScene(
+    gc,
+    vtkPointGaussianMapper.newInstance(initialValues),
+    polyData,
+    32
   );
-  container.appendChild(renderWindowContainer);
-
-  const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
-  const renderer = gc.registerResource(vtkRenderer.newInstance());
-  renderWindow.addRenderer(renderer);
-
-  const mapper = gc.registerResource(
-    vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
-  );
-  mapper.setInputData(polyData);
-  const actor = gc.registerResource(vtkActor.newInstance());
-  actor.setMapper(mapper);
-  renderer.addActor(actor);
-
-  const view = gc.registerResource(renderWindow.newAPISpecificView());
-  view.setContainer(renderWindowContainer);
-  renderWindow.addView(view);
-  view.setSize(32, 32);
-
-  return { renderWindow, renderer, mapper, actor, view };
+  scene.renderer.resetCamera();
+  scene.view.initialize();
+  return scene;
 }
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'uploads float positions and RGBA byte colours as they are, also through verts drawing every point in order',
+  () => {
+    const gc = testUtils.createGarbageCollector();
+    const polyData = createPolyData(
+      gc,
+      [0, 0, 0, 1, 0, 0, 0, 1, 0],
+      [255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255]
+    );
+    const rgba = polyData.getPointData().getScalars();
+    const scene = makeScene(gc, polyData);
+    const points = polyData.getPoints();
+
+    const direct = renderUploads(scene);
+    expect(direct).toContain(points.getData());
+    expect(direct).toContain(rgba.getData());
+
+    for (const verts of [
+      [3, 0, 1, 2],
+      [1, 0, 1, 1, 1, 2],
+    ]) {
+      polyData.getVerts().setData(Uint16Array.from(verts));
+      const throughVerts = renderUploads(scene);
+      expect(throughVerts, `verts ${verts}`).toContain(points.getData());
+      expect(throughVerts, `verts ${verts}`).toContain(rgba.getData());
+    }
+
+    gc.releaseResources();
+  }
+);
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'stages positions when the point array is shorter than the drawn count',
   () => {
     const gc = testUtils.createGarbageCollector();
-    const polyData = gc.registerResource(vtkPolyData.newInstance());
+    const polyData = createPolyData(gc, []);
     // Four points are reported and drawn, but the backing store only holds
     // three of them: the fast path must not hand this array to bufferData.
     polyData.setPoints(
@@ -51,76 +68,61 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
         numberOfComponents: 3,
       })
     );
-
-    const { renderWindow, mapper, view } = makeScene(gc, polyData);
-    mapper.setScalarVisibility(false);
-    renderWindow.render();
+    const scene = makeScene(gc, polyData);
+    scene.renderWindow.render();
 
     const points = polyData.getPoints();
     expect(points.getNumberOfPoints()).toBe(4);
     expect(points.getData().length).toBe(9);
 
-    const bufferData = vi.spyOn(view.getContext(), 'bufferData');
-    polyData.getPoints().modified();
-    polyData.modified();
-    renderWindow.render();
-
-    const positionUploads = bufferData.mock.calls
-      .map(([, data]) => data)
-      .filter((data) => data instanceof Float32Array);
+    points.modified();
+    const positionUploads = renderUploads(scene).filter(
+      (data) => data instanceof Float32Array
+    );
     expect(positionUploads).toHaveLength(1);
     expect(positionUploads[0]).not.toBe(points.getData());
     expect(positionUploads[0].length).toBe(12);
 
-    bufferData.mockRestore();
     gc.releaseResources();
   }
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'stages colors when scalars are per cell rather than per point',
+  'uploads float scale and opacity arrays directly unless a table maps them',
   () => {
     const gc = testUtils.createGarbageCollector();
-    const polyData = gc.registerResource(vtkPolyData.newInstance());
-    polyData
-      .getPoints()
-      .setData(Float32Array.from([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0]), 3);
-    // One cell over four points: cell scalars yield one RGBA tuple, a quarter
-    // of what the draw reads.
-    polyData.getPolys().setData(Uint16Array.from([4, 0, 1, 2, 3]));
-    const cellColors = gc.registerResource(
-      vtkDataArray.newInstance({
-        name: 'cellColors',
-        numberOfComponents: 4,
-        values: Uint8Array.from([10, 20, 30, 255]),
-      })
+    const polyData = createPolyData(gc, [0, 0, 0, 1, 0, 0]);
+    const scales = vtkDataArray.newInstance({
+      name: 'scale',
+      values: Float32Array.from([0.5, 1]),
+    });
+    const opacities = vtkDataArray.newInstance({
+      name: 'opacity',
+      values: Float32Array.from([0.25, 1]),
+    });
+    polyData.getPointData().addArray(scales);
+    polyData.getPointData().addArray(opacities);
+
+    const scene = makeScene(gc, polyData, {
+      scaleArray: 'scale',
+      opacityArray: 'opacity',
+    });
+    const direct = renderUploads(scene);
+    expect(direct).toContain(scales.getData());
+    expect(direct).toContain(opacities.getData());
+
+    const scaleFunction = vtkPiecewiseFunction.newInstance();
+    scaleFunction.addPoint(0, 0);
+    scaleFunction.addPoint(1, 2);
+    scene.mapper.setScaleFunction(scaleFunction);
+    const radiusUploads = renderUploads(scene).filter(
+      (data) => data instanceof Float32Array
     );
-    polyData.getCellData().setScalars(cellColors);
+    expect(radiusUploads, 'only the radius buffer changes').toHaveLength(1);
+    expect(radiusUploads[0]).not.toBe(scales.getData());
+    expect(radiusUploads[0][0]).toBeCloseTo(1, 5);
+    expect(radiusUploads[0][1]).toBeCloseTo(2, 5);
 
-    const { renderWindow, mapper, view } = makeScene(gc, polyData);
-    mapper.setScalarVisibility(true);
-    mapper.setScalarModeToUseCellData();
-    mapper.setColorModeToDirectScalars();
-    renderWindow.render();
-
-    const colorMapColors = mapper.getColorMapColors();
-    expect(colorMapColors.getNumberOfComponents()).toBe(4);
-    expect(colorMapColors.getData().length).toBe(4);
-
-    const bufferData = vi.spyOn(view.getContext(), 'bufferData');
-    cellColors.setData(Uint8Array.from([40, 50, 60, 255]), 4);
-    renderWindow.render();
-
-    const colorUploads = bufferData.mock.calls
-      .map(([, data]) => data)
-      .filter(
-        (data) =>
-          data instanceof Uint8Array || data instanceof Uint8ClampedArray
-      );
-    expect(colorUploads).toHaveLength(1);
-    expect(colorUploads[0].length).toBe(16);
-
-    bufferData.mockRestore();
     gc.releaseResources();
   }
 );

@@ -1,180 +1,119 @@
-import { it, expect, vi } from 'vitest';
+import { it, expect } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
-import 'vtk.js/Sources/Rendering/Misc/RenderingAPIs';
-import vtkActor from 'vtk.js/Sources/Rendering/Core/Actor';
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
 import vtkPointGaussianMapper from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper';
-import vtkPolyData from 'vtk.js/Sources/Common/DataModel/PolyData';
-import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
-import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
+import {
+  capture,
+  countLitAlong,
+  createPolyData,
+  createScene,
+  lookDownZ,
+} from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper/test/pointGaussianTestUtils';
 
-function makePolyDataFromPoints(coords) {
-  const polyData = vtkPolyData.newInstance();
-  polyData.getPoints().setData(Float32Array.from(coords), 3);
-  return polyData;
-}
+// Two points seen from +z with a parallel projection of 20 px per unit, the
+// camera centred between them: they land on columns 20 and 40 of a 60 px
+// view wherever they are. Returns the lit columns among every tenth.
+function makeScene(gc) {
+  const polyData = createPolyData(gc, [0, 0, 0, 1, 0, 0]);
+  const scene = createScene(
+    gc,
+    vtkPointGaussianMapper.newInstance({ scaleFactor: 0 }),
+    polyData,
+    60
+  );
+  scene.actor.getProperty().setPointSize(4);
+  const camera = lookDownZ(scene.renderer, 1.5);
 
-function updatePoints(polyData, coords) {
-  polyData.getPoints().setData(Float32Array.from(coords), 3);
-  polyData.getPoints().modified();
-  polyData.modified();
-}
-
-function addRGB(polyData, values) {
-  const rgb = vtkDataArray.newInstance({
-    name: 'RGB',
-    numberOfComponents: 3,
-    values: Uint8Array.from(values),
-  });
-  polyData.getPointData().setScalars(rgb);
-  return rgb;
-}
-
-function getActivePrimitiveCABOs(openGLRenderWindow, mapper) {
-  const openGLMapper = openGLRenderWindow.getViewNodeFor(mapper);
-  const primitives = openGLMapper.getReferenceByName('primitives');
-  return primitives
-    .map((primitive) => primitive.getCABO())
-    .filter((cabo) => cabo.getElementCount() > 0);
+  return async (x) => {
+    polyData.getPoints().setData(Float64Array.of(x, 0, 0, x + 1, 0, 0), 3);
+    camera.setFocalPoint(x + 0.5, 0, 0);
+    camera.setPosition(x + 0.5, 0, 10);
+    const image = await capture(scene);
+    return [10, 20, 30, 40, 50].filter(
+      (column) => countLitAlong(image, { column }) > 0
+    );
+  };
 }
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'vtkPointGaussianMapper enables VBO shift/scale for far points and clears it near the origin',
-  () => {
+  'vtkPointGaussianMapper draws points in place far from the origin and back',
+  async () => {
     const gc = testUtils.createGarbageCollector();
-
-    const container = document.querySelector('body');
-    const renderWindowContainer = gc.registerDOMElement(
-      document.createElement('div')
-    );
-    container.appendChild(renderWindowContainer);
-
-    const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
-    const renderer = gc.registerResource(vtkRenderer.newInstance());
-    renderWindow.addRenderer(renderer);
-
-    const polyData = gc.registerResource(
-      makePolyDataFromPoints([10000000, 0, 0, 10000001, 0, 0])
-    );
-    const mapper = gc.registerResource(
-      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
-    );
-    const actor = gc.registerResource(vtkActor.newInstance());
-
-    mapper.setInputData(polyData);
-    mapper.setScalarVisibility(false);
-    actor.setMapper(mapper);
-    renderer.addActor(actor);
-
-    const openGLRenderWindow = gc.registerResource(
-      renderWindow.newAPISpecificView()
-    );
-    openGLRenderWindow.setContainer(renderWindowContainer);
-    renderWindow.addView(openGLRenderWindow);
-    openGLRenderWindow.setSize(1, 1);
-
-    renderWindow.render();
-
-    const shiftedCABOs = getActivePrimitiveCABOs(openGLRenderWindow, mapper);
-    expect(shiftedCABOs.length, 'point VBO was built').toBe(1);
-    expect(
-      shiftedCABOs.every((cabo) => cabo.getCoordShiftAndScaleEnabled()),
-      'far points enable shift/scale on the VBO'
-    ).toBeTruthy();
-
-    updatePoints(polyData, [-0.5, 0, 0, 0.5, 0, 0]);
-    renderWindow.render();
-
-    const unshiftedCABOs = getActivePrimitiveCABOs(openGLRenderWindow, mapper);
-    expect(
-      unshiftedCABOs.every((cabo) => !cabo.getCoordShiftAndScaleEnabled()),
-      'VBO shift/scale is cleared once points no longer need it'
-    ).toBeTruthy();
-
+    const drawAt = makeScene(gc);
+    expect(await drawAt(10000000)).toEqual([20, 40]);
+    expect(await drawAt(-0.5)).toEqual([20, 40]);
+    expect(await drawAt(10000000)).toEqual([20, 40]);
     gc.releaseResources();
   }
 );
 
+// Coordinates this far out reuse the VBO shift of the previous upload when
+// the new one is within its tolerance.
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'vtkPointGaussianMapper only rebuilds VBOs for point or color data',
-  () => {
+  'vtkPointGaussianMapper keeps far points in place when they move a little',
+  async () => {
     const gc = testUtils.createGarbageCollector();
-    const container = document.querySelector('body');
-    const renderWindowContainer = gc.registerDOMElement(
-      document.createElement('div')
-    );
-    container.appendChild(renderWindowContainer);
+    const drawAt = makeScene(gc);
+    expect(await drawAt(10000000)).toEqual([20, 40]);
+    expect(await drawAt(10000004)).toEqual([20, 40]);
+    gc.releaseResources();
+  }
+);
 
-    const renderWindow = gc.registerResource(vtkRenderWindow.newInstance());
-    const renderer = gc.registerResource(vtkRenderer.newInstance());
-    renderWindow.addRenderer(renderer);
+// Splat sizes come from the model-space covariance, which must not pick up
+// the VBO scale that brings far coordinates back into float range.
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper draws far splats like the same splats at the origin',
+  async () => {
+    const offset = [5000000, -3000000, 1000000];
+    const coords = [-2, 0, 0, 0, 1, 0, 3, -1, 0];
+    const scales = [0.3, 0.6, 0.9];
 
-    const polyData = gc.registerResource(
-      makePolyDataFromPoints([0, 0, 0, 1, 0, 0])
-    );
-    const rgb = gc.registerResource(addRGB(polyData, [255, 0, 0, 0, 255, 0]));
-    const mapper = gc.registerResource(
-      vtkPointGaussianMapper.newInstance({ scaleFactor: 0 })
-    );
-    const actor = gc.registerResource(vtkActor.newInstance());
-    mapper.setInputData(polyData);
-    mapper.setColorModeToDirectScalars();
-    actor.setMapper(mapper);
-    renderer.addActor(actor);
-    renderer.resetCamera();
-
-    const openGLRenderWindow = gc.registerResource(
-      renderWindow.newAPISpecificView()
-    );
-    openGLRenderWindow.setContainer(renderWindowContainer);
-    renderWindow.addView(openGLRenderWindow);
-    openGLRenderWindow.setSize(50, 50);
-    renderWindow.render();
-
-    const bufferData = vi.spyOn(openGLRenderWindow.getContext(), 'bufferData');
-    const pointOrColorUploads = () =>
-      bufferData.mock.calls.filter(
-        ([, data]) => data.length === 6 || data.length === 8
+    const render = async (shift) => {
+      const gc = testUtils.createGarbageCollector();
+      const polyData = createPolyData(gc, []);
+      polyData
+        .getPoints()
+        .setData(
+          Float64Array.from(coords.map((value, i) => value + shift[i % 3])),
+          3
+        );
+      polyData.getPointData().addArray(
+        vtkDataArray.newInstance({
+          name: 'scale',
+          values: Float32Array.from(scales),
+        })
       );
-    const renderWithoutUpload = (change) => {
-      change();
-      renderWindow.render();
-      expect(pointOrColorUploads()).toHaveLength(0);
+      const scene = createScene(
+        gc,
+        vtkPointGaussianMapper.newInstance({
+          scaleArray: 'scale',
+          emissive: false,
+        }),
+        polyData,
+        64
+      );
+      const camera = scene.renderer.getActiveCamera();
+      camera.setFocalPoint(shift[0], shift[1], shift[2]);
+      camera.setPosition(shift[0], shift[1], shift[2] + 12);
+      camera.setClippingRange(1, 100);
+      const { data } = await capture(scene);
+      gc.releaseResources();
+      return data;
     };
 
-    renderWithoutUpload(() => actor.getProperty().setPointSize(9));
-    renderWithoutUpload(() =>
-      actor.setUserMatrix([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 0, 0, 1])
+    const near = await render([0, 0, 0]);
+    const far = await render(offset);
+    let lit = 0;
+    let different = 0;
+    for (let i = 0; i < near.length; i += 4) {
+      lit += near[i] > 32 ? 1 : 0;
+      different += Math.abs(near[i] - far[i]) > 48 ? 1 : 0;
+    }
+    expect(lit, 'the splats are visible').toBeGreaterThan(100);
+    expect(different, 'far splats keep their place and size').toBeLessThan(
+      0.05 * lit
     );
-    renderWithoutUpload(() => actor.getProperty().setOpacity(0.5));
-    renderWithoutUpload(() => mapper.setPointSizeScale(2));
-    renderWithoutUpload(() => mapper.setCircle(true));
-
-    updatePoints(polyData, [0, 0, 0, 2, 0, 0]);
-    renderWindow.render();
-    expect(pointOrColorUploads()).toHaveLength(2);
-    bufferData.mockClear();
-
-    rgb.setData(Uint8Array.from([0, 0, 255, 255, 255, 0]), 3);
-    renderWindow.render();
-    expect(pointOrColorUploads()).toHaveLength(2);
-
-    const pointCABO = getActivePrimitiveCABOs(openGLRenderWindow, mapper)[0];
-    const colorHandle = pointCABO.getColorBO().getHandle();
-    const deleteBuffer = vi.spyOn(
-      openGLRenderWindow.getContext(),
-      'deleteBuffer'
-    );
-    mapper.setScalarVisibility(false);
-    renderWindow.render();
-    expect(pointCABO.getColorBO()).toBeNull();
-    expect(deleteBuffer.mock.calls.map(([handle]) => handle)).toContain(
-      colorHandle
-    );
-
-    bufferData.mockRestore();
-    deleteBuffer.mockRestore();
-    gc.releaseResources();
   }
 );

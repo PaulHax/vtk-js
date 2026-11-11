@@ -1,0 +1,38 @@
+{
+  "repository": "https://github.com/PaulHax/vtk-js.git",
+  "upstream": {
+    "ref": "origin/master",
+    "revision": "3c78fbbbcff5cc546bfc4f7055cf809c7c2eb422"
+  },
+  "base": {
+    "ref": "external-context-integration",
+    "revision": "ecf3d53fdc97db799b81a0adda5e8dde91844532"
+  },
+  "topics": [
+    {
+      "ref": "upstream-point-gaussian-mapper",
+      "revision": "98d7815d47f01c4d442a6b1268dff9dafcdcb3f4"
+    }
+  ],
+  "retainedTopics": [
+    {
+      "ref": "vtk-38-external-context",
+      "revision": "7539701fa780da6cf34fc90c009da2d20fc37c41"
+    },
+    {
+      "ref": "vtk-38-framebuffer-cache",
+      "revision": "8259f8fc837825289fd1a34faa48b6c6ac89915b"
+    },
+    {
+      "ref": "vtk-38-compressed-textures",
+      "revision": "7c401edad0894e89fd44aefc2fab4622a5ea0e5f"
+    },
+    {
+      "ref": "vtk-38-hidden-props",
+      "revision": "f90e2c5a8213ed9e50541515dfc3ee9e9ee35d55"
+    }
+  ],
+  "retainedSourcePaths": [
+    "Sources/Rendering/OpenGL/CellArrayBufferObject/index.js"
+  ]
+}

@@ -17,6 +17,7 @@ import vtkImageMapper from './ImageMapper';
 import vtkImageSlice from './ImageSlice';
 import vtkPixelSpaceCallbackMapper from './PixelSpaceCallbackMapper';
 import vtkPointGaussianMapper from './PointGaussianMapper';
+import vtkPointSpriteMapper from './PointSpriteMapper';
 import vtkPolyDataMapper from './PolyDataMapper';
 import vtkPolyDataMapper2D from './PolyDataMapper2D';
 import vtkRenderer from './Renderer';
@@ -55,6 +56,7 @@ export default {
   vtkImageSlice,
   vtkPixelSpaceCallbackMapper,
   vtkPointGaussianMapper,
+  vtkPointSpriteMapper,
   vtkPolyDataMapper,
   vtkPolyDataMapper2D,
   vtkRenderWindow,
