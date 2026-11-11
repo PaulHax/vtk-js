@@ -39,16 +39,24 @@ function getVerts(dataSet) {
 // every cell holds one point, so that a drawn index is a cell id.
 function getSelection(verts, numberOfPoints) {
   if (!verts || !verts.getNumberOfCells()) {
-    return { count: numberOfPoints, pointIds: null, cellIds: null };
+    return {
+      count: numberOfPoints,
+      pointIds: null,
+      cellIds: null,
+      maximumPointId: numberOfPoints - 1,
+      maximumCellId: numberOfPoints - 1,
+    };
   }
   const data = verts.getData();
   let count = 0;
   let inOrder = true;
   let onePerCell = true;
+  let maximumPointId = -1;
   for (let i = 0; i < data.length; i += data[i] + 1) {
     onePerCell = onePerCell && data[i] === 1;
     for (let j = 1; j <= data[i]; j++, count++) {
       inOrder = inOrder && data[i + j] === count;
+      maximumPointId = Math.max(maximumPointId, data[i + j]);
     }
   }
   const pointIds =
@@ -67,7 +75,13 @@ function getSelection(verts, numberOfPoints) {
       }
     }
   }
-  return { count, pointIds, cellIds };
+  return {
+    count,
+    pointIds,
+    cellIds,
+    maximumPointId,
+    maximumCellId: verts.getNumberOfCells() - 1,
+  };
 }
 
 // Positions relative to the VBO shift and scale, one xyz per drawn point.
@@ -550,14 +564,18 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     }
   };
 
-  // Selection passes write drawn indices, which selectionWebGLIdsToVTKIds
-  // maps to point and cell ids.
+  // Both the drawn indices and the remapped input ids must fit in the selected
+  // pixel format. The input bounds are cached when the selection is built.
   publicAPI.updateMaximumPointCellIds = () => {
     const selector = model._openGLRenderer.getSelector();
     if (selector) {
       const largestId = Math.max(0, publicAPI.getNumberOfDrawnPoints() - 1);
-      selector.setMaximumPointId(largestId);
-      selector.setMaximumCellId(largestId);
+      selector.setMaximumPointId(
+        Math.max(largestId, model.selection?.maximumPointId ?? 0)
+      );
+      selector.setMaximumCellId(
+        Math.max(largestId, model.selection?.maximumCellId ?? 0)
+      );
     }
   };
 
@@ -629,6 +647,8 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     const pointOrder = splatting && renderable.getPointOrder();
     return {
       context: model.context,
+      // Explicit dataset edits invalidate every attribute, unlike child edits.
+      input: [poly, poly.getReferenceByName('mtime')],
       ordered: !!pointOrder,
       selection: [
         !!pointOrder,
@@ -668,23 +688,19 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
 
   // The buffers to upload again, and whether to find the drawn points again
   // first, which rebuilds every buffer.
-  function getStaleBuffers(poly, keys) {
+  function getStaleBuffers(keys) {
     const built = model.bufferKeys;
     if (
       built &&
       built.valid !== false &&
       built.context === keys.context &&
+      sameKey(keys.input, built.input) &&
       sameKey(keys.selection, built.selection)
     ) {
-      const stale = BUFFERS.filter((name) => !sameKey(keys[name], built[name]));
-      // The keys hold array MTimes, so the polydata itself marked modified
-      // while none of them changed means an array was edited in place.
-      if (
-        stale.length ||
-        poly.getReferenceByName('mtime') <= model.VBOBuildTime.getMTime()
-      ) {
-        return { reselect: false, stale };
-      }
+      return {
+        reselect: false,
+        stale: BUFFERS.filter((name) => !sameKey(keys[name], built[name])),
+      };
     }
     return { reselect: true, stale: BUFFERS };
   }
@@ -882,12 +898,14 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     const count = poly.getPoints().getNumberOfPoints();
     const pointOrder = model.renderable.getPointOrder();
     const order = pointOrder.getData();
+    let maximumId = -1;
     let invalid =
       !(order instanceof Uint32Array) ||
       pointOrder.getNumberOfComponents() !== 1 ||
       !!getVerts(poly)?.getNumberOfCells();
     for (let i = 0; !invalid && i < order.length; i++) {
       invalid = order[i] >= count;
+      maximumId = Math.max(maximumId, order[i]);
     }
     if (invalid) {
       vtkErrorMacro(
@@ -901,6 +919,8 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
         count: order.length,
         pointIds: order,
         cellIds: order,
+        maximumPointId: maximumId,
+        maximumCellId: maximumId,
       };
       model.renderable.setSelectionWebGLIdsToVTKIds({
         points: order,
@@ -969,7 +989,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       return false;
     }
     model.bufferKeysTime.modified();
-    return getStaleBuffers(poly, getBufferKeys(poly)).stale.length > 0;
+    return getStaleBuffers(getBufferKeys(poly)).stale.length > 0;
   };
 
   publicAPI.buildBufferObjects = (ren, actor) => {
@@ -978,7 +998,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     if (model.bufferKeys && model.bufferKeys.ordered !== keys.ordered) {
       publicAPI.releaseGraphicsResources();
     }
-    const { reselect, stale } = getStaleBuffers(poly, keys);
+    const { reselect, stale } = getStaleBuffers(keys);
     model.layout.ordered = keys.ordered;
     if (keys.ordered) {
       keys.valid = buildOrderedSplats(poly, keys, stale, reselect);

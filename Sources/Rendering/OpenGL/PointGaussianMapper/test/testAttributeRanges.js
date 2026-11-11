@@ -26,6 +26,48 @@ function changeColors(mapper, colors, first, values) {
 }
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper dataset edits override partial attribute history',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    try {
+      const poly = createPolyData(gc, [-0.5, 0, 0, 0.5, 0, 0]);
+      const colors = gc.registerResource(
+        vtkDataArray.newInstance({
+          name: 'appearance',
+          numberOfComponents: 4,
+          values: Float32Array.of(1, 0, 0, 1, 1, 0, 0, 1),
+        })
+      );
+      poly.getPointData().addArray(colors);
+      const mapper = vtkPointGaussianMapper.newInstance({
+        emissive: false,
+        scaleFactor: 0.15,
+        splatShaderCode: DISC,
+        coordinateShiftAndScaleEnabled: false,
+        directColorArray: 'appearance',
+        pointOrder: gc.registerResource(
+          vtkDataArray.newInstance({ values: Uint32Array.of(0, 1) })
+        ),
+      });
+      const scene = createScene(gc, mapper, poly, 60);
+      lookDownZ(scene.renderer, 1.5);
+      expect(rgbaAt(await capture(scene), 20, 30)[0]).toBe(255);
+
+      changeColors(mapper, colors, 0, [0, 1, 0, 1]);
+      colors.getData().set([0, 0, 1, 1], 4);
+      poly.getPoints().getData()[0] = -0.75;
+      poly.modified();
+      const image = await capture(scene);
+      expect(rgbaAt(image, 15, 30).slice(0, 3)).toEqual([0, 255, 0]);
+      expect(rgbaAt(image, 20, 30).slice(0, 3)).toEqual([0, 0, 0]);
+      expect(rgbaAt(image, 40, 30).slice(0, 3)).toEqual([0, 0, 255]);
+    } finally {
+      gc.releaseResources();
+    }
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'vtkPointGaussianMapper uploads exact changed texture tuples across rows',
   async () => {
     const gc = testUtils.createGarbageCollector();

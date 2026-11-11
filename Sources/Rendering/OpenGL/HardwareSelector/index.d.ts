@@ -249,7 +249,7 @@ export interface vtkOpenGLHardwareSelector extends vtkHardwareSelector {
   getOpenGLRenderWindow(): vtkOpenGLRenderWindow | undefined;
 
   /**
-   * Sets the maximum point ID.
+   * Accumulates the maximum point ID across props. Reset at each selection.
    * @param {number} id
    */
   setMaximumPointId(id: number): boolean;
@@ -260,7 +260,7 @@ export interface vtkOpenGLHardwareSelector extends vtkHardwareSelector {
   getMaximumPointId(): number;
 
   /**
-   * Sets the maximum cell ID.
+   * Accumulates the maximum cell ID across props. Reset at each selection.
    * @param {number} id
    */
   setMaximumCellId(id: number): boolean;

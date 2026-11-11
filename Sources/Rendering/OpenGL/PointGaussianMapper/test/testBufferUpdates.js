@@ -10,6 +10,7 @@ import {
   createPolyData,
   createScene,
   lookDownZ,
+  rgbaAt,
   renderUploads,
 } from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper/test/pointGaussianTestUtils';
 
@@ -56,6 +57,50 @@ function countUploads(scene) {
 }
 
 const NONE = { positions: 0, colors: 0, radii: 0 };
+
+it.skipIf(__VTK_TEST_NO_WEBGL__).each(['points', 'splats', 'ordered splats'])(
+  'vtkPointGaussianMapper refreshes all %s after mixed dataset and array edits',
+  async (mode) => {
+    const gc = testUtils.createGarbageCollector();
+    try {
+      const poly = createPolyData(gc, [-0.5, 0, 0], [255, 0, 0]);
+      const mapper = vtkPointGaussianMapper.newInstance({
+        scaleFactor: mode === 'points' ? 0 : 0.15,
+        emissive: false,
+        splatShaderCode: DISC,
+        pointOrder:
+          mode === 'ordered splats'
+            ? gc.registerResource(
+                vtkDataArray.newInstance({ values: Uint32Array.of(0) })
+              )
+            : null,
+      });
+      const scene = createScene(gc, mapper, poly, 60);
+      scene.actor.getProperty().setPointSize(6);
+      lookDownZ(scene.renderer, 1.5);
+      expect(rgbaAt(await capture(scene), 20, 30).slice(0, 3)).toEqual([
+        255, 0, 0,
+      ]);
+
+      poly.getPoints().getData()[0] = 0.5;
+      const colors = poly.getPointData().getScalars();
+      colors.getData().set([0, 255, 0]);
+      colors.modified();
+      poly.modified();
+      const moved = await capture(scene);
+      expect(rgbaAt(moved, 20, 30).slice(0, 3)).toEqual([0, 0, 0]);
+      expect(rgbaAt(moved, 40, 30).slice(0, 3)).toEqual([0, 255, 0]);
+
+      colors.getData().set([0, 0, 255]);
+      poly.modified();
+      expect(rgbaAt(await capture(scene), 40, 30).slice(0, 3)).toEqual([
+        0, 0, 255,
+      ]);
+    } finally {
+      gc.releaseResources();
+    }
+  }
+);
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'vtkPointGaussianMapper changes that no buffer depends on upload nothing',
