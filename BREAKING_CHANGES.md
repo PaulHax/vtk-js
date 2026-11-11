@@ -1,3 +1,17 @@
+## From 37.x to 38
+
+- **`vtk-lite.js` removed.** Use `vtk.js` for script/CDN URLs and copied assets. Replace `vtk.js/vtk-lite.js` imports or requires with `vtk.js/vtk.js` or the package entry. Both files have contained the full UMD bundle since 36.
+- **TypeScript declarations**: expanded coverage and corrected types may expose build errors. Remove conflicting local declaration shims and fix code rejected by the new types.
+- **TypeScript libraries**: typed-array factories now declare BigInt support. Add `ES2020.BigInt` if your `lib` list does not include `ES2020` or later. Your `target` can stay unchanged.
+- **Accessor types**: `setXFrom` methods and setters that return no value now declare `void`. Getter types include `null` or `undefined` where applicable.
+- **`Point` type removed.** Import `Vector3` from `@kitware/vtk.js/types` instead.
+- **vtkVolumeProperty**: replace `setAverageIPScalarRange(min, max)` with `setIpScalarRange(min, max)`.
+- **vtkOpenGLFramebuffer**: replace `getColorTexture()` with `getColorBuffers()[0]`.
+
+## From 36.x to 37
+
+- **vtkCamera**: `setModelTransformMatrix` now expects matrices in gl-matrix column-major order, consistent with `vtkTransform`, `vtkMatrixBuilder`, and `userMatrix` on `vtkProp3D`. Remove any transpose previously applied to column-major rotation or translation matrices to compensate for the old behavior. Transpose row-major matrices before passing them. ([#3586](https://github.com/Kitware/vtk-js/pull/3586))
+
 ## From 35.x to 36
 
 - **`vtk-lite.js` deprecated.** The UMD build previously produced a slimmed-down companion bundle `dist/umd/vtk-lite.js` (curated ColorMaps subset; `PDBReader`, `MoleculeToRepresentation`, `MobileVR`, and `webvr-polyfill` stubbed out). The Vite build pipeline no longer produces a distinct lite bundle; `vtk-lite.js` now ships as a byte-identical alias of `vtk.js` so existing `<script src=…/vtk-lite.js>` and CDN consumers continue to load. Consumers should migrate to `vtk.js` directly — the alias will be removed in a future major. Note that anything that indexed into the `ColorMaps` array by position will now see the full preset set, not the lite subset.

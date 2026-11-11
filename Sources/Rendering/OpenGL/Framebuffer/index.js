@@ -11,18 +11,8 @@ function vtkFramebuffer(publicAPI, model) {
   model.classHierarchy.push('vtkFramebuffer');
 
   function releaseOwnedColorBuffer() {
-    if (model.ownedColorBuffer) {
-      if (model._openGLRenderWindow && !model._openGLRenderWindow.isDeleted()) {
-        model.ownedColorBuffer.releaseGraphicsResources(
-          model._openGLRenderWindow
-        );
-      } else {
-        // a shared GL context can outlive the render window
-        model.context?.deleteTexture(model.ownedColorBuffer.getHandle());
-      }
-      model.ownedColorBuffer.delete();
-      model.ownedColorBuffer = null;
-    }
+    model.ownedColorBuffer?.delete();
+    model.ownedColorBuffer = null;
   }
 
   // Releases owned attachments; borrowed ones and the framebuffer stay alive.
@@ -310,9 +300,6 @@ function vtkFramebuffer(publicAPI, model) {
     publicAPI.releaseGraphicsResources,
     publicAPI.delete
   );
-
-  // For backwards compatibility. Use getColorBuffers()[0] going forward.
-  publicAPI.getColorTexture = () => model.colorBuffers[0];
 }
 
 // ----------------------------------------------------------------------------

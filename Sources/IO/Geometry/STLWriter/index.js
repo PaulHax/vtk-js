@@ -23,6 +23,20 @@ function writeVectorBinary(dataView, offset, vector) {
   return writeFloatBinary(dataView, off, vector[2]);
 }
 
+// Each polygon with n points gives n - 2 triangles. Cells with less than 3
+// points give no triangle.
+function getNumberOfTriangles(polys) {
+  let count = 0;
+  for (let i = 0; i < polys.length;) {
+    const pointNumber = polys[i];
+    if (pointNumber >= 3) {
+      count += pointNumber - 2;
+    }
+    i += pointNumber + 1;
+  }
+  return count;
+}
+
 // ----------------------------------------------------------------------------
 // vtkSTLWriter methods
 // ----------------------------------------------------------------------------
@@ -33,14 +47,17 @@ const binaryWriter = () => {
   return {
     init: (polyData) => {
       const polys = polyData.getPolys().getData();
-      const buffer = new ArrayBuffer(80 + 4 + (50 * polys.length) / 4); // buffer for the full file; size = header (80) + num cells (4) +  50 bytes per poly
+      // The file has a header of 80 bytes, the triangle count in 4 bytes,
+      // and 50 bytes for each triangle.
+      const buffer = new ArrayBuffer(80 + 4 + 50 * getNumberOfTriangles(polys));
       dataView = new DataView(buffer);
     },
     writeHeader: (polyData) => {
       offset += 80; // Header is empty // TODO: could add date, version, package
 
-      // First need to write the number of cells
-      dataView.setUint32(offset, polyData.getNumberOfCells(), true);
+      // The facet count is the number of triangles that the writer writes.
+      const polys = polyData.getPolys().getData();
+      dataView.setUint32(offset, getNumberOfTriangles(polys), true);
       offset += 4;
     },
     writeTriangle: (v1, v2, v3, dn) => {
@@ -104,45 +121,43 @@ function writeSTL(polyData, format = FormatTypes.BINARY, transform = null) {
   const strips = polyData.getStrips() ? polyData.getStrips().getData() : null;
 
   const n = [];
-  let v1 = [];
-  let v2 = [];
-  let v3 = [];
 
   // Strips
   if (strips && strips.length > 0) {
     throw new Error('Unsupported strips');
   }
 
-  // Polys
-  for (let i = 0; i < polys.length; ) {
-    const pointNumber = polys[i++];
-
-    if (pointNumber) {
-      v1 = [
-        points[polys[i] * 3],
-        points[polys[i] * 3 + 1],
-        points[polys[i++] * 3 + 2],
-      ];
-      v2 = [
-        points[polys[i] * 3],
-        points[polys[i] * 3 + 1],
-        points[polys[i++] * 3 + 2],
-      ];
-      v3 = [
-        points[polys[i] * 3],
-        points[polys[i] * 3 + 1],
-        points[polys[i++] * 3 + 2],
-      ];
-      if (transform) {
-        vec3.transformMat4(v1, v1, transform);
-        vec3.transformMat4(v2, v2, transform);
-        vec3.transformMat4(v3, v3, transform);
-      }
-
-      vtkTriangle.computeNormal(v1, v2, v3, n);
-
-      writer.writeTriangle(v1, v2, v3, n);
+  const getPoint = (id, out) => {
+    out[0] = points[id * 3];
+    out[1] = points[id * 3 + 1];
+    out[2] = points[id * 3 + 2];
+    if (transform) {
+      vec3.transformMat4(out, out, transform);
     }
+    return out;
+  };
+
+  const v1 = [0, 0, 0];
+  let v2 = [0, 0, 0];
+  let v3 = [0, 0, 0];
+
+  // Polys: write each polygon as a triangle fan. The fan shares v3 with the
+  // next v2, thus each triangle reads one new point.
+  for (let i = 0; i < polys.length;) {
+    const pointNumber = polys[i];
+    if (pointNumber >= 3) {
+      getPoint(polys[i + 1], v1);
+      getPoint(polys[i + 2], v3);
+      for (let k = 2; k < pointNumber; k++) {
+        const tmp = v2;
+        v2 = v3;
+        v3 = tmp;
+        getPoint(polys[i + k + 1], v3);
+        vtkTriangle.computeNormal(v1, v2, v3, n);
+        writer.writeTriangle(v1, v2, v3, n);
+      }
+    }
+    i += pointNumber + 1;
   }
   writer.writeFooter(polyData);
   return writer.getOutputData();

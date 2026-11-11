@@ -32,9 +32,8 @@ function vtkForwardPass(publicAPI, model) {
     for (let i = 0; i < numlayers; i++) {
       for (let index = 0; index < renderers.length; index++) {
         const ren = renderers[index];
-        const renNode = viewNode.getViewNodeFor(ren);
-
         if (ren.getDraw() && ren.getLayer() === i) {
+          const renNode = viewNode.getViewNodeFor(ren);
           // check for both opaque and volume actors
           model.opaqueActorCount = 0;
           model.translucentActorCount = 0;
@@ -114,7 +113,7 @@ function vtkForwardPass(publicAPI, model) {
 
   publicAPI.getZBufferTexture = () => {
     if (model.framebuffer) {
-      return model.framebuffer.getColorTexture();
+      return model.framebuffer.getColorBuffersByReference()[0];
     }
     return null;
   };
