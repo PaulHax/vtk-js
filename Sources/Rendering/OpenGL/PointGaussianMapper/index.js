@@ -636,7 +636,10 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
         ...objectKey(getVerts(poly)),
       ],
       order: pointOrder ? objectKey(pointOrder) : null,
-      positions: objectKey(poly.getPoints()),
+      positions: [
+        renderable.getCoordinateShiftAndScaleEnabled(),
+        ...objectKey(poly.getPoints()),
+      ],
       colors: getColorKey(poly),
       radius: splatting
         ? [
@@ -707,7 +710,13 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
 
   function buildPositions(cabo, points, selection) {
     const { useShiftAndScale, coordShift, coordScale } =
-      computeCoordShiftAndScale(points);
+      model.renderable.getCoordinateShiftAndScaleEnabled()
+        ? computeCoordShiftAndScale(points)
+        : {
+            useShiftAndScale: false,
+            coordShift: [0, 0, 0],
+            coordScale: [1, 1, 1],
+          };
     cabo.setCoordShiftAndScale(
       useShiftAndScale ? coordShift : null,
       useShiftAndScale ? coordScale : null
@@ -839,6 +848,35 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     opacity: buildOpacity,
   };
 
+  const textureSources = new Map();
+
+  function uploadPointTexture(name, data, components, source, reselect) {
+    const previous = textureSources.get(name);
+    const direct = source && source.getData() === data;
+    const ranges =
+      !reselect &&
+      direct &&
+      previous?.source === source &&
+      previous.data === data
+        ? model.renderable.getPointAttributeUpdateRanges(
+            name,
+            source,
+            previous.mtime,
+            source.getMTime()
+          )
+        : null;
+    const uploaded = dataTextures.upload(
+      `point${macro.capitalize(name)}`,
+      data,
+      components,
+      ranges
+    );
+    if (direct)
+      textureSources.set(name, { source, data, mtime: source.getMTime() });
+    else textureSources.delete(name);
+    return uploaded;
+  }
+
   function buildOrderedSplats(poly, keys, stale, reselect) {
     const cabo = getPointsPrimitive().getCABO();
     const count = poly.getPoints().getNumberOfPoints();
@@ -872,10 +910,12 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     dataTextures.setRenderWindow(model._openGLRenderWindow);
     const allPoints = { count, pointIds: null, cellIds: null };
     if (stale.includes('positions')) {
-      dataTextures.upload(
-        'pointPositions',
+      uploadPointTexture(
+        'positions',
         buildPositions(cabo, poly.getPoints(), allPoints),
-        3
+        3,
+        poly.getPoints(),
+        reselect
       );
     }
     if (stale.includes('colors')) {
@@ -883,10 +923,12 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       model.layout.floatColors = !!getDirectColors(poly);
       const ColorArray = model.layout.floatColors ? Float32Array : Uint8Array;
       const selection = colors && getColorSelection(colors, poly, allPoints);
-      const hasColors = dataTextures.upload(
-        'pointColors',
+      const hasColors = uploadPointTexture(
+        'colors',
         selection && gatherTuples(colors, selection, ColorArray),
-        4
+        4,
+        getDirectColors(poly),
+        reselect
       );
       cabo.setColorComponents(hasColors ? 4 : 0);
       keys.colors = getColorKey(poly);
@@ -898,10 +940,17 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     };
     Object.entries(builders).forEach(([name, build]) => {
       if (stale.includes(name)) {
-        model.layout[name] = dataTextures.upload(
-          `point${macro.capitalize(name)}`,
+        const arrayNames = {
+          radius: model.renderable.getScaleArray(),
+          rotation: model.renderable.getRotationArray(),
+          opacity: model.renderable.getOpacityArray(),
+        };
+        model.layout[name] = uploadPointTexture(
+          name,
           keys[name] && build(poly, allPoints),
-          components[name]
+          components[name],
+          getPointArray(poly, arrayNames[name]),
+          reselect
         );
       }
     });
@@ -987,6 +1036,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     superClass.releaseGraphicsResources(renderWindow);
     getSplatBuffers().forEach((buffer) => buffer.releaseGraphicsResources());
     dataTextures.release();
+    textureSources.clear();
     model.bufferKeys = null;
     model.selection = null;
   };

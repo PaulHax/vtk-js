@@ -39,6 +39,21 @@ its alpha. The renderer does not infer the reconstruction color space or a
 blending policy. A normalized render target requires premultiplied shader output
 and a source blend factor of one to avoid clamping colors before alpha blending.
 
+Indexed rendering accepts complete changed-tuple history through
+`setPointAttributeUpdateRanges`. After in-place edits, call each source array's
+`modified()`, then record its previous and current modification times and all
+changed `[firstTuple, tupleCount]` ranges. The logical attribute names are
+`positions`, `colors` (the direct Float32 source), `radius`, `rotation` and
+`opacity`. Up to 64 contiguous source revisions are retained per attribute.
+A matching raw source with unchanged storage uploads only those texture rows.
+For caller-managed origin-relative Float32 positions, explicitly disabling
+`coordinateShiftAndScaleEnabled` avoids automatic position repacking. It stays
+enabled by default for other inputs.
+A history gap, ordinary unrecorded modification, source replacement, conversion,
+layout change or context restoration uploads in full. Marking the polydata
+itself modified remains a conservative full rebuild. Empty ranges assert that
+an explicitly marked source revision changed no tuples.
+
 The covariance uses the complete linear model-to-view transform, including
 nonuniform actor scale and shear, independently of position-buffer shift and
 scale. Projection uses the derivative of the supplied homogeneous projection

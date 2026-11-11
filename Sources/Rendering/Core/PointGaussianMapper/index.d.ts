@@ -21,9 +21,57 @@ export type IPointGaussianMapperInitialValues = IMapperInitialValues & {
   lowpassMatrix?: Vector3;
   pointOrder?: Nullable<vtkDataArray>;
   directColorArray?: Nullable<string>;
+  coordinateShiftAndScaleEnabled?: boolean;
+};
+
+export type PointAttributeName =
+  | 'positions'
+  | 'colors'
+  | 'radius'
+  | 'rotation'
+  | 'opacity';
+
+export type PointAttributeUpdate = {
+  source: vtkDataArray;
+  fromMTime: number;
+  toMTime: number;
+  /** First tuple and tuple count, in the unchanged backing array. */
+  ranges: readonly (readonly [number, number])[];
 };
 
 export type vtkPointGaussianMapper = vtkMapper & {
+  /**
+   * Record complete in-place edits after calling each source's modified().
+   * Indexed rendering can upload only these tuples when a complete history
+   * connects its last upload to the current source modification time.
+   * History is bounded to 64 updates per attribute. Unrecorded modifications,
+   * replaced arrays, layout changes and context restoration upload in full.
+   * This records upload history only; it does not modify the source arrays.
+   * Pass null to clear history. The colors source is directColorArray.
+   */
+  setPointAttributeUpdateRanges(
+    updates: Partial<Record<PointAttributeName, PointAttributeUpdate>> | null
+  ): boolean;
+
+  /** Complete combined tuple ranges for a source interval, or null on a gap. */
+  getPointAttributeUpdateRanges(
+    name: PointAttributeName,
+    source: vtkDataArray,
+    fromMTime: number,
+    toMTime: number
+  ): [number, number][] | null;
+
+  /** Get whether automatic position-buffer shift and scale are enabled. */
+  getCoordinateShiftAndScaleEnabled(): boolean;
+
+  /**
+   * Enable automatic position-buffer shift and scale (default true). Disable
+   * only for already origin-relative Float32 positions whose precision is
+   * managed by the caller. Keeping raw storage enables indexed subrange
+   * uploads without repacking the complete position array.
+   */
+  setCoordinateShiftAndScaleEnabled(enabled: boolean): boolean;
+
   /** Get the optional point-data Float32 RGBA source. */
   getDirectColorArray(): Nullable<string>;
 

@@ -21,6 +21,100 @@ function vtkPointGaussianMapper(publicAPI, model) {
 
   const superClass = { ...publicAPI };
 
+  const attributeUpdates = new Map();
+  const attributeNames = new Set([
+    'positions',
+    'colors',
+    'radius',
+    'rotation',
+    'opacity',
+  ]);
+
+  publicAPI.setPointAttributeUpdateRanges = (updates) => {
+    if (updates === null) {
+      attributeUpdates.clear();
+      return true;
+    }
+    const entries = Object.entries(updates);
+    for (const [name, update] of entries) {
+      const { source, fromMTime, toMTime, ranges } = update;
+      if (
+        !attributeNames.has(name) ||
+        !source ||
+        typeof source.getData !== 'function' ||
+        !Number.isSafeInteger(fromMTime) ||
+        !Number.isSafeInteger(toMTime) ||
+        fromMTime < 0 ||
+        toMTime <= fromMTime ||
+        toMTime !== source.getMTime() ||
+        !Array.isArray(ranges) ||
+        ranges.some(
+          ([first, count]) =>
+            !Number.isSafeInteger(first) ||
+            !Number.isSafeInteger(count) ||
+            first < 0 ||
+            count <= 0 ||
+            first + count > source.getNumberOfTuples()
+        )
+      ) {
+        throw new Error(
+          'Point attribute updates require complete tuple ranges between source modification times.'
+        );
+      }
+    }
+    for (const [name, update] of entries) {
+      const { source, fromMTime, toMTime, ranges } = update;
+      const data = source.getData();
+      let state = attributeUpdates.get(name);
+      if (
+        state?.source !== source ||
+        state.data.deref() !== data ||
+        state.history.at(-1)?.toMTime !== fromMTime
+      ) {
+        state = { source, data: new WeakRef(data), history: [] };
+        attributeUpdates.set(name, state);
+      }
+      state.history.push({
+        fromMTime,
+        toMTime,
+        ranges: ranges.map((range) => [...range]),
+      });
+      if (state.history.length > 64) state.history.shift();
+    }
+    return true;
+  };
+
+  publicAPI.getPointAttributeUpdateRanges = (
+    name,
+    source,
+    fromMTime,
+    toMTime
+  ) => {
+    const state = attributeUpdates.get(name);
+    if (state?.source !== source || state.data.deref() !== source.getData())
+      return null;
+    const ranges = [];
+    let cursor = fromMTime;
+    for (const update of state.history) {
+      if (update.fromMTime !== cursor) continue;
+      ranges.push(...update.ranges);
+      cursor = update.toMTime;
+      if (cursor === toMTime) {
+        ranges.sort((left, right) => left[0] - right[0]);
+        const merged = [];
+        for (const [first, count] of ranges) {
+          const previous = merged.at(-1);
+          if (previous && first <= previous[0] + previous[1]) {
+            previous[1] =
+              Math.max(previous[0] + previous[1], first + count) - previous[0];
+          } else merged.push([first, count]);
+        }
+        return merged;
+      }
+    }
+    return null;
+  };
+
   // Each point or splat carries a single colour, so there is nothing to
   // interpolate across, and texture colouring would drop the colours.
   publicAPI.canUseTextureMapForColoring = () => false;
@@ -124,6 +218,7 @@ function defaultValues(initialValues) {
     lowpassMatrix: [0, 0, 0],
     pointOrder: null,
     directColorArray: null,
+    coordinateShiftAndScaleEnabled: true,
     ...initialValues,
   };
 }
@@ -153,6 +248,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     'rotationArray',
     'pointOrder',
     'directColorArray',
+    'coordinateShiftAndScaleEnabled',
   ]);
   macro.setGetArray(publicAPI, model, ['lowpassMatrix'], 3);
 

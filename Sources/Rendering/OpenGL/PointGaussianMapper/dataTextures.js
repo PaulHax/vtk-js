@@ -33,7 +33,7 @@ export function createDataTextures() {
     }
   };
 
-  const upload = (name, data, components) => {
+  const upload = (name, data, components, ranges = null) => {
     if (!data || !data.length) {
       remove(name);
       return false;
@@ -91,34 +91,33 @@ export function createDataTextures() {
     // All supported texels are a multiple of four bytes.
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    const completeRows = Math.floor(count / width);
-    if (completeRows) {
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        0,
-        width,
-        completeRows,
-        format,
-        type,
-        data.subarray(0, completeRows * width * components)
-      );
-    }
-    const remaining = count - completeRows * width;
-    if (remaining) {
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        completeRows,
-        remaining,
-        1,
-        format,
-        type,
-        data.subarray(completeRows * width * components)
-      );
-    }
+    const uploadRows = (first, length) => {
+      let cursor = first;
+      let remaining = length;
+      while (remaining > 0) {
+        const x = cursor % width;
+        const y = Math.floor(cursor / width);
+        const rows = x === 0 ? Math.floor(remaining / width) : 0;
+        const rowWidth = rows ? width : Math.min(width - x, remaining);
+        const rowCount = rows || 1;
+        const tuples = rowWidth * rowCount;
+        gl.texSubImage2D(
+          gl.TEXTURE_2D,
+          0,
+          x,
+          y,
+          rowWidth,
+          rowCount,
+          format,
+          type,
+          data.subarray(cursor * components, (cursor + tuples) * components)
+        );
+        cursor += tuples;
+        remaining -= tuples;
+      }
+    };
+    const updates = allocate || !ranges ? [[0, count]] : ranges;
+    updates.forEach(([first, length]) => uploadRows(first, length));
     texture.bytes = width * height * components * data.BYTES_PER_ELEMENT;
     renderWindow.deactivateTexture(texture);
     return true;
