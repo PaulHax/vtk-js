@@ -1364,21 +1364,50 @@ function vtkOpenGLTexture(publicAPI, model) {
     return true;
   }
 
+  // Largest finite half float, values above overflow to infinity
+  // (e.g. Uint16 65535) and produce NaN when linearly filtered
+  const HALF_FLOAT_MAX = 65504;
+
+  function hasFiniteHalfFloat(offset, scale) {
+    for (let c = 0; c < offset.length; c++) {
+      const min = offset[c];
+      const max = scale[c] + min;
+      if (
+        min < -HALF_FLOAT_MAX ||
+        min > HALF_FLOAT_MAX ||
+        max < -HALF_FLOAT_MAX ||
+        max > HALF_FLOAT_MAX
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   function setCanUseHalfFloat(dataType, offset, scale, preferSizeOverAccuracy) {
     publicAPI.getOpenGLDataType(dataType);
 
     // Don't consider halfFloat and convert back to Float when the range of data does not generate an accurate halfFloat
     // AND it is not preferable to have a smaller texture than an exact texture.
+    // Even when preferring size, never use halfFloat if values would overflow to infinity.
     const isExactHalfFloat =
-      hasExactHalfFloat(offset, scale) || preferSizeOverAccuracy;
+      hasExactHalfFloat(offset, scale) ||
+      (preferSizeOverAccuracy && hasFiniteHalfFloat(offset, scale));
 
     // If OES_texture_float_linear is not available, and using a half float would still be exact, force half floats.
     const forceHalfFloat =
       model.openGLDataType === model.context.FLOAT &&
       model.context.getExtension('OES_texture_float_linear') === null &&
       isExactHalfFloat;
+    // SHORT and UNSIGNED_SHORT mean norm16
+    const overrideNorm16 =
+      preferSizeOverAccuracy &&
+      (model.openGLDataType === model.context.SHORT ||
+        model.openGLDataType === model.context.UNSIGNED_SHORT);
     const useHalfFloat =
-      forceHalfFloat || model.openGLDataType === model.context.HALF_FLOAT;
+      forceHalfFloat ||
+      overrideNorm16 ||
+      model.openGLDataType === model.context.HALF_FLOAT;
 
     model.canUseHalfFloat = useHalfFloat && isExactHalfFloat;
   }
@@ -1410,8 +1439,12 @@ function vtkOpenGLTexture(publicAPI, model) {
     );
 
     // since our default is to use half float, in case that we can't use it
-    // we need to use another type
-    if (!publicAPI.useHalfFloat()) {
+    // (or norm16 is overridden) we need to use another type
+    if (
+      !publicAPI.useHalfFloat() ||
+      model.openGLDataType === model.context.SHORT ||
+      model.openGLDataType === model.context.UNSIGNED_SHORT
+    ) {
       publicAPI.getOpenGLDataType(dataType, true);
     }
 
