@@ -5,13 +5,13 @@
     "revision": "3c78fbbbcff5cc546bfc4f7055cf809c7c2eb422"
   },
   "base": {
-    "ref": "external-context-integration",
-    "revision": "ecf3d53fdc97db799b81a0adda5e8dde91844532"
+    "ref": "fork/external-context-integration",
+    "revision": "abf750ac1f80f9524957187bfb49846083a76855"
   },
   "topics": [
     {
       "ref": "upstream-point-gaussian-mapper",
-      "revision": "98d7815d47f01c4d442a6b1268dff9dafcdcb3f4"
+      "revision": "dc2c20299946c56fade7cc1f41f777a8a1fc8ac6"
     }
   ],
   "retainedTopics": [

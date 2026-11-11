@@ -1,11 +1,15 @@
 import { it, expect, vi } from 'vitest';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
+import { FieldAssociations } from 'vtk.js/Sources/Common/DataModel/DataSet/Constants';
+import vtkActor from 'vtk.js/Sources/Rendering/Core/Actor';
+import vtkMapper from 'vtk.js/Sources/Rendering/Core/Mapper';
 import vtkPointGaussianMapper from 'vtk.js/Sources/Rendering/Core/PointGaussianMapper';
 import vtkForwardPass from 'vtk.js/Sources/Rendering/OpenGL/ForwardPass';
 import vtkRenderPass from 'vtk.js/Sources/Rendering/SceneGraph/RenderPass';
 import {
   attributeIds,
+  DISC,
   capture,
   createPointSelector,
   createPolyData,
@@ -76,6 +80,74 @@ function makeScene(gc, coordinates = [0, 0, 0, 0, 0, 0]) {
 function orderArray(values) {
   return vtkDataArray.newInstance({ values: Uint32Array.from(values) });
 }
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper preserves high input ids across selection modes and actor order',
+  async ({ skip }) => {
+    const gc = testUtils.createGarbageCollector();
+    try {
+      const highId = 0x1000000;
+      const poly = createPolyData(gc, [0, 0, 0]);
+      const order = gc.registerResource(orderArray([0]));
+      const mapper = vtkPointGaussianMapper.newInstance({
+        emissive: false,
+        scaleFactor: 0.15,
+        splatShaderCode: DISC,
+        coordinateShiftAndScaleEnabled: false,
+        pointOrder: order,
+      });
+      const scene = createScene(gc, mapper, poly, 60);
+      scene.actor.getProperty().setPointSize(6);
+      lookDownZ(scene.renderer, 1.5);
+
+      const otherPoly = createPolyData(gc, [1, 0, 0]);
+      otherPoly.getVerts().setData(Uint32Array.of(1, 0));
+      const otherMapper = gc.registerResource(vtkMapper.newInstance());
+      otherMapper.setInputData(otherPoly);
+      const otherActor = gc.registerResource(vtkActor.newInstance());
+      otherActor.setMapper(otherMapper);
+      scene.renderer.addActor(otherActor);
+      const selector = createPointSelector(scene);
+      const gl = scene.view.getContext();
+      if (gl.getParameter(gl.MAX_TEXTURE_SIZE) ** 2 <= highId) skip();
+      poly.getPoints().setData(new Float32Array((highId + 1) * 3), 3);
+      order.setData(Uint32Array.of(highId));
+      const selectCenter = async () =>
+        attributeIds(
+          await selector.selectAsync(scene.renderer, 30, 30, 30, 30)
+        );
+
+      for (const gaussianLast of [false, true]) {
+        if (gaussianLast) {
+          scene.renderer.removeActor(scene.actor);
+          scene.renderer.addActor(scene.actor);
+        }
+        for (const fieldAssociation of [
+          FieldAssociations.FIELD_ASSOCIATION_POINTS,
+          FieldAssociations.FIELD_ASSOCIATION_CELLS,
+        ]) {
+          selector.setFieldAssociation(fieldAssociation);
+          expect(await selectCenter()).toEqual([highId]);
+          order.setData(Uint32Array.of(0));
+          expect(await selectCenter()).toEqual([0]);
+          order.setData(Uint32Array.of(highId));
+        }
+      }
+
+      mapper.setPointOrder(null);
+      poly.getVerts().setData(Uint32Array.of(1, highId));
+      selector.setFieldAssociation(FieldAssociations.FIELD_ASSOCIATION_POINTS);
+      for (const scaleFactor of [0, 0.15]) {
+        mapper.setScaleFactor(scaleFactor);
+        expect(await selectCenter()).toEqual([highId]);
+      }
+      selector.setFieldAssociation(FieldAssociations.FIELD_ASSOCIATION_CELLS);
+      expect(await selectCenter()).toEqual([0]);
+    } finally {
+      gc.releaseResources();
+    }
+  }
+);
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'vtkPointGaussianMapper reorders splats without uploading their resident attributes',
