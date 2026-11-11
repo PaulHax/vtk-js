@@ -23,7 +23,7 @@ function getClassNameFromTypeId(typeId) {
  * defined in vtkCellType.h)
  */
 function getTypeIdFromClassName(cellTypeString) {
-  return CellTypesStrings.findIndex(cellTypeString);
+  return CellTypesStrings.indexOf(cellTypeString);
 }
 
 /**
