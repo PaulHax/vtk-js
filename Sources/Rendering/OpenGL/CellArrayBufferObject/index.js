@@ -200,13 +200,6 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
     return superSetColorBO(colorBO);
   };
 
-  publicAPI.releaseGraphicsResources = () => {
-    if (model.colorBO) {
-      model.colorBO.releaseGraphicsResources();
-    }
-    superClass.releaseGraphicsResources();
-  };
-
   publicAPI.setOpenGLRenderWindow = (rw) => {
     if (model._openGLRenderWindow === rw) {
       return;
@@ -216,10 +209,6 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
     }
     superClass.setOpenGLRenderWindow(rw);
   };
-
-  publicAPI.getAllocatedGPUMemoryInBytes = () =>
-    superClass.getAllocatedGPUMemoryInBytes() +
-    (model.colorBO ? model.colorBO.getAllocatedGPUMemoryInBytes() : 0);
 
   publicAPI.createVBO = (
     cellArray,
