@@ -19,13 +19,11 @@ function vtkOrientationMarkerWidget(publicAPI, model) {
 
   const previousCameraInput = [];
   const selfRenderer = vtkRenderer.newInstance();
-  const resizeObserver = new ResizeObserver((entries) => {
-    publicAPI.updateViewport();
-  });
   let onCameraChangedSub = null;
   let onCameraModifiedSub = null;
   let onAnimationSub = null;
   let onEndAnimationSub = null;
+  let onWindowResizeSub = null;
   let selfSubscription = null;
 
   function onCameraModified() {
@@ -79,6 +77,11 @@ function vtkOrientationMarkerWidget(publicAPI, model) {
       model._interactor.render();
     }
   };
+
+  // Whoever resizes the view renders it afterwards, so only fit the viewport.
+  function onWindowResize() {
+    selfRenderer.setViewport(...publicAPI.computeViewport());
+  }
 
   publicAPI.updateMarkerOrientation = () => {
     const ren = model.parentRenderer || model._interactor.getCurrentRenderer();
@@ -169,7 +172,9 @@ function vtkOrientationMarkerWidget(publicAPI, model) {
         publicAPI.updateMarkerOrientation
       );
 
-      resizeObserver.observe(model._interactor.getView().getCanvas());
+      onWindowResizeSub = model._interactor
+        .getView()
+        .onWindowResizeEvent(onWindowResize);
 
       publicAPI.updateViewport();
       publicAPI.updateMarkerOrientation();
@@ -181,7 +186,8 @@ function vtkOrientationMarkerWidget(publicAPI, model) {
       }
       model.enabled = false;
 
-      resizeObserver.disconnect();
+      onWindowResizeSub.unsubscribe();
+      onWindowResizeSub = null;
       onCameraChangedSub.unsubscribe();
       onCameraChangedSub = null;
       onCameraModifiedSub.unsubscribe();
@@ -260,7 +266,10 @@ function vtkOrientationMarkerWidget(publicAPI, model) {
       onEndAnimationSub.unsubscribe();
       onEndAnimationSub = null;
     }
-    resizeObserver.disconnect();
+    if (onWindowResizeSub) {
+      onWindowResizeSub.unsubscribe();
+      onWindowResizeSub = null;
+    }
   };
 
   // --------------------------------------------------------------------------
