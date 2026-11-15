@@ -66,7 +66,6 @@ function vtkSplineWidget(publicAPI, model) {
   // Default manipulator
   publicAPI.setManipulator(
     model.manipulator ||
-      model.manipulator ||
       vtkPlanePointManipulator.newInstance({ useCameraNormal: true })
   );
 }

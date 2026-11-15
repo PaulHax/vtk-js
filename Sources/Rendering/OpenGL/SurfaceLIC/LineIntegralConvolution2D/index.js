@@ -503,7 +503,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     'context',
     '_openGLRenderWindow',
 
-    'nuberOfSteps',
+    'numberOfSteps',
     'stepSize',
     'normalizeVectors',
     'maskThreshold',
