@@ -202,8 +202,10 @@ function vtkViewProxy(publicAPI, model) {
       const devicePixelRatio = window.devicePixelRatio || 1;
       const width = Math.max(10, Math.floor(devicePixelRatio * dims.width));
       const height = Math.max(10, Math.floor(devicePixelRatio * dims.height));
-      model._apiSpecificRenderWindow.setSize(width, height);
+      const resized = model._apiSpecificRenderWindow.setSize(width, height);
       publicAPI.invokeResize({ width, height });
+      // Resizing cleared the canvas, so draw before the browser paints it.
+      if (resized) model.renderWindow.render();
       publicAPI.renderLater();
     }
   };
