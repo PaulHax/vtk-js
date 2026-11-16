@@ -53,11 +53,14 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
   'keeps half float and clamps values above its finite range',
-  () => {
+  ({ skip }) => {
     const gc = testUtils.createGarbageCollector();
     const { view } = createTrackedRenderView(gc);
     const gl = view.getContext();
-    expect(gl.getExtension('EXT_color_buffer_float')).not.toBeNull();
+    if (!gl.getExtension('EXT_color_buffer_float')) {
+      gc.releaseResources();
+      skip('Floating-point color attachments are unavailable.');
+    }
 
     const texture = gc.registerResource(vtkOpenGLTexture.newInstance());
     texture.setOpenGLRenderWindow(view);

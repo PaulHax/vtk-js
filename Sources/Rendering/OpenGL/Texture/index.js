@@ -16,19 +16,6 @@ const { vtkDebugMacro, vtkErrorMacro, vtkWarningMacro, requiredParam } = macro;
 const { toHalf } = HalfFloat;
 const MAX_FINITE_HALF_FLOAT = 65504;
 
-// Prevent finite inputs such as Uint16 65535 from becoming infinite texels,
-// which turn linear interpolation with neighboring values into NaN.
-function toHalfForUpload(value) {
-  let uploadValue = value;
-  if (Number.isFinite(value)) {
-    uploadValue = Math.max(
-      -MAX_FINITE_HALF_FLOAT,
-      Math.min(value, MAX_FINITE_HALF_FLOAT)
-    );
-  }
-  return toHalf(uploadValue);
-}
-
 // ----------------------------------------------------------------------------
 // vtkOpenGLTexture methods
 // ----------------------------------------------------------------------------
@@ -780,6 +767,10 @@ function vtkOpenGLTexture(publicAPI, model) {
     // if the opengl data type is half float
     // then the data array must be u16
     const halfFloat = model.openGLDataType === model.context.HALF_FLOAT;
+    // Half float is only used for Int16 and Uint16, and only Uint16 can exceed
+    // the largest finite half float. Clamp it so 65535 does not become an
+    // infinite texel, which turns linear interpolation into NaN.
+    const clampToFiniteHalf = dataType === VtkDataTypes.UNSIGNED_SHORT;
 
     if (halfFloat) {
       for (let idx = 0; idx < data.length; idx++) {
@@ -791,8 +782,14 @@ function vtkOpenGLTexture(publicAPI, model) {
             onlyUpdateExtents ? src.length : pixCount
           );
           const newArrayLen = newArray.length;
-          for (let i = 0; i < newArrayLen; i++) {
-            newArray[i] = toHalfForUpload(src[i]);
+          if (clampToFiniteHalf) {
+            for (let i = 0; i < newArrayLen; i++) {
+              newArray[i] = toHalf(Math.min(src[i], MAX_FINITE_HALF_FLOAT));
+            }
+          } else {
+            for (let i = 0; i < newArrayLen; i++) {
+              newArray[i] = toHalf(src[i]);
+            }
           }
           pixData.push(newArray);
         } else {
