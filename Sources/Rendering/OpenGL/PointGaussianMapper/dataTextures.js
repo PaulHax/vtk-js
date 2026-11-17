@@ -2,7 +2,7 @@ const uploadBatches = new WeakMap();
 
 function uploadState(gl) {
   const unit = gl.getParameter(gl.ACTIVE_TEXTURE);
-  const binding = gl.getParameter(gl.TEXTURE_BINDING_2D);
+  let binding = gl.getParameter(gl.TEXTURE_BINDING_2D);
   const unpackBuffer = gl.getParameter(gl.PIXEL_UNPACK_BUFFER_BINDING);
   const unpack = [
     [gl.UNPACK_ALIGNMENT, 4],
@@ -18,6 +18,9 @@ function uploadState(gl) {
       gl.bindTexture(gl.TEXTURE_2D, handle);
       gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, null);
       unpack.forEach(([key, value]) => gl.pixelStorei(key, value));
+    },
+    forgetDeleted(handle) {
+      if (handle === binding) binding = null;
     },
     restore() {
       gl.activeTexture(unit);
@@ -52,12 +55,17 @@ export function createDataTextures() {
   let maxSize = 0;
   const textures = new Map();
 
+  const deleteTexture = (texture) => {
+    uploadBatches.get(gl)?.state?.forgetDeleted(texture.handle);
+    gl.deleteTexture(texture.handle);
+  };
+
   const release = () => {
     textures.forEach((texture) => {
       if (!renderWindow.isDeleted()) {
         renderWindow.deactivateTexture(texture);
       }
-      gl.deleteTexture(texture.handle);
+      deleteTexture(texture);
     });
     textures.clear();
   };
@@ -74,7 +82,7 @@ export function createDataTextures() {
     const texture = textures.get(name);
     if (texture) {
       renderWindow.deactivateTexture(texture);
-      gl.deleteTexture(texture.handle);
+      deleteTexture(texture);
       textures.delete(name);
     }
   };
