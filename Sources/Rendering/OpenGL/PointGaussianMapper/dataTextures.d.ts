@@ -20,3 +20,8 @@ export type PointTextureBank = Pick<
 export function createPointTextureBank(
   window: vtkOpenGLRenderWindow
 ): PointTextureBank;
+
+export function withPointTextureUploads<T>(
+  window: vtkOpenGLRenderWindow | null | undefined,
+  run: () => T
+): T;

@@ -1,3 +1,49 @@
+const uploadBatches = new WeakMap();
+
+function uploadState(gl) {
+  const unit = gl.getParameter(gl.ACTIVE_TEXTURE);
+  const binding = gl.getParameter(gl.TEXTURE_BINDING_2D);
+  const unpackBuffer = gl.getParameter(gl.PIXEL_UNPACK_BUFFER_BINDING);
+  const unpack = [
+    [gl.UNPACK_ALIGNMENT, 4],
+    [gl.UNPACK_FLIP_Y_WEBGL, false],
+    [gl.UNPACK_ROW_LENGTH, 0],
+    [gl.UNPACK_SKIP_PIXELS, 0],
+    [gl.UNPACK_SKIP_ROWS, 0],
+  ];
+  const previousUnpack = unpack.map(([key]) => gl.getParameter(key));
+  return {
+    bind(handle) {
+      gl.activeTexture(unit);
+      gl.bindTexture(gl.TEXTURE_2D, handle);
+      gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, null);
+      unpack.forEach(([key, value]) => gl.pixelStorei(key, value));
+    },
+    restore() {
+      gl.activeTexture(unit);
+      gl.bindTexture(gl.TEXTURE_2D, binding);
+      gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, unpackBuffer);
+      unpack.forEach(([key], index) =>
+        gl.pixelStorei(key, previousUnpack[index])
+      );
+    },
+  };
+}
+
+/** Reuse the caller's saved texture and pixel-store state for this drain. */
+export function withPointTextureUploads(window, run) {
+  const gl = window?.getContext();
+  if (!gl || gl.isContextLost() || uploadBatches.has(gl)) return run();
+  const batch = { state: null };
+  uploadBatches.set(gl, batch);
+  try {
+    return run();
+  } finally {
+    uploadBatches.delete(gl);
+    batch.state?.restore();
+  }
+}
+
 // Nearest-filtered data textures for indexed point attributes. Each texel holds
 // one point; the final row is padded, without changing the input arrays.
 export function createDataTextures() {
@@ -70,18 +116,9 @@ export function createDataTextures() {
       texture = { handle, width: 0, height: 0 };
       textures.set(name, texture);
     }
-    const binding = gl.getParameter(gl.TEXTURE_BINDING_2D);
-    const unpack = [
-      [gl.UNPACK_ALIGNMENT, 4],
-      [gl.UNPACK_FLIP_Y_WEBGL, false],
-      [gl.UNPACK_ROW_LENGTH, 0],
-      [gl.UNPACK_SKIP_PIXELS, 0],
-      [gl.UNPACK_SKIP_ROWS, 0],
-    ];
-    const previousUnpack = unpack.map(([key]) => gl.getParameter(key));
-    const unpackBuffer = gl.getParameter(gl.PIXEL_UNPACK_BUFFER_BINDING);
-    gl.bindTexture(gl.TEXTURE_2D, texture.handle);
-    gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, null);
+    const batch = uploadBatches.get(gl);
+    const state = batch ? (batch.state ??= uploadState(gl)) : uploadState(gl);
+    state.bind(texture.handle);
     try {
       const allocate =
         texture.width !== width ||
@@ -105,7 +142,6 @@ export function createDataTextures() {
         );
         Object.assign(texture, { width, height, internalFormat });
       }
-      unpack.forEach(([key, value]) => gl.pixelStorei(key, value));
       const uploadRows = (first, length, source = first) => {
         let cursor = first;
         let remaining = length;
@@ -142,11 +178,7 @@ export function createDataTextures() {
       texture.bytes = width * height * components * data.BYTES_PER_ELEMENT;
       return true;
     } finally {
-      unpack.forEach(([key], index) =>
-        gl.pixelStorei(key, previousUnpack[index])
-      );
-      gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, unpackBuffer);
-      gl.bindTexture(gl.TEXTURE_2D, binding);
+      if (!batch) state.restore();
     }
   };
 
