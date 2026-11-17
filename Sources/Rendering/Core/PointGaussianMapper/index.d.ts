@@ -2,6 +2,8 @@ import { Nullable, Vector3 } from '../../../types';
 import vtkPiecewiseFunction from '../../../Common/DataModel/PiecewiseFunction';
 import vtkDataArray from '../../../Common/Core/DataArray';
 import vtkMapper, { IMapperInitialValues } from '../Mapper';
+import type vtkOpenGLRenderWindow from '../../OpenGL/RenderWindow';
+import type vtkShaderProgram from '../../OpenGL/ShaderProgram';
 
 export type IPointGaussianMapperInitialValues = IMapperInitialValues & {
   scaleArray?: Nullable<string>;
@@ -39,7 +41,26 @@ export type PointAttributeUpdate = {
   ranges: readonly (readonly [number, number])[];
 };
 
+/** A fully uploaded indexed snapshot of Float32 RGBA anisotropic splats. */
+export type PreparedPointTextures = {
+  readonly window: vtkOpenGLRenderWindow;
+  readonly context: WebGL2RenderingContext;
+  readonly generation: number;
+  readonly maximumId: number;
+  /** Texture offset and count for each surviving run after hard invalidation. */
+  readonly ranges?: readonly (readonly [number, number])[];
+  bind(program: vtkShaderProgram): void;
+  unbind(): void;
+};
+
 export type vtkPointGaussianMapper = vtkMapper & {
+  /**
+   * Bind caller-owned textures for the current pointOrder. The caller keeps
+   * them alive, validates the ids, and publishes both together before paint.
+   */
+  setPreparedPointTextures(textures: PreparedPointTextures | null): void;
+  getPreparedPointTextures(): PreparedPointTextures | null;
+
   /**
    * Record complete in-place edits after calling each source's modified().
    * Indexed rendering can upload only these tuples when a complete history

@@ -8,7 +8,6 @@ import vtkOpenGLTextureUnitManager from 'vtk.js/Sources/Rendering/OpenGL/Texture
 import vtkOpenGLViewNodeFactory, {
   registerOverride,
 } from 'vtk.js/Sources/Rendering/OpenGL/ViewNodeFactory';
-import vtkRenderPass from 'vtk.js/Sources/Rendering/SceneGraph/RenderPass';
 import vtkRenderWindowViewNode from 'vtk.js/Sources/Rendering/SceneGraph/RenderWindowViewNode';
 import { createContextProxyHandler } from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow/ContextProxy';
 
@@ -46,6 +45,7 @@ const parentMethodsToProxy = [
   'registerGraphicsResourceUser',
   'unregisterGraphicsResourceUser',
   'restoreContext',
+  'getGraphicsResourceGeneration',
   'setActiveFramebuffer',
   'setContext',
   'setGraphicsResourceForObject',
@@ -138,12 +138,6 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
   // (manageCanvas=false) keeps its host's context-loss handling
   if (model.manageCanvas) {
     model.canvas.addEventListener('webglcontextlost', _preventDefault, false);
-
-    model.canvas.addEventListener(
-      'webglcontextrestored',
-      publicAPI.restoreContext,
-      false
-    );
   }
 
   // Auto update style
@@ -204,6 +198,47 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
         // Only openGl renderers have a method setOpenGLRenderWindow
         child.setOpenGLRenderWindow?.(publicAPI);
       });
+    }
+  };
+
+  const withBufferBindings = (run) => {
+    const gl = publicAPI.getContext();
+    if (!gl || gl.isContextLost()) return run();
+    const vertexArray = gl.getParameter(gl.VERTEX_ARRAY_BINDING);
+    const arrayBuffer = gl.getParameter(gl.ARRAY_BUFFER_BINDING);
+    gl.bindVertexArray(null);
+    const elementBuffer = gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING);
+    try {
+      return run();
+    } finally {
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
+      gl.bindVertexArray(vertexArray);
+      gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
+    }
+  };
+
+  /** Realize geometry on this view while the actor is still hidden. */
+  publicAPI.preparePolygonalGeometry = (renderer, actor) => {
+    let rendererNode = publicAPI.getViewNodeFor(renderer);
+    if (!rendererNode) {
+      publicAPI.buildPass(true);
+      rendererNode = publicAPI.getViewNodeFor(renderer);
+      rendererNode?.buildPass(true);
+    }
+    const actorNode = rendererNode?.addMissingNode(actor);
+    if (!actorNode) throw new Error('Actor has no OpenGL view node.');
+    const release = () => {
+      if (!rendererNode.isDeleted() && !actorNode.isDeleted())
+        withBufferBindings(() => rendererNode.removeNode(actorNode));
+    };
+    try {
+      const bytes = withBufferBindings(() =>
+        actorNode.preparePolygonalGeometry()
+      );
+      return { bytes, release };
+    } catch (error) {
+      release();
+      throw error;
     }
   };
 
@@ -334,11 +369,29 @@ function vtkOpenGLRenderWindow(publicAPI, model) {
   publicAPI.get2DContext = (options = {}) =>
     model.canvas.getContext('2d', options);
 
+  let graphicsResourceGeneration = 0;
+  publicAPI.getGraphicsResourceGeneration = () => graphicsResourceGeneration;
   publicAPI.restoreContext = () => {
-    const rp = vtkRenderPass.newInstance();
-    rp.setCurrentOperation('Release');
-    rp.traverse(publicAPI, null);
+    const gl = publicAPI.getContext();
+    if (!gl) return;
+    graphicsResourceGeneration += 1;
+    publicAPI.releaseGraphicsResources();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.depthMask(true);
+    gl.blendFuncSeparate(
+      gl.SRC_ALPHA,
+      gl.ONE_MINUS_SRC_ALPHA,
+      gl.ONE,
+      gl.ONE_MINUS_SRC_ALPHA
+    );
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
   };
+  if (model.manageCanvas)
+    model.canvas.addEventListener(
+      'webglcontextrestored',
+      publicAPI.restoreContext
+    );
 
   publicAPI.activateTexture = (texture) => {
     // Only add if it isn't already there

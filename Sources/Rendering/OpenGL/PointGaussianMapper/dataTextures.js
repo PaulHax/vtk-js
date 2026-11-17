@@ -33,13 +33,17 @@ export function createDataTextures() {
     }
   };
 
-  const upload = (name, data, components, ranges = null) => {
+  const upload = (name, data, components, ranges = null, capacity = null) => {
     if (!data || !data.length) {
       remove(name);
       return false;
     }
-    const count = data.length / components;
-    const width = Math.min(maxSize, count);
+    const count = capacity ?? data.length / components;
+    // The staged atlas capacity is a power of two. A power-of-two row width
+    // avoids uncharged row padding even on a context with an unusual limit.
+    const rowLimit =
+      capacity === null ? maxSize : 2 ** Math.floor(Math.log2(maxSize));
+    const width = Math.min(rowLimit, count);
     const height = Math.ceil(count / width);
     if (height > maxSize) {
       throw new Error('Point attributes exceed the maximum data texture size.');
@@ -61,66 +65,89 @@ export function createDataTextures() {
         : gl.FLOAT;
     let texture = textures.get(name);
     if (!texture) {
-      texture = { handle: gl.createTexture(), width: 0, height: 0 };
+      const handle = gl.createTexture();
+      if (!handle) throw new Error('Could not allocate point texture.');
+      texture = { handle, width: 0, height: 0 };
       textures.set(name, texture);
     }
-    renderWindow.activateTexture(texture);
+    const binding = gl.getParameter(gl.TEXTURE_BINDING_2D);
+    const unpack = [
+      [gl.UNPACK_ALIGNMENT, 4],
+      [gl.UNPACK_FLIP_Y_WEBGL, false],
+      [gl.UNPACK_ROW_LENGTH, 0],
+      [gl.UNPACK_SKIP_PIXELS, 0],
+      [gl.UNPACK_SKIP_ROWS, 0],
+    ];
+    const previousUnpack = unpack.map(([key]) => gl.getParameter(key));
+    const unpackBuffer = gl.getParameter(gl.PIXEL_UNPACK_BUFFER_BINDING);
     gl.bindTexture(gl.TEXTURE_2D, texture.handle);
-    const allocate =
-      texture.width !== width ||
-      texture.height !== height ||
-      texture.internalFormat !== internalFormat;
-    if (allocate) {
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        internalFormat,
-        width,
-        height,
-        0,
-        format,
-        type,
-        null
-      );
-      Object.assign(texture, { width, height, internalFormat });
-    }
-    // All supported texels are a multiple of four bytes.
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    const uploadRows = (first, length) => {
-      let cursor = first;
-      let remaining = length;
-      while (remaining > 0) {
-        const x = cursor % width;
-        const y = Math.floor(cursor / width);
-        const rows = x === 0 ? Math.floor(remaining / width) : 0;
-        const rowWidth = rows ? width : Math.min(width - x, remaining);
-        const rowCount = rows || 1;
-        const tuples = rowWidth * rowCount;
-        gl.texSubImage2D(
+    gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, null);
+    try {
+      const allocate =
+        texture.width !== width ||
+        texture.height !== height ||
+        texture.internalFormat !== internalFormat;
+      if (allocate) {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(
           gl.TEXTURE_2D,
           0,
-          x,
-          y,
-          rowWidth,
-          rowCount,
+          internalFormat,
+          width,
+          height,
+          0,
           format,
           type,
-          data.subarray(cursor * components, (cursor + tuples) * components)
+          null
         );
-        cursor += tuples;
-        remaining -= tuples;
+        Object.assign(texture, { width, height, internalFormat });
       }
-    };
-    const updates = allocate || !ranges ? [[0, count]] : ranges;
-    updates.forEach(([first, length]) => uploadRows(first, length));
-    texture.bytes = width * height * components * data.BYTES_PER_ELEMENT;
-    renderWindow.deactivateTexture(texture);
-    return true;
+      unpack.forEach(([key, value]) => gl.pixelStorei(key, value));
+      const uploadRows = (first, length, source = first) => {
+        let cursor = first;
+        let remaining = length;
+        while (remaining > 0) {
+          const x = cursor % width;
+          const y = Math.floor(cursor / width);
+          const rows = x === 0 ? Math.floor(remaining / width) : 0;
+          const rowWidth = rows ? width : Math.min(width - x, remaining);
+          const rowCount = rows || 1;
+          const tuples = rowWidth * rowCount;
+          gl.texSubImage2D(
+            gl.TEXTURE_2D,
+            0,
+            x,
+            y,
+            rowWidth,
+            rowCount,
+            format,
+            type,
+            data.subarray(source * components, (source + tuples) * components)
+          );
+          source += tuples;
+          cursor += tuples;
+          remaining -= tuples;
+        }
+      };
+      // A staged upload can allocate storage and initialize just its supplied
+      // range. A legacy upload must initialize the full newly allocated texture.
+      const updates =
+        (capacity === null && allocate) || !ranges ? [[0, count]] : ranges;
+      updates.forEach(([first, length, source]) =>
+        uploadRows(first, length, source)
+      );
+      texture.bytes = width * height * components * data.BYTES_PER_ELEMENT;
+      return true;
+    } finally {
+      unpack.forEach(([key], index) =>
+        gl.pixelStorei(key, previousUnpack[index])
+      );
+      gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, unpackBuffer);
+      gl.bindTexture(gl.TEXTURE_2D, binding);
+    }
   };
 
   const bind = (program) => {
@@ -150,5 +177,23 @@ export function createDataTextures() {
         (total, texture) => total + texture.bytes,
         0
       ),
+  };
+}
+
+/** Owns the staged texture handles until the caller releases this bank. */
+export function createPointTextureBank(renderWindow) {
+  const textures = createDataTextures();
+  textures.setRenderWindow(renderWindow);
+  return {
+    ...textures,
+    write(name, data, components, capacity, first, count, source = first) {
+      textures.upload(
+        name,
+        data,
+        components,
+        [[first, count, source]],
+        capacity
+      );
+    },
   };
 }

@@ -93,14 +93,33 @@ function vtkOpenGLPolyDataMapper(publicAPI, model) {
     }
   };
 
-  publicAPI.render = () => {
-    const ctx = model._openGLRenderWindow.getContext();
-    if (model.context !== ctx) {
+  let contextGeneration;
+  function ensureContext() {
+    const window = model._openGLRenderWindow;
+    const ctx = window.getContext();
+    const generation = window.getGraphicsResourceGeneration();
+    if (model.context !== ctx || contextGeneration !== generation) {
+      if (model.context) publicAPI.releaseGraphicsResources();
       model.context = ctx;
+      contextGeneration = generation;
       for (let i = primTypes.Start; i < primTypes.End; i++) {
-        model.primitives[i].setOpenGLRenderWindow(model._openGLRenderWindow);
+        model.primitives[i].setOpenGLRenderWindow(window);
       }
     }
+  }
+
+  publicAPI.prepareGeometry = () => {
+    ensureContext();
+    model.currentInput = model.renderable.getInputData();
+    publicAPI.updateBufferObjects(
+      model._openGLRenderer.getRenderable(),
+      model.openGLActor.getRenderable()
+    );
+    return publicAPI.getAllocatedGPUMemoryInBytes();
+  };
+
+  publicAPI.render = () => {
+    ensureContext();
     const actor = model.openGLActor.getRenderable();
     const ren = model._openGLRenderer.getRenderable();
     publicAPI.renderPiece(ren, actor);

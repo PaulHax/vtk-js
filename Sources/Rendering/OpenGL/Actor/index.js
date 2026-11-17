@@ -22,34 +22,50 @@ function vtkOpenGLActor(publicAPI, model) {
   };
 
   // Builds myself.
-  publicAPI.buildPass = (prepass) => {
-    if (prepass && model.renderable && model.renderable.getNestedVisibility()) {
-      model._openGLRenderWindow = publicAPI.getLastAncestorOfType(
-        'vtkOpenGLRenderWindow'
-      );
-      model._openGLRenderer =
-        publicAPI.getFirstAncestorOfType('vtkOpenGLRenderer');
-      model.context = model._openGLRenderWindow.getContext();
-      publicAPI.prepareNodes();
-      publicAPI.addMissingNodes(model.renderable.getTextures());
-      publicAPI.addMissingNode(model.renderable.getMapper());
-      publicAPI.removeUnusedNodes();
+  function buildResources() {
+    model._openGLRenderWindow = publicAPI.getLastAncestorOfType(
+      'vtkOpenGLRenderWindow'
+    );
+    model._openGLRenderer =
+      publicAPI.getFirstAncestorOfType('vtkOpenGLRenderer');
+    model.context = model._openGLRenderWindow.getContext();
+    publicAPI.prepareNodes();
+    publicAPI.addMissingNodes(model.renderable.getTextures());
+    publicAPI.addMissingNode(model.renderable.getMapper());
+    publicAPI.removeUnusedNodes();
 
-      // we store textures and mapper
-      model.ogltextures = null;
-      model.oglmapper = null;
-      model.activeTextures = null;
-      for (let index = 0; index < model.children.length; index++) {
-        const child = model.children[index];
-        if (child.isA('vtkOpenGLTexture')) {
-          if (!model.ogltextures) {
-            model.ogltextures = [];
-          }
-          model.ogltextures.push(child);
-        } else {
-          model.oglmapper = child;
+    // we store textures and mapper
+    model.ogltextures = null;
+    model.oglmapper = null;
+    model.activeTextures = null;
+    for (let index = 0; index < model.children.length; index++) {
+      const child = model.children[index];
+      if (child.isA('vtkOpenGLTexture')) {
+        if (!model.ogltextures) {
+          model.ogltextures = [];
         }
+        model.ogltextures.push(child);
+      } else {
+        model.oglmapper = child;
       }
+    }
+  }
+
+  publicAPI.buildPass = (prepass) => {
+    if (prepass && model.renderable && model.renderable.getNestedVisibility())
+      buildResources();
+  };
+
+  publicAPI.preparePolygonalGeometry = () => {
+    buildResources();
+    // The mapper needs texture coordinates when the actor has a texture,
+    // even while the texture itself is inactive.
+    model.activeTextures = model.ogltextures;
+    try {
+      model.oglmapper.buildPass(true);
+      return model.oglmapper.prepareGeometry();
+    } finally {
+      model.activeTextures = null;
     }
   };
 
