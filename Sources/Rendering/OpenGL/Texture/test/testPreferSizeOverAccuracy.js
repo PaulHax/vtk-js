@@ -52,11 +52,15 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'does not use half float when values overflow to infinity',
-  () => {
+  'keeps half float and clamps values above its finite range',
+  ({ skip }) => {
     const gc = testUtils.createGarbageCollector();
     const { view } = createTrackedRenderView(gc);
     const gl = view.getContext();
+    if (!gl.getExtension('EXT_color_buffer_float')) {
+      gc.releaseResources();
+      skip('Floating-point color attachments are unavailable.');
+    }
 
     const texture = gc.registerResource(vtkOpenGLTexture.newInstance());
     texture.setOpenGLRenderWindow(view);
@@ -75,7 +79,22 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
       dataArray: vtkDataArray.newInstance({ numberOfComponents: 1, values }),
       preferSizeOverAccuracy: true,
     });
-    expect(texture.getOpenGLDataType()).toBe(gl.UNSIGNED_SHORT);
+    expect(texture.getOpenGLDataType()).toBe(gl.HALF_FLOAT);
+
+    const framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTextureLayer(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      texture.getHandle(),
+      0,
+      sideLen - 1
+    );
+    const texel = new Float32Array(4);
+    gl.readPixels(sideLen - 1, sideLen - 1, 1, 1, gl.RGBA, gl.FLOAT, texel);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.deleteFramebuffer(framebuffer);
+    expect(texel[0]).toBe(65504);
 
     gc.releaseResources();
   }
