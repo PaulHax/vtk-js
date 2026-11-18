@@ -2,6 +2,7 @@ import * as macro from 'vtk.js/Sources/macros';
 import vtkOpenGLTexture from 'vtk.js/Sources/Rendering/OpenGL/Texture';
 import { VtkDataTypes } from 'vtk.js/Sources/Common/Core/DataArray/Constants';
 import { Filter } from 'vtk.js/Sources/Rendering/OpenGL/Texture/Constants';
+import { getFramebufferBindingState } from 'vtk.js/Sources/Rendering/OpenGL/Framebuffer/BindingState';
 
 // ----------------------------------------------------------------------------
 // vtkFramebuffer methods
@@ -25,6 +26,13 @@ function vtkFramebuffer(publicAPI, model) {
     model.colorBuffers = [];
   }
 
+  function trackBinding(binding) {
+    const state = getFramebufferBindingState(model._openGLRenderWindow);
+    if (state?.known) {
+      state.binding = binding;
+    }
+  }
+
   publicAPI.getBothMode = () => model.context.FRAMEBUFFER;
   // publicAPI.getDrawMode = () => model.context.DRAW_FRAMEBUFFER;
   // publicAPI.getReadMode = () => model.context.READ_FRAMEBUFFER;
@@ -45,9 +53,10 @@ function vtkFramebuffer(publicAPI, model) {
     }
 
     const gl = model.context;
-    model.previousDrawBinding = gl.getParameter(
-      model.context.FRAMEBUFFER_BINDING
-    );
+    const state = getFramebufferBindingState(model._openGLRenderWindow);
+    model.previousDrawBinding = state?.known
+      ? state.binding
+      : gl.getParameter(gl.FRAMEBUFFER_BINDING);
     model.previousActiveFramebuffer =
       model._openGLRenderWindow.getActiveFramebuffer();
   };
@@ -73,6 +82,7 @@ function vtkFramebuffer(publicAPI, model) {
 
     const gl = model.context;
     gl.bindFramebuffer(gl.FRAMEBUFFER, model.previousDrawBinding);
+    trackBinding(model.previousDrawBinding);
     model._openGLRenderWindow.setActiveFramebuffer(
       model.previousActiveFramebuffer
     );
@@ -88,6 +98,9 @@ function vtkFramebuffer(publicAPI, model) {
       mode = model.context.FRAMEBUFFER;
     }
     model.context.bindFramebuffer(mode, model.glFramebuffer);
+    if (mode !== model.context.READ_FRAMEBUFFER) {
+      trackBinding(model.glFramebuffer);
+    }
     // removed attachments leave empty slots; indices match attachment points
     model.colorBuffers.forEach((buffer) => buffer?.bind());
     model._openGLRenderWindow.setActiveFramebuffer(publicAPI);
@@ -242,6 +255,15 @@ function vtkFramebuffer(publicAPI, model) {
     releaseAttachments();
     if (model.glFramebuffer) {
       model.context?.deleteFramebuffer(model.glFramebuffer);
+      // Deleting the bound framebuffer reverts GL to the default one, so a
+      // tracked binding still naming this handle would let a later save and
+      // restore rebind an object the context no longer has.
+      if (
+        getFramebufferBindingState(model._openGLRenderWindow)?.binding ===
+        model.glFramebuffer
+      ) {
+        trackBinding(null);
+      }
       model.glFramebuffer = null;
     }
   };
