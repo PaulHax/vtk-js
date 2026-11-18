@@ -13,9 +13,17 @@ function vtkOpenGLActor(publicAPI, model) {
   // Set our className
   model.classHierarchy.push('vtkOpenGLActor');
 
+  const superTraverse = publicAPI.traverse;
+  publicAPI.traverse = (renderPass) => {
+    if (!model.renderable || !model.renderable.getNestedVisibility()) {
+      return;
+    }
+    superTraverse(renderPass);
+  };
+
   // Builds myself.
   publicAPI.buildPass = (prepass) => {
-    if (prepass) {
+    if (prepass && model.renderable && model.renderable.getNestedVisibility()) {
       model._openGLRenderWindow = publicAPI.getLastAncestorOfType(
         'vtkOpenGLRenderWindow'
       );
