@@ -21,6 +21,15 @@ function vtkPointGaussianMapper(publicAPI, model) {
 
   const superClass = { ...publicAPI };
 
+  let preparedTextures = null;
+  publicAPI.getPreparedPointTextures = () => preparedTextures;
+  publicAPI.setPreparedPointTextures = (textures) => {
+    if (preparedTextures !== textures) {
+      preparedTextures = textures;
+      publicAPI.modified();
+    }
+  };
+
   const attributeUpdates = new Map();
   const attributeNames = new Set([
     'positions',

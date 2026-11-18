@@ -7,6 +7,7 @@ import vtkDataArray from '../../../Common/Core/DataArray';
 import vtkOpenGLTexture from '../../OpenGL/Texture';
 import vtkPoints from '../../../Common/Core/Points';
 import vtkRenderer from '../../Core/Renderer';
+import type vtkActor from '../../Core/Actor';
 import vtkRenderPass from '../../SceneGraph/RenderPass';
 import vtkTexture from '../../Core/Texture';
 import vtkViewNode from '../../SceneGraph/ViewNode';
@@ -57,6 +58,18 @@ export interface vtkOpenGLRenderWindow extends vtkViewNode {
    * @param {Boolean} prepass
    */
   buildPass(prepass: boolean): void;
+
+  /** Changes when WebGL resources need recreation on the same context. */
+  getGraphicsResourceGeneration(): number;
+
+  /** Current live WebGL context once initialized. */
+  getContext(): WebGL2RenderingContext | null;
+
+  /** Upload polygonal geometry for an actor attached to the given renderer. */
+  preparePolygonalGeometry(
+    renderer: vtkRenderer,
+    actor: vtkActor
+  ): { bytes: number; release(): void };
 
   /**
    * Initialize the rendering window. This will setup all system-specific

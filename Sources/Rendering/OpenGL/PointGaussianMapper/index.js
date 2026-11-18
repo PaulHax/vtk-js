@@ -168,6 +168,8 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
   const getPointsPrimitive = () => model.primitives[model.primTypes.Points];
   const isSplatting = () => model.renderable.getScaleFactor() !== 0;
   const dataTextures = createDataTextures();
+  const preparedTextures = () => model.renderable.getPreparedPointTextures();
+  const textureBinding = () => preparedTextures() ?? dataTextures;
 
   // --------------------------------------------------------------------------
   // Render passes
@@ -343,11 +345,13 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       ];
       const declarations = [
         'uniform highp usampler2D pointOrder;',
+        'uniform int orderOffset;',
         ...attributes.map(([, , name]) => `uniform highp sampler2D ${name};`),
       ];
       const statements = [
         'int orderWidth = textureSize(pointOrder, 0).x;',
-        'int pointId = int(texelFetch(pointOrder, ivec2(gl_InstanceID % orderWidth, gl_InstanceID / orderWidth), 0).r);',
+        'int orderIndex = gl_InstanceID + orderOffset;',
+        'int pointId = int(texelFetch(pointOrder, ivec2(orderIndex % orderWidth, orderIndex / orderWidth), 0).r);',
         'int pointWidth = textureSize(pointPositions, 0).x;',
         'ivec2 pointCoord = ivec2(pointId % pointWidth, pointId / pointWidth);',
       ];
@@ -506,7 +510,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       program.setUniformf('boundScale', renderable.getBoundScale());
       const [a, b, c] = renderable.getLowpassMatrixByReference() || [0, 0, 0];
       program.setUniform3f('lowpassMatrix', a, b, c);
-      if (model.layout.ordered) dataTextures.bind(program);
+      if (model.layout.ordered) textureBinding().bind(program);
     }
   };
 
@@ -543,6 +547,16 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     getPointsPrimitive().getCABO().getElementCount();
 
   publicAPI.renderPieceDraw = (ren, actor) => {
+    const prepared = preparedTextures();
+    const window = model._openGLRenderWindow;
+    if (
+      prepared &&
+      (prepared.window !== window ||
+        prepared.context !== model.context ||
+        prepared.generation !== window.getGraphicsResourceGeneration())
+    ) {
+      return;
+    }
     const count = publicAPI.getNumberOfDrawnPoints();
     if (!count) {
       return;
@@ -555,12 +569,24 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       if (isSplatting()) {
         // Splats face the camera, so, like simple points, none is culled.
         model._openGLRenderWindow.disableCullFace();
-        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
+        if (model.layout.ordered) {
+          const program = primitive.getProgram();
+          let drawn = 0;
+          for (const [offset, size] of prepared?.ranges ?? [[0, count]]) {
+            program.setUniformi('orderOffset', offset);
+            if (program.isUniformUsed('VertexIDOffset'))
+              program.setUniformi('VertexIDOffset', drawn);
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, size);
+            drawn += size;
+          }
+        } else {
+          gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
+        }
       } else {
         gl.drawArrays(gl.POINTS, 0, count);
       }
     } finally {
-      if (model.layout.ordered) dataTextures.unbind();
+      if (model.layout.ordered) textureBinding().unbind();
     }
   };
 
@@ -655,7 +681,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
         poly.getPoints().getNumberOfPoints(),
         ...objectKey(getVerts(poly)),
       ],
-      order: pointOrder ? objectKey(pointOrder) : null,
+      order: pointOrder ? [...objectKey(pointOrder), preparedTextures()] : null,
       positions: [
         renderable.getCoordinateShiftAndScaleEnabled(),
         ...objectKey(poly.getPoints()),
@@ -898,12 +924,13 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
     const count = poly.getPoints().getNumberOfPoints();
     const pointOrder = model.renderable.getPointOrder();
     const order = pointOrder.getData();
-    let maximumId = -1;
+    const prepared = preparedTextures();
+    let maximumId = prepared?.maximumId ?? -1;
     let invalid =
       !(order instanceof Uint32Array) ||
       pointOrder.getNumberOfComponents() !== 1 ||
       !!getVerts(poly)?.getNumberOfCells();
-    for (let i = 0; !invalid && i < order.length; i++) {
+    for (let i = 0; !prepared && !invalid && i < order.length; i++) {
       invalid = order[i] >= count;
       maximumId = Math.max(maximumId, order[i]);
     }
@@ -926,6 +953,15 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
         points: order,
         cells: order,
       });
+    }
+    if (prepared) {
+      model.layout.floatColors = true;
+      model.layout.radius = true;
+      model.layout.rotation = true;
+      model.layout.opacity = false;
+      cabo.setColorComponents(4);
+      cabo.setElementCount(order.length);
+      return true;
     }
     dataTextures.setRenderWindow(model._openGLRenderWindow);
     const allPoints = { count, pointIds: null, cellIds: null };
