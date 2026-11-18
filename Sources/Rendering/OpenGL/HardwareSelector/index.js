@@ -340,6 +340,13 @@ function vtkOpenGLHardwareSelector(publicAPI, model) {
   // Set our className
   model.classHierarchy.push('vtkOpenGLHardwareSelector');
 
+  const superSetMaximumPointId = publicAPI.setMaximumPointId;
+  publicAPI.setMaximumPointId = (id) =>
+    superSetMaximumPointId(Math.max(model.maximumPointId, id));
+  const superSetMaximumCellId = publicAPI.setMaximumCellId;
+  publicAPI.setMaximumCellId = (id) =>
+    superSetMaximumCellId(Math.max(model.maximumCellId, id));
+
   //----------------------------------------------------------------------------
   publicAPI.releasePixBuffers = () => {
     model.rawPixBuffer = [];
@@ -360,6 +367,8 @@ function vtkOpenGLHardwareSelector(publicAPI, model) {
       model._openGLRenderer
     );
     model.maxAttributeId = 0;
+    model.maximumPointId = 0;
+    model.maximumCellId = 0;
 
     const size = model._openGLRenderWindow.getSize();
     if (!model.framebuffer) {

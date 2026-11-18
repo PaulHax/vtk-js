@@ -389,7 +389,14 @@ function scalarColoring(publicAPI, model) {
     }
 
     // we want to only recompute when something has changed
-    const toString = `${publicAPI.getMTime()}${scalars.getMTime()}${alpha}`;
+    const getColorBuildString = () =>
+      [
+        publicAPI.getMTime(),
+        scalars.getMTime(),
+        alpha,
+        input.getReferenceByName('mtime'),
+      ].join(':');
+    const toString = getColorBuildString();
     if (model.colorBuildString === toString) return;
 
     if (!model.useLookupTableScalarRange) {
@@ -418,7 +425,7 @@ function scalarColoring(publicAPI, model) {
         );
       }
     }
-    model.colorBuildString = `${publicAPI.getMTime()}${scalars.getMTime()}${alpha}`;
+    model.colorBuildString = getColorBuildString();
   };
 
   // Protected method

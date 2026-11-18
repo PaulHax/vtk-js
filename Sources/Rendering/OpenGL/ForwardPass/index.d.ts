@@ -16,6 +16,13 @@ export interface IForwardPassInitialValues extends IRenderPassInitialValues {
   overlayActorCount?: number;
   framebuffer?: Nullable<vtkFramebuffer>;
   depthRequested?: boolean;
+  /**
+   * Pass used for translucent geometry. Defaults to order-independent
+   * translucency. Its traverse method receives the OpenGL render window,
+   * renderer view node and this forward pass, in that order. Releasing this
+   * forward pass also releases the supplied pass's graphics resources.
+   */
+  translucentPass?: vtkRenderPass;
 }
 
 export interface vtkForwardPass extends vtkRenderPass {
