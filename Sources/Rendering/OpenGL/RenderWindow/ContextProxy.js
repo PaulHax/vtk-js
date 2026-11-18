@@ -23,6 +23,32 @@ export function createContextProxyHandler() {
     };
   }
 
+  // FRAMEBUFFER_BINDING aliases the draw framebuffer binding in WebGL2.
+  // Binding READ_FRAMEBUFFER alone must not update it.
+  function bindFramebufferHandler(readFramebufferTarget, bindingKey) {
+    return {
+      apply(target, gl, args) {
+        if (args[0] !== readFramebufferTarget) {
+          cache.set(bindingKey, args[1]);
+        }
+        return target.apply(gl, args);
+      },
+    };
+  }
+
+  // Deleting the currently bound framebuffer implicitly rebinds the
+  // default framebuffer.
+  function deleteFramebufferHandler(bindingKey) {
+    return {
+      apply(target, gl, args) {
+        if (args[0] != null && cache.get(bindingKey) === args[0]) {
+          cache.set(bindingKey, null);
+        }
+        return target.apply(gl, args);
+      },
+    };
+  }
+
   // When a property is accessed on the webgl context proxy,
   // it's accessed is intercepted. If the property name matches
   // any of the keys of `propHandlers`, then that handler is called
@@ -42,6 +68,18 @@ export function createContextProxyHandler() {
   // Sets depthMask(flag) as a cached setter proxy.
   propHandlers.depthMask = (gl, prop, receiver, propValue) =>
     new Proxy(propValue.bind(gl), cachedSetterHandler(gl.DEPTH_WRITEMASK));
+
+  propHandlers.bindFramebuffer = (gl, prop, receiver, propValue) =>
+    new Proxy(
+      propValue.bind(gl),
+      bindFramebufferHandler(gl.READ_FRAMEBUFFER, gl.FRAMEBUFFER_BINDING)
+    );
+
+  propHandlers.deleteFramebuffer = (gl, prop, receiver, propValue) =>
+    new Proxy(
+      propValue.bind(gl),
+      deleteFramebufferHandler(gl.FRAMEBUFFER_BINDING)
+    );
 
   return {
     get(gl, prop, receiver) {
