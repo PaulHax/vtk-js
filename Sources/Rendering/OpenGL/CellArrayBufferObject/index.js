@@ -184,7 +184,31 @@ function vtkOpenGLCellArrayBufferObject(publicAPI, model) {
   // Set our className
   model.classHierarchy.push('vtkOpenGLCellArrayBufferObject');
 
+  const superClass = { ...publicAPI };
+
   publicAPI.setType(ObjectType.ARRAY_BUFFER);
+
+  // A CABO owns both its primary vertex buffer and (when scalar colors are
+  // present) its separate packed RGBA buffer. Keep their lifetimes together so
+  // helpers, mapper deletion, and render-window replacement cannot leak the
+  // latter.
+  const superSetColorBO = publicAPI.setColorBO;
+  publicAPI.setColorBO = (colorBO) => {
+    if (model.colorBO && model.colorBO !== colorBO) {
+      model.colorBO.releaseGraphicsResources();
+    }
+    return superSetColorBO(colorBO);
+  };
+
+  publicAPI.setOpenGLRenderWindow = (rw) => {
+    if (model._openGLRenderWindow === rw) {
+      return;
+    }
+    if (model.colorBO) {
+      model.colorBO.setOpenGLRenderWindow(rw);
+    }
+    superClass.setOpenGLRenderWindow(rw);
+  };
 
   publicAPI.createVBO = (
     cellArray,
