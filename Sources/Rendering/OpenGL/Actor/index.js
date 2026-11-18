@@ -13,9 +13,17 @@ function vtkOpenGLActor(publicAPI, model) {
   // Set our className
   model.classHierarchy.push('vtkOpenGLActor');
 
+  const superTraverse = publicAPI.traverse;
+  publicAPI.traverse = (renderPass) => {
+    if (!model.renderable || !model.renderable.getNestedVisibility()) {
+      return;
+    }
+    superTraverse(renderPass);
+  };
+
   // Builds myself.
   publicAPI.buildPass = (prepass) => {
-    if (prepass) {
+    if (prepass && model.renderable && model.renderable.getNestedVisibility()) {
       model._openGLRenderWindow = publicAPI.getLastAncestorOfType(
         'vtkOpenGLRenderWindow'
       );
@@ -29,6 +37,7 @@ function vtkOpenGLActor(publicAPI, model) {
 
       // we store textures and mapper
       model.ogltextures = null;
+      model.oglmapper = null;
       model.activeTextures = null;
       for (let index = 0; index < model.children.length; index++) {
         const child = model.children[index];
@@ -48,6 +57,7 @@ function vtkOpenGLActor(publicAPI, model) {
   publicAPI.traverseZBufferPass = (renderPass) => {
     if (
       !model.renderable ||
+      !model.oglmapper ||
       !model.renderable.getNestedVisibility() ||
       (model._openGLRenderer.getSelector() &&
         !model.renderable.getNestedPickable())
@@ -69,6 +79,7 @@ function vtkOpenGLActor(publicAPI, model) {
   publicAPI.traverseOpaquePass = (renderPass) => {
     if (
       !model.renderable ||
+      !model.oglmapper ||
       !model.renderable.getNestedVisibility() ||
       !model.renderable.getIsOpaque() ||
       (model._openGLRenderer.getSelector() &&
@@ -88,6 +99,7 @@ function vtkOpenGLActor(publicAPI, model) {
   publicAPI.traverseTranslucentPass = (renderPass) => {
     if (
       !model.renderable ||
+      !model.oglmapper ||
       !model.renderable.getNestedVisibility() ||
       model.renderable.getIsOpaque() ||
       (model._openGLRenderer.getSelector() &&
