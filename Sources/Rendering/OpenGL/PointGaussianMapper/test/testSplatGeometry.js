@@ -1,4 +1,5 @@
 import { it, expect } from 'vitest';
+import { mat4 } from 'gl-matrix';
 import testUtils from 'vtk.js/Sources/Testing/testUtils';
 
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
@@ -84,6 +85,50 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
     expect(red(0), 'the left edge, beyond the splat').toBe(0);
 
     gc.releaseResources();
+  }
+);
+
+it.skipIf(__VTK_TEST_NO_WEBGL__)(
+  'vtkPointGaussianMapper clips the support of near-eye splats against viewport sides',
+  async () => {
+    const gc = testUtils.createGarbageCollector();
+    try {
+      const positions = [0, 0, -1, 1.03, 0, -1];
+      const scene = createScene(
+        gc,
+        vtkPointGaussianMapper.newInstance({
+          boundScale: 1,
+          scaleFactor: 0.09,
+          splatShaderCode: DISC,
+        }),
+        createPolyData(gc, positions),
+        64
+      );
+      const camera = scene.renderer.getActiveCamera();
+      camera.setPosition(0, 0, 0);
+      camera.setFocalPoint(0, 0, -1);
+      camera.setExplicitProjectionMatrix(
+        mat4.perspective(new Float64Array(16), Math.PI / 2, 1, 0.01, 10)
+      );
+
+      const reference = await capture(scene);
+      expect(rgbaAt(reference, 32, 32)[0], 'visible center').toBeGreaterThan(
+        100
+      );
+      expect(rgbaAt(reference, 63, 32)[0], 'overlapping edge').toBeGreaterThan(
+        100
+      );
+
+      // This splat is outside the right plane even at its closest corner.
+      // The derivative at its center would nevertheless spread it inward.
+      scene.polyData
+        .getPoints()
+        .setData(Float32Array.from([...positions, 0.4, 0, -0.1]), 3);
+      scene.polyData.modified();
+      expect((await capture(scene)).data).toEqual(reference.data);
+    } finally {
+      gc.releaseResources();
+    }
   }
 );
 
