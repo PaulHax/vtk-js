@@ -89,7 +89,7 @@ it.skipIf(__VTK_TEST_NO_WEBGL__)(
 );
 
 it.skipIf(__VTK_TEST_NO_WEBGL__)(
-  'vtkPointGaussianMapper clips the support of near-eye splats against viewport sides',
+  'vtkPointGaussianMapper guards off-axis footprints near the eye',
   async () => {
     const gc = testUtils.createGarbageCollector();
     try {

@@ -81,47 +81,24 @@ mat3 computeCov3D(vec3 scale, vec4 rotation)
   return M * transpose(M);
 }
 
-vec3 projectionRow(int row)
-{
-  return vec3(VCPCMatrix[0][row], VCPCMatrix[1][row], VCPCMatrix[2][row]);
-}
-
 // Derivative of the homogeneous divide with respect to view coordinates.
 // Using every projection term also handles oblique and host-supplied matrices.
 mat3 getProjectionJacobian(vec4 positionPC)
 {
-  vec3 rowX = projectionRow(0);
-  vec3 rowY = projectionRow(1);
-  vec3 rowW = projectionRow(3);
-  vec2 ndc = positionPC.xy / positionPC.w;
+  vec3 rowX = vec3(VCPCMatrix[0][0], VCPCMatrix[1][0], VCPCMatrix[2][0]);
+  vec3 rowY = vec3(VCPCMatrix[0][1], VCPCMatrix[1][1], VCPCMatrix[2][1]);
+  vec3 rowW = vec3(VCPCMatrix[0][3], VCPCMatrix[1][3], VCPCMatrix[2][3]);
+  // Limit the off-axis derivative outside a padded viewport. Near the eye
+  // the unbounded linear approximation can stretch a distant off-screen
+  // center across the image. The splat center itself stays unmodified.
+  const float guardBand = 1.3;
+  vec2 ndc = clamp(positionPC.xy / positionPC.w, vec2(-guardBand), vec2(guardBand));
   vec3 dx = (rowX - ndc.x * rowW) / positionPC.w;
   vec3 dy = (rowY - ndc.y * rowW) / positionPC.w;
   return mat3(
     dx.x, dy.x, 0.0,
     dx.y, dy.y, 0.0,
     dx.z, dy.z, 0.0);
-}
-
-bool outsideSupport(float clearance, vec3 planeVC, mat3 covarianceMC)
-{
-  vec3 planeMC = transpose(MCVCLinearMatrix) * planeVC;
-  float variance = dot(planeMC, covarianceMC * planeMC);
-  // The corner of the shader's square support can lie sqrt(2) farther
-  // from the center than its half-width.
-  return clearance * clearance > 2.0 * boundScale * boundScale * max(variance, 0.0);
-}
-
-bool outsideViewportSupport(vec4 positionPC, mat3 covarianceMC)
-{
-  // Widen the side planes by the screen-space low-pass support so it can
-  // still contribute when the center is just outside the viewport.
-  vec2 extent = vec2(1.0) + boundScale * sqrt(2.0 * max(lowpassMatrix.xz, vec2(0.0)));
-  vec2 clearance = abs(positionPC.xy) - extent * positionPC.w;
-  return
-    (clearance.x > 0.0 && outsideSupport(clearance.x,
-      sign(positionPC.x) * projectionRow(0) - extent.x * projectionRow(3), covarianceMC)) ||
-    (clearance.y > 0.0 && outsideSupport(clearance.y,
-      sign(positionPC.y) * projectionRow(1) - extent.y * projectionRow(3), covarianceMC));
 }
 
 void main()
@@ -153,14 +130,6 @@ void main()
   mat3 T = getProjectionJacobian(posPC) * MCVCLinearMatrix;
 
   //VTK::Covariance::Impl
-
-  // The projection derivative can expand a near-eye splat across the image
-  // even when its covariance cannot reach a side of the view frustum.
-  if (outsideViewportSupport(posPC, splatCovarianceMC))
-  {
-    gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
-    return;
-  }
 
   mat2 cov2d = mat2(cov) +
     mat2(lowpassMatrix.x, lowpassMatrix.y, lowpassMatrix.y, lowpassMatrix.z);

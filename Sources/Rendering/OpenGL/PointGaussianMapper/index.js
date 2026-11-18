@@ -238,10 +238,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
       VSSource = vtkShaderProgram.substitute(
         VSSource,
         '//VTK::Covariance::Impl',
-        [
-          '  mat3 splatCovarianceMC = computeCov3D(radiusMC, rotationMC);',
-          '  mat3 cov = T * splatCovarianceMC * transpose(T);',
-        ]
+        '  mat3 cov = T * computeCov3D(radiusMC, rotationMC) * transpose(T);'
       ).result;
     } else {
       VSSource = vtkShaderProgram.substitute(
@@ -254,8 +251,7 @@ function vtkOpenGLPointGaussianMapper(publicAPI, model) {
         '//VTK::Covariance::Impl',
         [
           '  float radius = scaleFactor * radiusMC;',
-          '  mat3 splatCovarianceMC = mat3(radius * radius);',
-          '  mat3 cov = T * splatCovarianceMC * transpose(T);',
+          '  mat3 cov = (radius * radius) * T * transpose(T);',
         ]
       ).result;
     }
