@@ -1,0 +1,46 @@
+{
+  "repository": "https://github.com/PaulHax/vtk-js.git",
+  "upstream": {
+    "ref": "origin/master",
+    "revision": "c2b6eee203df0840018ab7befab996839362a32d"
+  },
+  "base": {
+    "ref": "origin/master",
+    "revision": "c2b6eee203df0840018ab7befab996839362a32d"
+  },
+  "topics": [
+    {
+      "ref": "upstream-point-gaussian-mapper",
+      "revision": "5e1a8a8033a8f5fa8a1d61274a25a442639980e4"
+    },
+    {
+      "ref": "vtk-streaming-geometry-uploads",
+      "revision": "b40078e423cee84e4b49b0321eebe84db43c2496"
+    }
+  ],
+  "retainedTopics": [
+    {
+      "ref": "vtk-38-external-context",
+      "revision": "7539701fa780da6cf34fc90c009da2d20fc37c41"
+    },
+    {
+      "ref": "vtk-38-framebuffer-cache",
+      "revision": "8259f8fc837825289fd1a34faa48b6c6ac89915b"
+    },
+    {
+      "ref": "vtk-38.1-compressed-textures",
+      "revision": "28fcc30d1e363e923e5d31f384ff2200fdf8e848"
+    },
+    {
+      "ref": "vtk-38-hidden-props",
+      "revision": "f90e2c5a8213ed9e50541515dfc3ee9e9ee35d55"
+    },
+    {
+      "ref": "vtk-streaming-color-buffer-ownership",
+      "revision": "eb13d0bb1b137353109f4be4f9069f9ad2aaaf1a"
+    }
+  ],
+  "retainedSourcePaths": [
+    "Sources/Rendering/OpenGL/CellArrayBufferObject/index.js"
+  ]
+}
