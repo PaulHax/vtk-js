@@ -74,7 +74,9 @@ export interface vtkImageResliceMapper
    * When a slab thickness larger than 0 is provided, the mapper will composite multile slices
    * together using different composite functions based on the slabType. When
    * slabTrapezoidIntegration is enabled, the first and the last slices in the slab are weighted at
-   * half their original intensity for sum and mean slab types.
+   * half their original intensity for sum and mean slab types. These are the first and last
+   * samples inside the image when the slab extends beyond its bounds. Mean is normalized by
+   * the total sample weight, so a constant intensity is preserved.
    * @param {Number} slabTrapezoidIntegration Enable/disable trapezoid integration for slab slicing.
    * Default: 0
    */
@@ -84,7 +86,9 @@ export interface vtkImageResliceMapper
    *
    * When a slab thickness larger than 0 is provided, the mapper will composite multile slices
    * together using different composite functions based on the slabType. Available options are max,
-   * min, mean and sum.
+   * min, mean and sum. Sum adds sampled intensities without multiplying by physical sample
+   * spacing; its units differ from the path-length integral produced by C++ VTK. Mean is
+   * independent of the number of samples for a constant input.
    * @param {SlabTypes} slabType The blend function used to composite slab slices.
    * Default: SlabTypes.MEAN
    */
